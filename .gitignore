@@ -1,0 +1,34 @@
+# Django
+*.log
+*.pot
+*.pyc
+__pycache__/
+db.sqlite3
+media/
+
+# Environnement virtuel
+venv/
+env/
+ENV/
+env.bak/
+venv.bak/
+
+# Base de données
+*.sqlite3
+*.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+.DS_Store
+
+# Migrations - mais on garde les dossiers
+*/migrations/*.py
+!*/migrations/__init__.py
+
+# Fichiers de configuration personnels
+local_settings.py
+.env
