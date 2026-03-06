@@ -14,21 +14,59 @@ def nouveau_sous_projet(request):
     print("="*60)
     
     if request.method == 'POST':
+        # Crée une copie modifiable des données POST
+        post_data = request.POST.copy()
+        
+        # AFFICHE LES DONNÉES REÇUES
         print("\n📦 DONNÉES POST REÇUES:")
         print("-" * 40)
-        for key, value in request.POST.items():
-            if key != 'csrfmiddlewaretoken':  # Ne pas afficher le token
+        for key, value in post_data.items():
+            if key != 'csrfmiddlewaretoken':
                 print(f"  {key}: {value}")
         print("-" * 40)
         
-        # Initialisation des formulaires
+        # CORRECTION: Vérifie et corrige les IDs
+        # Moughataa
+        moughataa_id = post_data.get('moughataa')
+        if moughataa_id and moughataa_id.isdigit():
+            if not Moughataa.objects.filter(id=moughataa_id).exists():
+                print(f"⚠️ Moughataa ID {moughataa_id} n'existe pas, recherche d'une alternative...")
+                # Cherche la première moughataa de la wilaya sélectionnée
+                wilaya_id = post_data.get('wilaya')
+                if wilaya_id and wilaya_id.isdigit():
+                    premiere_moughataa = Moughataa.objects.filter(wilaya_id=wilaya_id).first()
+                    if premiere_moughataa:
+                        post_data['moughataa'] = str(premiere_moughataa.id)
+                        print(f"✅ Moughataa corrigée à {premiere_moughataa.id} ({premiere_moughataa.nom})")
+        
+        # Commune
+        commune_id = post_data.get('commune')
+        if commune_id and commune_id.isdigit():
+            if not Commune.objects.filter(id=commune_id).exists():
+                print(f"⚠️ Commune ID {commune_id} n'existe pas, recherche d'une alternative...")
+                # Cherche la première commune de la moughataa sélectionnée
+                moughataa_id = post_data.get('moughataa')
+                if moughataa_id and moughataa_id.isdigit():
+                    premiere_commune = Commune.objects.filter(moughataa_id=moughataa_id).first()
+                    if premiere_commune:
+                        post_data['commune'] = str(premiere_commune.id)
+                        print(f"✅ Commune corrigée à {premiere_commune.id} ({premiere_commune.nom})")
+        
+        print("\n📦 DONNÉES POST CORRIGÉES:")
+        print("-" * 40)
+        for key, value in post_data.items():
+            if key != 'csrfmiddlewaretoken':
+                print(f"  {key}: {value}")
+        print("-" * 40)
+        
+        # Initialisation des formulaires avec les données corrigées
         print("\n🔄 Initialisation des formulaires...")
-        form = SousProjetForm(request.POST)
-        infrastructure_formset = InfrastructureFormSet(request.POST, prefix='infra')
-        equipement_formset = EquipementFormSet(request.POST, prefix='equip')
-        intrant_formset = IntrantFormSet(request.POST, prefix='intrant')
-        realisation_formset = RealisationFormSet(request.POST, prefix='real')
-        emprunt_formset = EmpruntFormSet(request.POST, prefix='emprunt')
+        form = SousProjetForm(post_data)
+        infrastructure_formset = InfrastructureFormSet(post_data, prefix='infra')
+        equipement_formset = EquipementFormSet(post_data, prefix='equip')
+        intrant_formset = IntrantFormSet(post_data, prefix='intrant')
+        realisation_formset = RealisationFormSet(post_data, prefix='real')
+        emprunt_formset = EmpruntFormSet(post_data, prefix='emprunt')
         
         # Validation individuelle
         print("\n🔍 VALIDATION DES FORMULAIRES:")
@@ -130,7 +168,7 @@ def nouveau_sous_projet(request):
                         realisation.sous_projet = sous_projet
                         realisation.save()
                         real_count += 1
-                        print(f"  ✅ Réalisation {real_count} sauvegardée: {real_form.cleaned_data}")
+                        print(f"  ✅ Réalisation {real_count} sauvegardée")
                 
                 # Sauvegarde des emprunts
                 print("\n💰 Sauvegarde des emprunts...")
@@ -141,7 +179,7 @@ def nouveau_sous_projet(request):
                         emprunt.sous_projet = sous_projet
                         emprunt.save()
                         emp_count += 1
-                        print(f"  ✅ Emprunt {emp_count} sauvegardé: {emp_form.cleaned_data}")
+                        print(f"  ✅ Emprunt {emp_count} sauvegardé")
                 
                 print("\n" + "="*40)
                 print("🎉 TOUTES LES DONNÉES ONT ÉTÉ SAUVEGARDÉES AVEC SUCCÈS!")

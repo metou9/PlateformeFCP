@@ -3,33 +3,341 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Détail du sous-projet</title>
+    <title>Détail du sous-projet #{{ sous_projet.id }}</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <style>
+        .section-title {
+            background-color: #f8f9fa;
+            padding: 10px;
+            margin: 20px 0 10px 0;
+            border-left: 5px solid #007bff;
+            font-weight: bold;
+        }
+        .info-card {
+            margin-bottom: 20px;
+        }
+    </style>
 </head>
 <body>
     <div class="container-fluid mt-4">
+        <!-- En-tête avec bouton retour -->
         <div class="d-flex justify-content-between align-items-center mb-4">
             <h1>Détail du sous-projet #{{ sous_projet.id }}</h1>
-            <div>
-                <a href="{% url 'liste_sous_projets' %}" class="btn btn-secondary">Retour à la liste</a>
+            <a href="{% url 'formulaire:liste_sous_projets' %}" class="btn btn-secondary">
+                ← Retour à la liste
+            </a>
+        </div>
+        
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-success alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <!-- SECTION 1: Informations générales -->
+        <div class="card info-card">
+            <div class="card-header bg-primary text-white">
+                <h5 class="mb-0">1. Informations générales</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Date du formulaire:</strong> {{ sous_projet.date_formulaire|date:"d/m/Y" }}</p>
+                        <p><strong>Intitulé du sous-projet:</strong> {{ sous_projet.intitule_sous_projet }}</p>
+                        <p><strong>Type de sous-projet demandé:</strong> {{ sous_projet.type_sous_projet_demande }}</p>
+                        <p><strong>Guichet:</strong> {{ sous_projet.guichet }}</p>
+                        <p><strong>Type de projet:</strong> {{ sous_projet.type_projet }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Chaîne d'approvisionnement:</strong> {{ sous_projet.chaine_approvisionnement }}</p>
+                        <p><strong>Marchés visés:</strong> {{ sous_projet.marches_vises }}</p>
+                        <p><strong>Segment de la CA:</strong> {{ sous_projet.segment_ca }}</p>
+                        <p><strong>Date de création:</strong> {{ sous_projet.date_creation|date:"d/m/Y H:i" }}</p>
+                    </div>
+                </div>
             </div>
         </div>
         
-        <div class="card">
-            <div class="card-header">
-                <h5>Informations générales</h5>
+        <!-- SECTION 2: Identification du demandeur -->
+        <div class="card info-card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">2. Identification du demandeur / bénéficiaire</h5>
             </div>
             <div class="card-body">
-                <p><strong>Intitulé:</strong> {{ sous_projet.intitule_sous_projet }}</p>
-                <p><strong>Date formulaire:</strong> {{ sous_projet.date_formulaire }}</p>
-                <p><strong>Guichet:</strong> {{ sous_projet.guichet }}</p>
-                <p><strong>Type:</strong> {{ sous_projet.type_projet }}</p>
-                <p><strong>Wilaya:</strong> {{ sous_projet.wilaya.nom }}</p>
-                <p><strong>Moughataa:</strong> {{ sous_projet.moughataa.nom }}</p>
-                <p><strong>Commune:</strong> {{ sous_projet.commune.nom }}</p>
-                <p><strong>Village:</strong> {{ sous_projet.village|default:"-" }}</p>
+                <div class="row">
+                    <div class="col-md-6">
+                        <p><strong>Nom et statut juridique:</strong> {{ sous_projet.nom_statut_juridique }}</p>
+                        <p><strong>Adresse:</strong> {{ sous_projet.adresse }}</p>
+                        <p><strong>Principal domaine d'activités:</strong> {{ sous_projet.principal_domaine_activites }}</p>
+                    </div>
+                    <div class="col-md-6">
+                        <p><strong>Personne contact:</strong> {{ sous_projet.personne_contact_nom }} ({{ sous_projet.personne_contact_fonction }})</p>
+                        <p><strong>Téléphone:</strong> {{ sous_projet.telephone }}</p>
+                        <p><strong>Fax:</strong> {{ sous_projet.fax|default:"-" }}</p>
+                        <p><strong>Email:</strong> {{ sous_projet.email }}</p>
+                        <p><strong>Présenté par femmes/jeunes:</strong> {{ sous_projet.presente_par_femmes_jeunes }}</p>
+                    </div>
+                </div>
             </div>
         </div>
+        
+        <!-- SECTION 3: Description et localisation -->
+        <div class="card info-card">
+            <div class="card-header bg-info text-white">
+                <h5 class="mb-0">3. Description du sous-projet</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Objectif:</strong> {{ sous_projet.objectif_sous_projet }}</p>
+                <p><strong>Principales activités:</strong> {{ sous_projet.principales_activites }}</p>
+                
+                <h6 class="mt-3">Localisation:</h6>
+                <div class="row">
+                    <div class="col-md-3">
+                        <p><strong>Wilaya:</strong> {{ sous_projet.wilaya.nom|default:"-" }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Moughataa:</strong> {{ sous_projet.moughataa.nom|default:"-" }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Commune:</strong> {{ sous_projet.commune.nom|default:"-" }}</p>
+                    </div>
+                    <div class="col-md-3">
+                        <p><strong>Village:</strong> {{ sous_projet.village|default:"-" }}</p>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- SECTION 4: Infrastructures -->
+        {% if sous_projet.infrastructures.all %}
+        <div class="card info-card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">4. A. Infrastructures</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantité</th>
+                            <th>Montant Total</th>
+                            <th>Subvention</th>
+                            <th>Contribution</th>
+                            <th>Autre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for infra in sous_projet.infrastructures.all %}
+                        <tr>
+                            <td>{{ infra.description }}</td>
+                            <td>{{ infra.quantite }}</td>
+                            <td>{{ infra.montant_total }}</td>
+                            <td>{{ infra.subvention_padisam }}</td>
+                            <td>{{ infra.contribution_promoteur }}</td>
+                            <td>{{ infra.autre_financement }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- SECTION 4: Equipements -->
+        {% if sous_projet.equipements.all %}
+        <div class="card info-card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">4. B. Equipements</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantité</th>
+                            <th>Montant Total</th>
+                            <th>Subvention</th>
+                            <th>Contribution</th>
+                            <th>Autre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for equip in sous_projet.equipements.all %}
+                        <tr>
+                            <td>{{ equip.description }}</td>
+                            <td>{{ equip.quantite }}</td>
+                            <td>{{ equip.montant_total }}</td>
+                            <td>{{ equip.subvention_padisam }}</td>
+                            <td>{{ equip.contribution_promoteur }}</td>
+                            <td>{{ equip.autre_financement }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- SECTION 4: Intrants -->
+        {% if sous_projet.intrants.all %}
+        <div class="card info-card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">4. C. Intrants</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Description</th>
+                            <th>Quantité</th>
+                            <th>Montant Total</th>
+                            <th>Subvention</th>
+                            <th>Contribution</th>
+                            <th>Autre</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for intrant in sous_projet.intrants.all %}
+                        <tr>
+                            <td>{{ intrant.description }}</td>
+                            <td>{{ intrant.quantite }}</td>
+                            <td>{{ intrant.montant_total }}</td>
+                            <td>{{ intrant.subvention_padisam }}</td>
+                            <td>{{ intrant.contribution_promoteur }}</td>
+                            <td>{{ intrant.autre_financement }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- SECTION 4: Fonctionnement -->
+        {% if sous_projet.fonctionnement_description %}
+        <div class="card info-card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">4. D. Fonctionnement</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3"><strong>Description:</strong> {{ sous_projet.fonctionnement_description }}</div>
+                    <div class="col-md-2"><strong>Quantité:</strong> {{ sous_projet.fonctionnement_quantite }}</div>
+                    <div class="col-md-2"><strong>Montant Total:</strong> {{ sous_projet.fonctionnement_montant_total }}</div>
+                    <div class="col-md-2"><strong>Contribution:</strong> {{ sous_projet.fonctionnement_contribution_promoteur }}</div>
+                    <div class="col-md-3"><strong>Autre financement:</strong> {{ sous_projet.fonctionnement_autre_financement }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- SECTION 4: Services -->
+        {% if sous_projet.service_description %}
+        <div class="card info-card">
+            <div class="card-header bg-warning text-dark">
+                <h5 class="mb-0">4. E. Services</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-3"><strong>Description:</strong> {{ sous_projet.service_description }}</div>
+                    <div class="col-md-1"><strong>Qté:</strong> {{ sous_projet.service_quantite }}</div>
+                    <div class="col-md-2"><strong>Montant:</strong> {{ sous_projet.service_montant_total }}</div>
+                    <div class="col-md-2"><strong>Subvention:</strong> {{ sous_projet.service_subvention_padisam }}</div>
+                    <div class="col-md-2"><strong>Contribution:</strong> {{ sous_projet.service_contribution_promoteur }}</div>
+                    <div class="col-md-2"><strong>Autre:</strong> {{ sous_projet.service_autre_financement }}</div>
+                </div>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- SECTION 5: Renseignement sur le promoteur -->
+        <div class="card info-card">
+            <div class="card-header bg-secondary text-white">
+                <h5 class="mb-0">5. Renseignement sur le promoteur</h5>
+            </div>
+            <div class="card-body">
+                <p><strong>Année de début des activités:</strong> {{ sous_projet.annee_debut_activites }}</p>
+                <p><strong>Historique:</strong> {{ sous_projet.historique_promoteur }}</p>
+            </div>
+        </div>
+        
+        <!-- SECTION 6: Réalisations passées -->
+        {% if sous_projet.realisations.all %}
+        <div class="card info-card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">6. Réalisations passées</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Année</th>
+                            <th>Produit</th>
+                            <th>Volume</th>
+                            <th>Ventes (USD)</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for real in sous_projet.realisations.all %}
+                        <tr>
+                            <td>{{ real.annee }}</td>
+                            <td>{{ real.produit }}</td>
+                            <td>{{ real.volume }}</td>
+                            <td>{{ real.ventes_usd }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- SECTION 8: Passifs (emprunts) -->
+        {% if sous_projet.emprunts.all %}
+        <div class="card info-card">
+            <div class="card-header bg-danger text-white">
+                <h5 class="mb-0">8. Passifs (emprunts)</h5>
+            </div>
+            <div class="card-body">
+                <table class="table table-sm table-bordered">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Année</th>
+                            <th>Institution</th>
+                            <th>Montant emprunté</th>
+                            <th>Montant remboursé</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp in sous_projet.emprunts.all %}
+                        <tr>
+                            <td>{{ emp.annee }}</td>
+                            <td>{{ emp.institution_financiere }}</td>
+                            <td>{{ emp.montant_emprunte }}</td>
+                            <td>{{ emp.montant_rembourse }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+        {% endif %}
+        
+        <!-- Bouton retour en bas -->
+        <div class="mt-4 mb-5">
+            <a href="{% url 'formulaire:liste_sous_projets' %}" class="btn btn-secondary">
+                ← Retour à la liste
+            </a>
+            <a href="{% url 'formulaire:detail_sous_projet' sous_projet.id %}" class="btn btn-primary">
+                🔄 Actualiser
+            </a>
+        </div>
     </div>
+    
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>
 </html>

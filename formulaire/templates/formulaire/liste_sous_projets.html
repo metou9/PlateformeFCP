@@ -9,6 +9,9 @@
         .table th { background-color: #f8f9fa; }
         .badge-agr { background-color: #28a745; color: white; padding: 5px 10px; border-radius: 5px; }
         .badge-aci { background-color: #007bff; color: white; padding: 5px 10px; border-radius: 5px; }
+        .badge-ag { background-color: #fd7e14; color: white; padding: 5px 10px; border-radius: 5px; }
+        .badge-el { background-color: #6f42c1; color: white; padding: 5px 10px; border-radius: 5px; }
+        .badge-env { background-color: #20c997; color: white; padding: 5px 10px; border-radius: 5px; }
     </style>
 </head>
 <body>
@@ -17,7 +20,7 @@
             <div class="col-md-12">
                 <div class="d-flex justify-content-between align-items-center mb-4">
                     <h1>Liste des sous-projets</h1>
-                    <a href="{% url 'nouveau_sous_projet' %}" class="btn btn-primary">
+                    <a href="{% url 'formulaire:nouveau_sous_projet' %}" class="btn btn-primary">
                         + Nouveau sous-projet
                     </a>
                 </div>
@@ -37,12 +40,13 @@
                             <thead>
                                 <tr>
                                     <th>ID</th>
-                                    <th>Date formulaire</th>
-                                    <th>Intitulé du sous-projet</th>
+                                    <th>Date</th>
+                                    <th>Intitulé</th>
                                     <th>Guichet</th>
                                     <th>Type</th>
                                     <th>Demandeur</th>
-                                    <th>Localisation</th>
+                                    <th>Wilaya</th>
+                                    <th>Moughataa</th>
                                     <th>Actions</th>
                                 </tr>
                             </thead>
@@ -59,17 +63,20 @@
                                             <span class="badge-aci">{{ projet.guichet }}</span>
                                         {% endif %}
                                     </td>
-                                    <td>{{ projet.type_projet }}</td>
-                                    <td>{{ projet.nom_statut_juridique|truncatechars:30 }}</td>
                                     <td>
-                                        {% if projet.wilaya %}
-                                            {{ projet.wilaya.nom|truncatechars:15 }}
+                                        {% if projet.type_projet == 'AG' %}
+                                            <span class="badge-ag">{{ projet.type_projet }}</span>
+                                        {% elif projet.type_projet == 'EL' %}
+                                            <span class="badge-el">{{ projet.type_projet }}</span>
                                         {% else %}
-                                            -
+                                            <span class="badge-env">{{ projet.type_projet }}</span>
                                         {% endif %}
                                     </td>
+                                    <td>{{ projet.nom_statut_juridique|truncatechars:30 }}</td>
+                                    <td>{{ projet.wilaya.nom|default:"-" }}</td>
+                                    <td>{{ projet.moughataa.nom|default:"-" }}</td>
                                     <td>
-                                        <a href="{% url 'detail_sous_projet' projet.id %}" class="btn btn-sm btn-info">Voir</a>
+                                        <a href="{% url 'formulaire:detail_sous_projet' projet.id %}" class="btn btn-sm btn-info">Voir</a>
                                     </td>
                                 </tr>
                                 {% endfor %}
@@ -85,7 +92,7 @@
                         <h4 class="alert-heading">Aucun sous-projet!</h4>
                         <p>Vous n'avez pas encore enregistré de sous-projet.</p>
                         <hr>
-                        <a href="{% url 'nouveau_sous_projet' %}" class="btn btn-primary">Créer le premier sous-projet</a>
+                        <a href="{% url 'formulaire:nouveau_sous_projet' %}" class="btn btn-primary">Créer le premier sous-projet</a>
                     </div>
                 {% endif %}
             </div>

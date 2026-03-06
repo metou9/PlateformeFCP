@@ -8,28 +8,8 @@ from .models import (
 )
 
 class SousProjetForm(forms.ModelForm):
-    # Pour la localisation : chargement dynamique
     date_formulaire = forms.DateField(
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'})
-    )
-    
-    # Redéfinir les champs pour personnaliser l'affichage
-    wilaya = forms.ModelChoiceField(
-        queryset=Wilaya.objects.all(),
-        empty_label="Sélectionnez une wilaya",
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_wilaya'})
-    )
-    
-    moughataa = forms.ModelChoiceField(
-        queryset=Moughataa.objects.none(),  # Vide au départ, rempli via AJAX
-        empty_label="Sélectionnez d'abord une wilaya",
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_moughataa'})
-    )
-    
-    commune = forms.ModelChoiceField(
-        queryset=Commune.objects.none(),  # Vide au départ, rempli via AJAX
-        empty_label="Sélectionnez d'abord une moughataa",
-        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_commune'})
     )
     
     class Meta:
@@ -57,7 +37,8 @@ class SousProjetForm(forms.ModelForm):
             'village': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom du village/quartier'}),
             'annee_debut_activites': forms.NumberInput(attrs={'class': 'form-control'}),
             'historique_promoteur': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
-         # Nouveaux champs pour fonctionnement
+            
+            # Nouveaux champs pour fonctionnement
             'fonctionnement_description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description du fonctionnement'}),
             'fonctionnement_quantite': forms.NumberInput(attrs={'class': 'form-control'}),
             'fonctionnement_montant_total': forms.NumberInput(attrs={'class': 'form-control'}),
@@ -75,13 +56,14 @@ class SousProjetForm(forms.ModelForm):
     
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        # Si on est en édition, pré-remplir les listes déroulantes
-        if self.instance and self.instance.pk:
-            if self.instance.wilaya:
-                self.fields['moughataa'].queryset = Moughataa.objects.filter(wilaya=self.instance.wilaya)
-            if self.instance.moughataa:
-                self.fields['commune'].queryset = Commune.objects.filter(moughataa=self.instance.moughataa)
-
+        # Rendre tous les champs de localisation NON obligatoires pour le test
+        self.fields['wilaya'].required = False
+        self.fields['moughataa'].required = False
+        self.fields['commune'].required = False
+        
+        # Afficher TOUTES les moughataas et communes sans filtre
+        self.fields['moughataa'].queryset = Moughataa.objects.all()
+        self.fields['commune'].queryset = Commune.objects.all()
 # Création des formulaires pour les tables enfants (formsets)
 InfrastructureFormSet = inlineformset_factory(
     SousProjet, Infrastructure,
