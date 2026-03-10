@@ -26,6 +26,9 @@ SECRET_KEY = 'django-insecure-o*g55(6!ce%plup*e=j=%0byv7qe$z&6n(g1n@2zr_kdrf^fk5
 DEBUG = True
 
 ALLOWED_HOSTS = ["bapps.binorassocies.com", "localhost"]
+CSRF_TRUSTED_ORIGINS = [
+    "https://bapps.binorassocies.com",
+]
 
 
 # Application definition
