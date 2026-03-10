@@ -7,6 +7,11 @@ from .forms import (
     IntrantFormSet, RealisationFormSet, EmpruntFormSet
 )
 
+
+def accueil(request):
+    """Redirige vers le formulaire de nouveau sous-projet"""
+    return redirect('formulaire:nouveau_sous_projet')
+
 def nouveau_sous_projet(request):
     print("\n" + "="*60)
     print("🔍 NOUVELLE REQUÊTE SUR /formulaire/nouveau/")
