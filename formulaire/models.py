@@ -1,8 +1,7 @@
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
+from django.contrib.auth.hashers import make_password, check_password
 
-from django.db import models
-from django.core.validators import MinValueValidator, MaxValueValidator
 
 # ============================================
 # 1. MODÈLES DE RÉFÉRENCE (Tables déjà existantes)
@@ -210,3 +209,39 @@ class PassifEmprunt(models.Model):
     
     def __str__(self):
         return f"Emprunt {self.annee} - {self.institution_financiere[:20]}"
+
+# ============================================
+# 5. TABLE UTILISATEUR
+# ============================================
+class Utilisateur(models.Model):
+    ROLE_CHOICES = [
+        ('admin', 'Administrateur'),
+        ('agent', 'Agent de saisie'),
+        ('superviseur', 'Superviseur'),
+        ('consultant', 'Consultant'),
+    ]
+    
+    nom = models.CharField(max_length=100)
+    prenom = models.CharField(max_length=100)
+    username = models.CharField(max_length=50, unique=True)
+    password = models.CharField(max_length=128)  # Le mot de passe sera hashé
+    role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='agent')
+    email = models.EmailField(blank=True, null=True)
+    date_creation = models.DateTimeField(auto_now_add=True)
+    dernier_login = models.DateTimeField(null=True, blank=True)
+    actif = models.BooleanField(default=True)
+    
+    def set_password(self, raw_password):
+        """Hash le mot de passe"""
+        self.password = make_password(raw_password)
+    
+    def check_password(self, raw_password):
+        """Vérifie le mot de passe"""
+        return check_password(raw_password, self.password)
+    
+    def __str__(self):
+        return f"{self.prenom} {self.nom} ({self.username})"
+    
+    class Meta:
+        verbose_name = "Utilisateur"
+        verbose_name_plural = "Utilisateurs"

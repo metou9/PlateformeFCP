@@ -1,21 +1,107 @@
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib import messages
-from .models import SousProjet, Wilaya, Moughataa, Commune
 from django.http import JsonResponse
+from django.utils import timezone
+from django.contrib.auth import logout
+from functools import wraps
+
+from .models import SousProjet, Wilaya, Moughataa, Commune, Utilisateur
 from .forms import (
     SousProjetForm, InfrastructureFormSet, EquipementFormSet,
     IntrantFormSet, RealisationFormSet, EmpruntFormSet
 )
+from .auth_forms import LoginForm  # On garde seulement LoginForm
 
+# ============================================
+# DÉCORATEUR POUR PROTÉGER LES VUES
+# ============================================
 
+def login_required(view_func):
+    """Décorateur pour vérifier que l'utilisateur est connecté"""
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        if not request.session.get('user_id'):
+            return redirect('formulaire:login')
+        return view_func(request, *args, **kwargs)
+    return wrapper
+
+# ============================================
+# VUES D'AUTHENTIFICATION (CONNEXION UNIQUEMENT)
+# ============================================
+
+def login_view(request):
+    """Page de connexion"""
+    # Si déjà connecté, rediriger vers l'accueil
+    if request.session.get('user_id'):
+        return redirect('formulaire:accueil')
+    
+    if request.method == 'POST':
+        form = LoginForm(request.POST)
+        if form.is_valid():
+            username = form.cleaned_data['username']
+            password = form.cleaned_data['password']
+            
+            try:
+                utilisateur = Utilisateur.objects.get(username=username)
+                if utilisateur.check_password(password) and utilisateur.actif:
+                    # Connexion réussie
+                    request.session['user_id'] = utilisateur.id
+                    request.session['user_name'] = f"{utilisateur.prenom} {utilisateur.nom}"
+                    request.session['user_role'] = utilisateur.role
+                    
+                    # Mettre à jour la date de dernier login
+                    utilisateur.dernier_login = timezone.now()
+                    utilisateur.save()
+                    
+                    messages.success(request, f"Bienvenue {utilisateur.prenom}!")
+                    return redirect('formulaire:accueil')
+                else:
+                    messages.error(request, "Mot de passe incorrect ou compte inactif")
+            except Utilisateur.DoesNotExist:
+                messages.error(request, "Nom d'utilisateur inexistant")
+    else:
+        form = LoginForm()
+    
+    return render(request, 'formulaire/login.html', {'form': form})
+
+def logout_view(request):
+    """Déconnexion"""
+    logout(request)
+    request.session.flush()
+    messages.success(request, "Vous avez été déconnecté")
+    return redirect('formulaire:login')
+
+# ============================================
+# VUES PROTÉGÉES DE L'APPLICATION
+# ============================================
+
+@login_required
 def accueil(request):
-    """Redirige vers le formulaire de nouveau sous-projet"""
-    return redirect('formulaire:nouveau_sous_projet')
+    """Page d'accueil après connexion"""
+    from django.utils import timezone
+    import datetime
+    
+    # Statistiques
+    total_projets = SousProjet.objects.count()
+    en_attente = SousProjet.objects.filter(statut='en_attente').count() if hasattr(SousProjet, 'statut') else 0
+    derniers_projets = SousProjet.objects.all().order_by('-date_creation')[:5]
+    
+    context = {
+        'user_name': request.session.get('user_name'),
+        'user_role': request.session.get('user_role'),
+        'total_projets': total_projets,
+        'en_attente': en_attente,
+        'derniers_projets': derniers_projets,
+        'now': timezone.now(),
+    }
+    return render(request, 'formulaire/accueil.html', context)
 
+@login_required
 def nouveau_sous_projet(request):
     print("\n" + "="*60)
     print("🔍 NOUVELLE REQUÊTE SUR /formulaire/nouveau/")
     print(f"📌 Méthode: {request.method}")
+    print(f"👤 Utilisateur: {request.session.get('user_name')}")
     print("="*60)
     
     if request.method == 'POST':
@@ -254,18 +340,34 @@ def nouveau_sous_projet(request):
         'intrant_formset': intrant_formset,
         'realisation_formset': realisation_formset,
         'emprunt_formset': emprunt_formset,
+        'user_name': request.session.get('user_name'),
+        'user_role': request.session.get('user_role'),
     }
     return render(request, 'formulaire/nouveau_sous_projet.html', context)
 
+@login_required
 def liste_sous_projets(request):
     sous_projets = SousProjet.objects.all().order_by('-date_creation')
     print(f"\n📋 Liste des sous-projets: {sous_projets.count()} trouvés")
-    return render(request, 'formulaire/liste_sous_projets.html', {'sous_projets': sous_projets})
+    return render(request, 'formulaire/liste_sous_projets.html', {
+        'sous_projets': sous_projets,
+        'user_name': request.session.get('user_name'),
+        'user_role': request.session.get('user_role'),
+    })
 
+@login_required
 def detail_sous_projet(request, pk):
     sous_projet = get_object_or_404(SousProjet, pk=pk)
     print(f"\n🔍 Détail du sous-projet ID: {pk}")
-    return render(request, 'formulaire/detail_sous_projet.html', {'sous_projet': sous_projet})
+    return render(request, 'formulaire/detail_sous_projet.html', {
+        'sous_projet': sous_projet,
+        'user_name': request.session.get('user_name'),
+        'user_role': request.session.get('user_role'),
+    })
+
+# ============================================
+# API NON PROTÉGÉES (accessibles sans authentification)
+# ============================================
 
 def get_moughataas(request):
     wilaya_id = request.GET.get('wilaya_id')

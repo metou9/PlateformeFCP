@@ -18,13 +18,10 @@ from django.contrib import admin
 from django.urls import path, include
 from django.shortcuts import redirect
 
-def redirect_to_formulaire(request):
-    return redirect('formulaire:accueil')
-
 
 urlpatterns = [
-    path('', redirect_to_formulaire, name='root'),
+    # Redirige la racine vers la page de login
+    path('', lambda request: redirect('formulaire:login'), name='root'),
     path('admin/', admin.site.urls),
     path('formulaire/', include(('formulaire.urls', 'formulaire'), namespace='formulaire')),
-
 ]
