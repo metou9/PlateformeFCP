@@ -80,7 +80,7 @@ DATABASES = {
         'NAME': 'fcp_app_db',
         'USER': 'soukeina',          # Remplace par ton nom d'utilisateur
         'PASSWORD': '',                # Pas de mot de passe
-        'HOST': 'localhost',
+        'HOST': 'db',
         'PORT': '5432',
     }
 }
