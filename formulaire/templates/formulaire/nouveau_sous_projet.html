@@ -3,543 +3,911 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Nouveau Sous-Projet</title>
+    <title>Nouveau sous-projet - FCP</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/formulaire/css/style.css" rel="stylesheet">
     <style>
-        .section-title {
-            background-color: #f8f9fa;
-            padding: 10px;
-            margin: 20px 0 10px 0;
-            border-left: 5px solid #007bff;
+        /* Styles spécifiques au wizard */
+        .wizard-step {
+            display: none;
+        }
+        .wizard-step.active {
+            display: block;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            position: relative;
+            flex-wrap: wrap;
+            gap: 10px;
+        }
+        .step-indicator::before {
+            content: '';
+            position: absolute;
+            top: 20px;
+            left: 0;
+            right: 0;
+            height: 2px;
+            background: #e0e0e0;
+            z-index: 1;
+        }
+        .step-item {
+            position: relative;
+            z-index: 2;
+            background: white;
+            padding: 10px 20px;
+            border-radius: 30px;
+            font-weight: 500;
+            color: #999;
+            border: 2px solid #e0e0e0;
+            transition: all 0.3s;
+            cursor: pointer;
+            font-size: 0.9rem;
+        }
+        .step-item.completed {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-color: transparent;
+        }
+        .step-item.active {
+            background: white;
+            color: #667eea;
+            border-color: #667eea;
             font-weight: bold;
         }
-        .formset-row {
-            background-color: #f9f9f9;
+        .step-item i {
+            margin-right: 8px;
+        }
+        .navigation-buttons {
+            display: flex;
+            justify-content: space-between;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 2px solid #e0e0e0;
+        }
+        .btn-prev, .btn-next {
+            min-width: 120px;
+        }
+        .btn-next {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border: none;
+        }
+        .btn-next:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+        .btn-submit {
+            background: linear-gradient(135deg, #28a745, #20c997);
+            color: white;
+            border: none;
+        }
+        .btn-submit:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+        .step-title {
+            font-size: 1.5rem;
+            margin-bottom: 20px;
+            color: #667eea;
+        }
+        .summary-card {
+            background: #f8f9fa;
+            border-radius: 10px;
             padding: 15px;
             margin-bottom: 10px;
-            border-radius: 5px;
-            border: 1px solid #dee2e6;
-        }
-        .delete-row {
-            color: red;
             cursor: pointer;
-            margin-top: 32px;
+            transition: all 0.3s;
+            border: 2px solid #e0e0e0;
         }
-        .add-row {
-            margin: 10px 0;
+        .summary-card:hover {
+            transform: translateX(5px);
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            border-color: #667eea;
+        }
+        .summary-card.completed {
+            border-left: 4px solid #28a745;
+        }
+        .summary-card i {
+            margin-right: 10px;
+            color: #667eea;
+        }
+        .save-progress {
+            background: #e8f4fd;
+            border-radius: 10px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border-left: 4px solid #667eea;
         }
     </style>
 </head>
 <body>
-    <div class="container-fluid mt-4">
-        <div class="row">
-            <div class="col-md-12">
-                <h1 class="mb-4">Nouveau Sous-Projet</h1>
+    <!-- Navigation avec Bootstrap -->
+    <nav class="navbar navbar-expand-lg navbar-dark" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
+                🏛️ Plateforme FCP
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'formulaire:liste_sous_projets' %}">
+                            📋 Liste
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'formulaire:nouveau_sous_projet' %}">
+                            ➕ Nouveau
+                        </a>
+                    </li>
+                    <li class="nav-item">
+                        <span class="nav-link user-badge">
+                            👤 {{ user_name }} ({{ user_role }})
+                        </span>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'formulaire:logout' %}">
+                            🚪 Déconnexion
+                        </a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-5 mb-5">
+        <!-- Messages -->
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+        
+        <!-- En-tête -->
+        <div class="page-header">
+            <h1>➕ Nouveau sous-projet</h1>
+            <p class="mb-0">Formulaire simplifié en 7 étapes</p>
+        </div>
+        
+        <!-- Sauvegarde automatique -->
+        <div class="save-progress">
+            <i>💾</i> Vos données sont sauvegardées automatiquement. Vous pouvez reprendre plus tard.
+        </div>
+        
+        <!-- Indicateur de progression -->
+        <div class="step-indicator">
+            <div class="step-item active" data-step="1" onclick="goToStep(1)"><i>📋</i> 1. Général</div>
+            <div class="step-item" data-step="2" onclick="goToStep(2)"><i>👤</i> 2. Demandeur</div>
+            <div class="step-item" data-step="3" onclick="goToStep(3)"><i>📍</i> 3. Description</div>
+            <div class="step-item" data-step="4" onclick="goToStep(4)"><i>💰</i> 4. Financements</div>
+            <div class="step-item" data-step="5" onclick="goToStep(5)"><i>👨‍🌾</i> 5. Promoteur</div>
+            <div class="step-item" data-step="6" onclick="goToStep(6)"><i>📊</i> 6. Réalisations</div>
+            <div class="step-item" data-step="7" onclick="goToStep(7)"><i>💳</i> 7. Emprunts</div>
+        </div>
+
+        <form method="post" id="sousProjetForm">
+            {% csrf_token %}
+            
+            <!-- ÉTAPE 1: Informations générales -->
+            <div class="wizard-step active" id="step1">
+                <h3 class="step-title">📋 Étape 1: Informations générales</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Date du formulaire</label>
+                                    {{ form.date_formulaire }}
+                                    <small class="form-text">Date de saisie du formulaire</small>
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Intitulé du sous-projet</label>
+                                    {{ form.intitule_sous_projet }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label">Type de sous-projet</label>
+                                    {{ form.type_sous_projet_demande }}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label class="form-label">Guichet</label>
+                                    {{ form.guichet }}
+                                </div>
+                            </div>
+                            <div class="col-md-2">
+                                <div class="form-group">
+                                    <label class="form-label">Type projet</label>
+                                    {{ form.type_projet }}
+                                </div>
+                            </div>
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label">Chaîne d'approvisionnement</label>
+                                    {{ form.chaine_approvisionnement }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Marchés visés</label>
+                                    {{ form.marches_vises }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Segment de la CA</label>
+                                    {{ form.segment_ca }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ÉTAPE 2: Identification demandeur -->
+            <div class="wizard-step" id="step2">
+                <h3 class="step-title">👤 Étape 2: Identification du demandeur</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Nom et statut juridique</label>
+                                    {{ form.nom_statut_juridique }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Principal domaine d'activités</label>
+                                    {{ form.principal_domaine_activites }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Adresse</label>
+                            {{ form.adresse }}
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Personne contact (nom)</label>
+                                    {{ form.personne_contact_nom }}
+                                </div>
+                            </div>
+                            <div class="col-md-6">
+                                <div class="form-group">
+                                    <label class="form-label">Personne contact (fonction)</label>
+                                    {{ form.personne_contact_fonction }}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">Téléphone</label>
+                                    {{ form.telephone }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">Fax</label>
+                                    {{ form.fax }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">Email</label>
+                                    {{ form.email }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">Femmes/jeunes?</label>
+                                    {{ form.presente_par_femmes_jeunes }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ÉTAPE 3: Description et localisation -->
+            <div class="wizard-step" id="step3">
+                <h3 class="step-title">📍 Étape 3: Description et localisation</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="form-group">
+                            <label class="form-label">Objectif du sous-projet</label>
+                            {{ form.objectif_sous_projet }}
+                        </div>
+                        
+                        <div class="form-group">
+                            <label class="form-label">Liste des principales activités</label>
+                            {{ form.principales_activites }}
+                            <small class="form-text">Décrivez les activités avec des objectifs quantitatifs</small>
+                        </div>
+                        
+                        <h5 class="mt-4 mb-3">📍 Localisation</h5>
+                        <div class="row">
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">Wilaya</label>
+                                    {{ form.wilaya }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">Moughataa</label>
+                                    {{ form.moughataa }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">Commune</label>
+                                    {{ form.commune }}
+                                </div>
+                            </div>
+                            <div class="col-md-3">
+                                <div class="form-group">
+                                    <label class="form-label">Village</label>
+                                    {{ form.village }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- ÉTAPE 4: Financements -->
+            <div class="wizard-step" id="step4">
+                <h3 class="step-title">💰 Étape 4: Financements</h3>
                 
-                {% if messages %}
-                    {% for message in messages %}
-                        <div class="alert alert-success">{{ message }}</div>
-                    {% endfor %}
-                {% endif %}
+                <!-- Résumé des financements -->
+                <div class="row mb-4">
+                    <div class="col-md-4">
+                        <div class="summary-card" onclick="$('#infraModal').modal('show')">
+                            <i>🏗️</i> <strong>Infrastructures</strong><br>
+                            <small>Cliquez pour saisir</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="summary-card" onclick="$('#equipModal').modal('show')">
+                            <i>🔧</i> <strong>Équipements</strong><br>
+                            <small>Cliquez pour saisir</small>
+                        </div>
+                    </div>
+                    <div class="col-md-4">
+                        <div class="summary-card" onclick="$('#intrantModal').modal('show')">
+                            <i>🌾</i> <strong>Intrants</strong><br>
+                            <small>Cliquez pour saisir</small>
+                        </div>
+                    </div>
+                </div>
                 
-                <form method="post" id="sousProjetForm">
-                    {% csrf_token %}
-                    
-                    <!-- SECTION 1: Informations générales -->
-                    <div class="section-title">1. Informations générales</div>
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label>Date du formulaire</label>
-                                {{ form.date_formulaire }}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label>Intitulé du sous-projet</label>
-                                {{ form.intitule_sous_projet }}
-                            </div>
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="summary-card" onclick="$('#foncModal').modal('show')">
+                            <i>⚙️</i> <strong>Fonctionnement</strong><br>
+                            <small>Cliquez pour saisir</small>
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label>Type de sous-projet demandé</label>
-                                {{ form.type_sous_projet_demande }}
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="mb-3">
-                                <label>Guichet</label>
-                                {{ form.guichet }}
-                            </div>
-                        </div>
-                        <div class="col-md-2">
-                            <div class="mb-3">
-                                <label>Type de projet</label>
-                                {{ form.type_projet }}
-                            </div>
-                        </div>
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label>Chaîne d'approvisionnement</label>
-                                {{ form.chaine_approvisionnement }}
-                            </div>
+                    <div class="col-md-6">
+                        <div class="summary-card" onclick="$('#servModal').modal('show')">
+                            <i>🛠️</i> <strong>Services</strong><br>
+                            <small>Cliquez pour saisir</small>
                         </div>
                     </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label>Marchés visés / clients identifiés</label>
-                                {{ form.marches_vises }}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label>Segment de la CA</label>
-                                {{ form.segment_ca }}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <!-- SECTION 2: Identification du demandeur -->
-                    <div class="section-title">2. Identification du demandeur / bénéficiaire</div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label>Nom et statut juridique</label>
-                                {{ form.nom_statut_juridique }}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label>Principal domaine d'activités</label>
-                                {{ form.principal_domaine_activites }}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="mb-3">
-                        <label>Adresse</label>
-                        {{ form.adresse }}
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label>Personne contact (nom)</label>
-                                {{ form.personne_contact_nom }}
-                            </div>
-                        </div>
-                        <div class="col-md-6">
-                            <div class="mb-3">
-                                <label>Personne contact (fonction)</label>
-                                {{ form.personne_contact_fonction }}
-                            </div>
-                        </div>
-                    </div>
-                    
-                    <div class="row">
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label>Téléphone</label>
-                                {{ form.telephone }}
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label>Fax</label>
-                                {{ form.fax }}
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label>Email</label>
-                                {{ form.email }}
-                            </div>
-                        </div>
-                        <div class="col-md-3">
-                            <div class="mb-3">
-                                <label>Présenté par femmes/jeunes?</label>
-                                {{ form.presente_par_femmes_jeunes }}
-                            </div>
-                        </div>
-                    </div>
-                    
-                  <!-- SECTION 3: Description du sous-projet -->
-<div class="section-title">3. Description du sous-projet</div>
+                </div>
+            </div>
 
-<div class="mb-3">
-    <label>Objectif du sous-projet</label>
-    {{ form.objectif_sous_projet }}
-</div>
+            <!-- ÉTAPE 5: Promoteur -->
+            <div class="wizard-step" id="step5">
+                <h3 class="step-title">👨‍🌾 Étape 5: Renseignement promoteur</h3>
+                <div class="card">
+                    <div class="card-body">
+                        <div class="row">
+                            <div class="col-md-4">
+                                <div class="form-group">
+                                    <label class="form-label">Année début activités</label>
+                                    {{ form.annee_debut_activites }}
+                                </div>
+                            </div>
+                            <div class="col-md-8">
+                                <div class="form-group">
+                                    <label class="form-label">Historique</label>
+                                    {{ form.historique_promoteur }}
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-<div class="mb-3">
-    <label>Liste des principales activités</label>
-    {{ form.principales_activites }}
-</div>
+            <!-- ÉTAPE 6: Réalisations -->
+            <div class="wizard-step" id="step6">
+                <h3 class="step-title">📊 Étape 6: Réalisations passées</h3>
+                <div class="card">
+                    <div class="card-body">
+                        {{ realisation_formset.management_form }}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Année</th>
+                                        <th>Produit</th>
+                                        <th>Volume</th>
+                                        <th>Ventes (USD)</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for real_form in realisation_formset %}
+                                    <tr>
+                                        <td>{{ real_form.annee }}</td>
+                                        <td>{{ real_form.produit }}</td>
+                                        <td>{{ real_form.volume }}</td>
+                                        <td>{{ real_form.ventes_usd }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+            </div>
 
-<div class="section-title">Localisation du sous-projet</div>
+            <!-- ÉTAPE 7: Emprunts -->
+            <div class="wizard-step" id="step7">
+                <h3 class="step-title">💳 Étape 7: Passifs (emprunts)</h3>
+                <div class="card">
+                    <div class="card-body">
+                        {{ emprunt_formset.management_form }}
+                        <div class="table-responsive">
+                            <table class="table">
+                                <thead>
+                                    <tr>
+                                        <th>Année</th>
+                                        <th>Institution</th>
+                                        <th>Emprunté</th>
+                                        <th>Remboursé</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for emp_form in emprunt_formset %}
+                                    <tr>
+                                        <td>{{ emp_form.annee }}</td>
+                                        <td>{{ emp_form.institution_financiere }}</td>
+                                        <td>{{ emp_form.montant_emprunte }}</td>
+                                        <td>{{ emp_form.montant_rembourse }}</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- Récapitulatif final -->
+                <div class="alert alert-success mt-4">
+                    <h5>✅ Prêt à enregistrer !</h5>
+                    <p>Vérifiez les informations avant de soumettre.</p>
+                </div>
+            </div>
 
-<div class="row">
-    <div class="col-md-3">
-        <div class="mb-3">
-            <label>Wilaya</label>
-            {{ form.wilaya }}
-        </div>
+            <!-- Boutons de navigation -->
+            <div class="navigation-buttons">
+                <button type="button" class="btn btn-secondary btn-prev" onclick="prevStep()">← Précédent</button>
+                <div>
+                    <button type="button" class="btn btn-next" onclick="nextStep()">Suivant →</button>
+                    <button type="submit" class="btn btn-submit" id="submitBtn" style="display: none;">✅ Enregistrer le sous-projet</button>
+                </div>
+            </div>
+        </form>
     </div>
-    <div class="col-md-3">
-        <div class="mb-3">
-            <label>Moughataa</label>
-            {{ form.moughataa }}
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="mb-3">
-            <label>Commune</label>
-            {{ form.commune }}
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="mb-3">
-            <label>Village / Quartier</label>
-            {{ form.village }}
-            <small class="text-muted">Saisissez le nom du village ou quartier</small>
-        </div>
-    </div>
-</div>
-                    
-                    <!-- SECTION 4: Estimation du coût global -->
-                    <div class="section-title">4. Estimation du coût global et sources de financement</div>
-                    
-                    <!-- A. INFRASTRUCTURES -->
-                    <h5 class="mt-3">A. INFRASTRUCTURES</h5>
+
+    <!-- MODALS pour les financements -->
+    
+    <!-- Modal Infrastructures -->
+    <div class="modal fade" id="infraModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🏗️ Infrastructures</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
                     {{ infrastructure_formset.management_form }}
                     <div id="infrastructure-forms">
                         {% for infra_form in infrastructure_formset %}
-                            <div class="formset-row">
-                                {{ infra_form.id }}
-                                <div class="row">
-                                    <div class="col-md-3">{{ infra_form.description.label_tag }}{{ infra_form.description }}</div>
-                                    <div class="col-md-1">{{ infra_form.quantite.label_tag }}{{ infra_form.quantite }}</div>
-                                    <div class="col-md-2">{{ infra_form.montant_total.label_tag }}{{ infra_form.montant_total }}</div>
-                                    <div class="col-md-2">{{ infra_form.subvention_padisam.label_tag }}{{ infra_form.subvention_padisam }}</div>
-                                    <div class="col-md-2">{{ infra_form.contribution_promoteur.label_tag }}{{ infra_form.contribution_promoteur }}</div>
-                                    <div class="col-md-2">{{ infra_form.autre_financement.label_tag }}{{ infra_form.autre_financement }}</div>
-                                    <div class="col-md-0">{{ infra_form.DELETE }} Supprimer</div>
-                                </div>
+                        <div class="formset-row">
+                            <div class="row">
+                                <div class="col-md-3">{{ infra_form.description.label_tag }}{{ infra_form.description }}</div>
+                                <div class="col-md-1">{{ infra_form.quantite.label_tag }}{{ infra_form.quantite }}</div>
+                                <div class="col-md-2">{{ infra_form.montant_total.label_tag }}{{ infra_form.montant_total }}</div>
+                                <div class="col-md-2">{{ infra_form.subvention_padisam.label_tag }}{{ infra_form.subvention_padisam }}</div>
+                                <div class="col-md-2">{{ infra_form.contribution_promoteur.label_tag }}{{ infra_form.contribution_promoteur }}</div>
+                                <div class="col-md-2">{{ infra_form.autre_financement.label_tag }}{{ infra_form.autre_financement }}</div>
                             </div>
-                        {% endfor %}
-                    </div>
-                    <button type="button" class="btn btn-sm btn-success add-row" data-target="infrastructure">+ Ajouter une infrastructure</button>
-                    
-                    <!-- B. EQUIPEMENT -->
-                    <h5 class="mt-4">B. EQUIPEMENT</h5>
-                    {{ equipement_formset.management_form }}
-                    <div id="equipement-forms">
-                        {% for equip_form in equipement_formset %}
-                            <div class="formset-row">
-                                {{ equip_form.id }}
-                                <div class="row">
-                                    <div class="col-md-3">{{ equip_form.description.label_tag }}{{ equip_form.description }}</div>
-                                    <div class="col-md-1">{{ equip_form.quantite.label_tag }}{{ equip_form.quantite }}</div>
-                                    <div class="col-md-2">{{ equip_form.montant_total.label_tag }}{{ equip_form.montant_total }}</div>
-                                    <div class="col-md-2">{{ equip_form.subvention_padisam.label_tag }}{{ equip_form.subvention_padisam }}</div>
-                                    <div class="col-md-2">{{ equip_form.contribution_promoteur.label_tag }}{{ equip_form.contribution_promoteur }}</div>
-                                    <div class="col-md-2">{{ equip_form.autre_financement.label_tag }}{{ equip_form.autre_financement }}</div>
-                                    <div class="col-md-0">{{ equip_form.DELETE }} Supprimer</div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    <button type="button" class="btn btn-sm btn-success add-row" data-target="equipement">+ Ajouter un équipement</button>
-                    
-                    <!-- C. INTRANTS -->
-                    <h5 class="mt-4">C. INTRANTS</h5>
-                    {{ intrant_formset.management_form }}
-                    <div id="intrant-forms">
-                        {% for intrant_form in intrant_formset %}
-                            <div class="formset-row">
-                                {{ intrant_form.id }}
-                                <div class="row">
-                                    <div class="col-md-3">{{ intrant_form.description.label_tag }}{{ intrant_form.description }}</div>
-                                    <div class="col-md-1">{{ intrant_form.quantite.label_tag }}{{ intrant_form.quantite }}</div>
-                                    <div class="col-md-2">{{ intrant_form.montant_total.label_tag }}{{ intrant_form.montant_total }}</div>
-                                    <div class="col-md-2">{{ intrant_form.subvention_padisam.label_tag }}{{ intrant_form.subvention_padisam }}</div>
-                                    <div class="col-md-2">{{ intrant_form.contribution_promoteur.label_tag }}{{ intrant_form.contribution_promoteur }}</div>
-                                    <div class="col-md-2">{{ intrant_form.autre_financement.label_tag }}{{ intrant_form.autre_financement }}</div>
-                                    <div class="col-md-0">{{ intrant_form.DELETE }} Supprimer</div>
-                                </div>
-                            </div>
-                        {% endfor %}
-                    </div>
-                    <button type="button" class="btn btn-sm btn-success add-row" data-target="intrant">+ Ajouter un intrant</button>
-                    
-                    <!-- D. FONCTIONNEMENT (une seule ligne) -->
-<h5 class="mt-4">D. FONCTIONNEMENT</h5>
-<div class="row">
-    <div class="col-md-3">
-        <div class="mb-3">
-            <label>Description</label>
-            {{ form.fonctionnement_description }}
-        </div>
-    </div>
-    <div class="col-md-1">
-        <div class="mb-3">
-            <label>Quantité</label>
-            {{ form.fonctionnement_quantite }}
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="mb-3">
-            <label>Montant Total</label>
-            {{ form.fonctionnement_montant_total }}
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="mb-3">
-            <label>Contribution promoteur</label>
-            {{ form.fonctionnement_contribution_promoteur }}
-        </div>
-    </div>
-    <div class="col-md-3">
-        <div class="mb-3">
-            <label>Autre financement</label>
-            {{ form.fonctionnement_autre_financement }}
-        </div>
-    </div>
-</div>
-
-<!-- E. SERVICES (une seule ligne) -->
-<h5 class="mt-4">E. SERVICES</h5>
-<div class="row">
-    <div class="col-md-3">
-        <div class="mb-3">
-            <label>Description</label>
-            {{ form.service_description }}
-        </div>
-    </div>
-    <div class="col-md-1">
-        <div class="mb-3">
-            <label>Quantité</label>
-            {{ form.service_quantite }}
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="mb-3">
-            <label>Montant Total</label>
-            {{ form.service_montant_total }}
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="mb-3">
-            <label>Subvention PADISAM</label>
-            {{ form.service_subvention_padisam }}
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="mb-3">
-            <label>Contribution promoteur</label>
-            {{ form.service_contribution_promoteur }}
-        </div>
-    </div>
-    <div class="col-md-2">
-        <div class="mb-3">
-            <label>Autre financement</label>
-            {{ form.service_autre_financement }}
-        </div>
-    </div>
-</div>
-                    <!-- SECTION 5: Renseignement sur le promoteur -->
-                    <div class="section-title">5. Renseignement sur le promoteur</div>
-                    
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="mb-3">
-                                <label>Année de début des activités agricoles</label>
-                                {{ form.annee_debut_activites }}
+                            <div class="text-end mt-2">
+                                <small>{{ infra_form.DELETE }} Supprimer</small>
                             </div>
                         </div>
-                        <div class="col-md-8">
-                            <div class="mb-3">
-                                <label>Brève historique</label>
-                                {{ form.historique_promoteur }}
-                            </div>
-                        </div>
+                        {% endfor %}
                     </div>
-                    
-                   <!-- SECTION 6: Réalisations passées (3 années sur les 5 dernières) -->
-<div class="section-title">6. Réalisations passées (3 années sur les 5 dernières)</div>
-
-{{ realisation_formset.management_form }}
-<div id="realisation-forms">
-    <div class="row mb-2 fw-bold">
-        <div class="col-md-2">Année</div>
-        <div class="col-md-3">Produit</div>
-        <div class="col-md-3">Volume</div>
-        <div class="col-md-4">Ventes (USD)</div>
-    </div>
-    
-    {% for real_form in realisation_formset %}
-    <div class="row mb-3">
-        <div class="col-md-2">{{ real_form.annee }}</div>
-        <div class="col-md-3">{{ real_form.produit }}</div>
-        <div class="col-md-3">{{ real_form.volume }}</div>
-        <div class="col-md-4">{{ real_form.ventes_usd }}</div>
-    </div>
-    {% endfor %}
-</div>
-                    
-                    <!-- SECTION 8: Passifs (emprunts) - 3 dernières années -->
-<div class="section-title">8. Passifs (emprunts) - 3 dernières années</div>
-
-{{ emprunt_formset.management_form }}
-<div id="emprunt-forms">
-    <div class="row mb-2 fw-bold">
-        <div class="col-md-2">Année</div>
-        <div class="col-md-3">Institution financière</div>
-        <div class="col-md-3">Montant emprunté</div>
-        <div class="col-md-4">Montant remboursé</div>
-    </div>
-    
-    {% for emp_form in emprunt_formset %}
-    <div class="row mb-3">
-        <div class="col-md-2">{{ emp_form.annee }}</div>
-        <div class="col-md-3">{{ emp_form.institution_financiere }}</div>
-        <div class="col-md-3">{{ emp_form.montant_emprunte }}</div>
-        <div class="col-md-4">{{ emp_form.montant_rembourse }}</div>
-    </div>
-    {% endfor %}
-</div>
-                    
-                    <div class="mt-4 mb-5">
-                        <button type="submit" class="btn btn-primary btn-lg">Enregistrer le sous-projet</button>
-                        <a href="{% url 'formulaire:liste_sous_projets' %}" class="btn btn-secondary btn-lg">Annuler</a>
-                    </div>
-                </form>
+                    <button type="button" class="btn btn-success mt-3" onclick="addForm('infra')">+ Ajouter une infrastructure</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Fermer</button>
+                </div>
             </div>
         </div>
     </div>
-    
+
+    <!-- Modal Équipements -->
+    <div class="modal fade" id="equipModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🔧 Équipements</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {{ equipement_formset.management_form }}
+                    <div id="equipement-forms">
+                        {% for equip_form in equipement_formset %}
+                        <div class="formset-row">
+                            <div class="row">
+                                <div class="col-md-3">{{ equip_form.description.label_tag }}{{ equip_form.description }}</div>
+                                <div class="col-md-1">{{ equip_form.quantite.label_tag }}{{ equip_form.quantite }}</div>
+                                <div class="col-md-2">{{ equip_form.montant_total.label_tag }}{{ equip_form.montant_total }}</div>
+                                <div class="col-md-2">{{ equip_form.subvention_padisam.label_tag }}{{ equip_form.subvention_padisam }}</div>
+                                <div class="col-md-2">{{ equip_form.contribution_promoteur.label_tag }}{{ equip_form.contribution_promoteur }}</div>
+                                <div class="col-md-2">{{ equip_form.autre_financement.label_tag }}{{ equip_form.autre_financement }}</div>
+                            </div>
+                            <div class="text-end mt-2">
+                                <small>{{ equip_form.DELETE }} Supprimer</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn btn-success mt-3" onclick="addForm('equip')">+ Ajouter un équipement</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Intrants -->
+    <div class="modal fade" id="intrantModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🌾 Intrants</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    {{ intrant_formset.management_form }}
+                    <div id="intrant-forms">
+                        {% for intrant_form in intrant_formset %}
+                        <div class="formset-row">
+                            <div class="row">
+                                <div class="col-md-3">{{ intrant_form.description.label_tag }}{{ intrant_form.description }}</div>
+                                <div class="col-md-1">{{ intrant_form.quantite.label_tag }}{{ intrant_form.quantite }}</div>
+                                <div class="col-md-2">{{ intrant_form.montant_total.label_tag }}{{ intrant_form.montant_total }}</div>
+                                <div class="col-md-2">{{ intrant_form.subvention_padisam.label_tag }}{{ intrant_form.subvention_padisam }}</div>
+                                <div class="col-md-2">{{ intrant_form.contribution_promoteur.label_tag }}{{ intrant_form.contribution_promoteur }}</div>
+                                <div class="col-md-2">{{ intrant_form.autre_financement.label_tag }}{{ intrant_form.autre_financement }}</div>
+                            </div>
+                            <div class="text-end mt-2">
+                                <small>{{ intrant_form.DELETE }} Supprimer</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    <button type="button" class="btn btn-success mt-3" onclick="addForm('intrant')">+ Ajouter un intrant</button>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Fonctionnement -->
+    <div class="modal fade" id="foncModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">⚙️ Fonctionnement</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label>Description</label>
+                                {{ form.fonctionnement_description }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Quantité</label>
+                                {{ form.fonctionnement_quantite }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Montant Total</label>
+                                {{ form.fonctionnement_montant_total }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Contribution</label>
+                                {{ form.fonctionnement_contribution_promoteur }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label>Autre financement</label>
+                                {{ form.fonctionnement_autre_financement }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Modal Services -->
+    <div class="modal fade" id="servModal" tabindex="-1">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title">🛠️ Services</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <div class="row">
+                        <div class="col-md-12">
+                            <div class="form-group">
+                                <label>Description</label>
+                                {{ form.service_description }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Quantité</label>
+                                {{ form.service_quantite }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Montant Total</label>
+                                {{ form.service_montant_total }}
+                            </div>
+                        </div>
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label>Subvention</label>
+                                {{ form.service_subvention_padisam }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Contribution</label>
+                                {{ form.service_contribution_promoteur }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label>Autre financement</label>
+                                {{ form.service_autre_financement }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="modal-footer">
+                    <button type="button" class="btn btn-primary" data-bs-dismiss="modal">Fermer</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Fonction pour ajouter dynamiquement des lignes aux formsets
-        $('.add-row').click(function() {
-            var target = $(this).data('target');
-            var formsetPrefix = target;
+        let currentStep = 1;
+        const totalSteps = 7;
+
+        function updateSteps() {
+            // Mettre à jour les indicateurs
+            $('.step-item').removeClass('active completed');
+            
+            for (let i = 1; i <= totalSteps; i++) {
+                if (i < currentStep) {
+                    $(`.step-item[data-step="${i}"]`).addClass('completed');
+                } else if (i === currentStep) {
+                    $(`.step-item[data-step="${i}"]`).addClass('active');
+                }
+            }
+            
+            // Afficher/masquer les étapes
+            $('.wizard-step').removeClass('active');
+            $(`#step${currentStep}`).addClass('active');
+            
+            // Gérer les boutons
+            if (currentStep === 1) {
+                $('.btn-prev').prop('disabled', true);
+            } else {
+                $('.btn-prev').prop('disabled', false);
+            }
+            
+            if (currentStep === totalSteps) {
+                $('.btn-next').hide();
+                $('#submitBtn').show();
+            } else {
+                $('.btn-next').show();
+                $('#submitBtn').hide();
+            }
+            
+            // Sauvegarder l'étape en cours
+            localStorage.setItem('currentStep', currentStep);
+            
+            // Sauvegarder les données
+            saveFormData();
+        }
+
+        function nextStep() {
+            if (currentStep < totalSteps) {
+                if (validateStep(currentStep)) {
+                    currentStep++;
+                    updateSteps();
+                }
+            }
+        }
+
+        function prevStep() {
+            if (currentStep > 1) {
+                currentStep--;
+                updateSteps();
+            }
+        }
+
+        function goToStep(step) {
+            if (step >= 1 && step <= totalSteps) {
+                currentStep = step;
+                updateSteps();
+            }
+        }
+
+        function validateStep(step) {
+            console.log(`✅ Étape ${step} validée`);
+            return true;
+        }
+
+        function saveFormData() {
+            const formData = {};
+            $('#sousProjetForm :input').each(function() {
+                if (this.name && this.name !== 'csrfmiddlewaretoken') {
+                    formData[this.name] = this.value;
+                }
+            });
+            localStorage.setItem('formData', JSON.stringify(formData));
+            console.log('💾 Données sauvegardées');
+        }
+
+        function loadFormData() {
+            const savedData = localStorage.getItem('formData');
+            if (savedData) {
+                const formData = JSON.parse(savedData);
+                for (let key in formData) {
+                    $(`[name="${key}"]`).val(formData[key]);
+                }
+            }
+            
+            const savedStep = localStorage.getItem('currentStep');
+            if (savedStep) {
+                currentStep = parseInt(savedStep);
+                updateSteps();
+            }
+        }
+
+        function addForm(formsetPrefix) {
             var totalForms = $('#id_' + formsetPrefix + '-TOTAL_FORMS');
             var formIndex = parseInt(totalForms.val());
             
-            // Cloner la dernière ligne ou un template
             var newForm = $('#' + formsetPrefix + '-forms .formset-row:first').clone(true);
             newForm.find(':input').each(function() {
-                var name = $(this).attr('name').replace('-0-', '-' + formIndex + '-');
+                var name = $(this).attr('name').replace('-' + (formIndex-1) + '-', '-' + formIndex + '-');
                 var id = 'id_' + name;
                 $(this).attr({'name': name, 'id': id}).val('').removeAttr('checked');
             });
             newForm.find('label').each(function() {
-                var newFor = $(this).attr('for').replace('-0-', '-' + formIndex + '-');
+                var newFor = $(this).attr('for').replace('-' + (formIndex-1) + '-', '-' + formIndex + '-');
                 $(this).attr('for', newFor);
             });
             
             $('#id_' + formsetPrefix + '-TOTAL_FORMS').val(formIndex + 1);
             $('#' + formsetPrefix + '-forms').append(newForm);
-        });
-        
-        // Pour la localisation dynamique (à compléter avec des appels AJAX)
+        }
+
+        // AJAX pour les localisations
         $('#id_wilaya').change(function() {
             var wilayaId = $(this).val();
-            $.ajax({
-                url: '/api/moughataas/?wilaya=' + wilayaId,
-                success: function(data) {
-                    var options = '<option value="">---------</option>';
-                    for (var i = 0; i < data.length; i++) {
-                        options += '<option value="' + data[i].id + '">' + data[i].nom + '</option>';
-                    }
-                    $('#id_moughataa').html(options);
-                }
-            });
-        });
-    </script>
-   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-$(document).ready(function() {
-    console.log("JavaScript chargé"); // Pour vérifier que le script s'exécute
-    
-    // Quand on change la wilaya
-    $('#id_wilaya').change(function() {
-        var wilayaId = $(this).val();
-        console.log("Wilaya sélectionnée ID:", wilayaId);
-        
-        if (wilayaId) {
-            $.ajax({
-                url: '/formulaire/api/get-moughataas/',  // URL CORRECTE
-                data: { 'wilaya_id': wilayaId },          // Paramètre CORRECT
-                success: function(data) {
-                    console.log("Moughataas reçues:", data);
-                    var select = $('#id_moughataa');
-                    select.empty().append('<option value="">Sélectionnez une moughataa</option>');
-                    
-                    if (data.length === 0) {
-                        select.append('<option value="">Aucune moughataa trouvée</option>');
-                    } else {
+            if (wilayaId) {
+                $.ajax({
+                    url: '/formulaire/api/get-moughataas/',
+                    data: { 'wilaya_id': wilayaId },
+                    success: function(data) {
+                        var select = $('#id_moughataa');
+                        select.empty().append('<option value="">Sélectionnez une moughataa</option>');
                         $.each(data, function(index, moughataa) {
                             select.append('<option value="' + moughataa.id + '">' + moughataa.nom + '</option>');
                         });
+                        $('#id_commune').empty().append('<option value="">Sélectionnez d\'abord une moughataa</option>');
                     }
-                    
-                    // Réinitialiser la commune
-                    $('#id_commune').empty().append('<option value="">Sélectionnez d\'abord une moughataa</option>');
-                },
-                error: function(xhr, status, error) {
-                    console.log("Erreur AJAX moughataas:", error);
-                    console.log("URL appelée:", this.url);
-                    console.log("Statut:", xhr.status);
-                }
-            });
-        } else {
-            $('#id_moughataa').empty().append('<option value="">Sélectionnez d\'abord une wilaya</option>');
-            $('#id_commune').empty().append('<option value="">Sélectionnez d\'abord une moughataa</option>');
-        }
-    });
+                });
+            }
+        });
 
-    // Quand on change la moughataa
-    $('#id_moughataa').change(function() {
-        var moughataaId = $(this).val();
-        console.log("Moughataa sélectionnée ID:", moughataaId);
-        
-        if (moughataaId) {
-            $.ajax({
-                url: '/formulaire/api/get-communes/',  // URL CORRECTE
-                data: { 'moughataa_id': moughataaId },  // Paramètre CORRECT
-                success: function(data) {
-                    console.log("Communes reçues:", data);
-                    var select = $('#id_commune');
-                    select.empty().append('<option value="">Sélectionnez une commune</option>');
-                    
-                    if (data.length === 0) {
-                        select.append('<option value="">Aucune commune trouvée</option>');
-                    } else {
+        $('#id_moughataa').change(function() {
+            var moughataaId = $(this).val();
+            if (moughataaId) {
+                $.ajax({
+                    url: '/formulaire/api/get-communes/',
+                    data: { 'moughataa_id': moughataaId },
+                    success: function(data) {
+                        var select = $('#id_commune');
+                        select.empty().append('<option value="">Sélectionnez une commune</option>');
                         $.each(data, function(index, commune) {
                             select.append('<option value="' + commune.id + '">' + commune.nom + '</option>');
                         });
                     }
-                },
-                error: function(xhr, status, error) {
-                    console.log("Erreur AJAX communes:", error);
-                    console.log("URL appelée:", this.url);
-                    console.log("Statut:", xhr.status);
-                }
-            });
-        } else {
-            $('#id_commune').empty().append('<option value="">Sélectionnez d\'abord une moughataa</option>');
-        }
-    });
-});
-</script>
+                });
+            }
+        });
+
+        // Initialisation
+        $(document).ready(function() {
+            loadFormData();
+            
+            // Sauvegarde automatique toutes les 30 secondes
+            setInterval(saveFormData, 30000);
+        });
+    </script>
 </body>
 </html>
