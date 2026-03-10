@@ -1,0 +1,56 @@
+services:
+  db:
+    image: postgis/postgis:15-3.4
+    platform: linux/amd64
+    container_name: fcp_postgres
+    environment:
+      POSTGRES_DB: fcp_app_db
+      POSTGRES_USER: soukeina
+      POSTGRES_PASSWORD: ''
+      POSTGRES_HOST_AUTH_METHOD: trust 
+    volumes:
+      - postgres_data:/var/lib/postgresql/data
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U soukeina"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build: .
+    platform: linux/amd64
+    container_name: fcp_django
+    command: >
+      sh -c "python manage.py migrate &&
+             python manage.py runserver 0.0.0.0:8000"
+    volumes:
+      - .:/app
+    ports:
+      - "8000:8000"
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://soukeina@db:5432/fcp_app_db
+      POSTGRES_DB: fcp_app_db
+      POSTGRES_USER: soukeina
+      POSTGRES_PASSWORD: ""
+
+  superset:
+    image: apache/superset:latest
+    platform: linux/amd64
+    container_name: fcp_superset
+    environment:
+      SUPERSET_SECRET_KEY: 'dev_secret_key_changez_moi'
+    ports:
+      - "8089:8088"
+    volumes:
+      - superset_data:/app/superset_home
+    depends_on:
+      - db
+
+volumes:
+  postgres_data:
+  superset_data:
