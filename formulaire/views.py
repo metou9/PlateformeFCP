@@ -12,6 +12,24 @@ from .forms import (
 )
 from .auth_forms import LoginForm  # On garde seulement LoginForm
 
+def clean_formset_data(post_data, prefix):
+    """Supprime les formulaires vides d'un formset."""
+    total_forms = int(post_data.get(f'{prefix}-TOTAL_FORMS', 0))
+    for i in range(total_forms - 1, -1, -1):  # parcourir en sens inverse
+        has_data = False
+        for key, value in post_data.items():
+            if key.startswith(f'{prefix}-{i}-') and value:
+                has_data = True
+                break
+        if not has_data:
+            # Supprimer toutes les clés de ce formulaire
+            keys_to_del = [k for k in post_data.keys() if k.startswith(f'{prefix}-{i}-')]
+            for key in keys_to_del:
+                del post_data[key]
+            post_data[f'{prefix}-TOTAL_FORMS'] = str(total_forms - 1)
+            total_forms -= 1
+    return post_data
+
 # ============================================
 # DÉCORATEUR POUR PROTÉGER LES VUES
 # ============================================
@@ -107,6 +125,10 @@ def nouveau_sous_projet(request):
     if request.method == 'POST':
         # Crée une copie modifiable des données POST
         post_data = request.POST.copy()
+         # Nettoyer les formsets des lignes vides
+        clean_formset_data(post_data, 'infra')
+        clean_formset_data(post_data, 'equip')
+        clean_formset_data(post_data, 'intrant')
         
         # AFFICHE LES DONNÉES REÇUES
         print("\n📦 DONNÉES POST REÇUES:")

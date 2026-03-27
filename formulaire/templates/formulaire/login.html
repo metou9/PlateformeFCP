@@ -1,112 +1,299 @@
 <!DOCTYPE html>
 <html lang="fr">
+
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Connexion - FCP</title>
+    <title>Connexion - PADISAM</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
+        :root {
+            --flag-green: #00A859;
+            /* Vert du drapeau */
+            --flag-gold: #FFD700;
+            /* Jaune / Or du croissant et de l'étoile */
+            --flag-red: #E50012;
+            /* Rouge des bandes */
+            --light-beige: #FDF8E7;
+            /* Fond clair (sable) */
+            --dark-green: #00623B;
+            /* Vert plus foncé pour contraste */
+        }
+
         body {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
-            height: 100vh;
+            background: linear-gradient(135deg, var(--flag-green) 0%, var(--flag-gold) 100%);
+            min-height: 100vh;
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            padding: 20px;
         }
+
         .login-card {
             background: white;
-            border-radius: 20px;
-            box-shadow: 0 15px 50px rgba(0,0,0,0.3);
-            padding: 40px;
+            border-radius: 30px;
+            box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
+            padding: 30px;
             width: 100%;
-            max-width: 400px;
-            transition: transform 0.3s;
+            max-width: 500px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 5px solid #5DBB63;
         }
+
         .login-card:hover {
             transform: translateY(-5px);
+            box-shadow: 0 35px 60px rgba(0, 0, 0, 0.3);
         }
+
+        .logo-container {
+            text-align: center;
+            margin-bottom: 25px;
+            position: relative;
+        }
+
+        .logo {
+            max-width: 440px;
+            height: auto;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 4px 8px rgba(0, 0, 0, 0.1));
+        }
+
+        .project-title {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+
+        .project-title h3 {
+            color: var(--primary-green);
+            font-weight: 700;
+            margin-bottom: 5px;
+            font-size: 1.5rem;
+        }
+
+        .project-title p {
+            color: #666;
+            font-size: 0.85rem;
+            margin: 0;
+            line-height: 1.4;
+        }
+
         .login-header {
             text-align: center;
             margin-bottom: 30px;
+            position: relative;
         }
+
         .login-header h2 {
-            color: #333;
-            font-weight: 700;
-            margin-bottom: 10px;
+            color: var(--dark-green);
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 1.8rem;
         }
+
         .login-header p {
-            color: #666;
-            font-size: 14px;
+            color: #888;
+            font-size: 0.9rem;
         }
-        .form-control {
-            border-radius: 10px;
-            padding: 12px;
+
+        .form-group {
             margin-bottom: 20px;
-            border: 2px solid #e0e0e0;
+        }
+
+        .form-label {
+            font-weight: 500;
+            color: var(--dark-green);
+            margin-bottom: 8px;
+            display: block;
+            font-size: 0.9rem;
+        }
+
+        .form-control {
+            border-radius: 12px;
+            padding: 12px 15px;
+            border: 2px solid #e8e8e8;
             transition: all 0.3s;
+            font-size: 1rem;
+            background: #fafafa;
         }
+
         .form-control:focus {
-            border-color: #667eea;
-            box-shadow: none;
+            border-color: var(--secondary-orange);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.1);
+            background: white;
         }
+
         .btn-login {
-            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            background:linear-gradient(135deg, var(--flag-green) 0%, var(--flag-gold) 100%);
             color: white;
             border: none;
-            border-radius: 10px;
-            padding: 12px;
+            border-radius: 12px;
+            padding: 14px;
             font-weight: 600;
             width: 100%;
-            margin-top: 10px;
-            transition: transform 0.3s;
+            margin-top: 15px;
+            transition: all 0.3s;
+            font-size: 1rem;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
         }
+
         .btn-login:hover {
             transform: translateY(-2px);
-            color: white;
+            box-shadow: 0 8px 20px rgba(44, 110, 47, 0.3);
         }
+
+        .btn-login:active {
+            transform: translateY(0);
+        }
+
         .alert {
-            border-radius: 10px;
+            border-radius: 12px;
             margin-bottom: 20px;
+            padding: 12px 15px;
+            border: none;
+        }
+
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            border-left: 4px solid var(--primary-green);
+        }
+
+        .alert-error {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+
+        .alert-info {
+            background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+            color: #0c5460;
+            border-left: 4px solid var(--secondary-orange);
+        }
+
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .footer small {
+            color: #aaa;
+            font-size: 0.75rem;
+        }
+
+        /* Animation d'entrée */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+
+        .login-card {
+            animation: fadeInUp 0.6s ease-out;
+        }
+
+        /* Responsive */
+        @media (max-width: 576px) {
+            .login-card {
+                padding: 30px 25px;
+                max-width: 95%;
+            }
+
+            .project-title h3 {
+                font-size: 1.2rem;
+            }
+
+            .login-header h2 {
+                font-size: 1.5rem;
+            }
+
+            .logo {
+                max-width: 100px;
+            }
+        }
+
+
+
+        .login-card {
+            position: relative;
         }
     </style>
 </head>
+
 <body>
     <div class="login-card">
-        <div class="login-header">
-            <h2>🔐 Plateforme FCP</h2>
-            <p>Veuillez vous connecter pour continuer</p>
+        <div class="logo-container">
+            <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" class="logo"
+                onerror="this.src='https://via.placeholder.com/120x120?text=PADISAM'">
         </div>
-        
+
+
+
+        <div class="login-header">
+            <h2>Bienvenue</h2>
+            <p>Connectez-vous pour accéder à votre espace</p>
+        </div>
+
         {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }}">{{ message }}</div>
-            {% endfor %}
+        {% for message in messages %}
+        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+            {{ message }}
+            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+        </div>
+        {% endfor %}
         {% endif %}
-        
+
         <form method="post">
             {% csrf_token %}
-            
-            <div class="mb-3">
+
+            <div class="form-group">
                 <label for="username" class="form-label">Nom d'utilisateur</label>
-                <input type="text" name="username" id="username" class="form-control" required>
+                <input type="text" name="username" id="username" class="form-control"
+                    placeholder="Entrez votre nom d'utilisateur" required>
             </div>
-            
-            <div class="mb-3">
+
+            <div class="form-group">
                 <label for="password" class="form-label">Mot de passe</label>
-                <input type="password" name="password" id="password" class="form-control" required>
+                <input type="password" name="password" id="password" class="form-control"
+                    placeholder="Entrez votre mot de passe" required>
             </div>
-            
-            <button type="submit" class="btn btn-login">
+
+            <button type="submit" class="btn-login">
                 Se connecter
             </button>
         </form>
-        
-        <div class="text-center mt-4">
-            <small class="text-muted">
-                Version 1.0 - &copy; 2026
+
+        <div class="footer">
+            <small>
+                &copy; {% now "Y" %} PADISAM - Tous droits réservés<br>
+                Ministère de l'Agriculture, Mauritanie
             </small>
         </div>
     </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Animation pour les champs de formulaire
+        document.querySelectorAll('.form-control').forEach(input => {
+            input.addEventListener('focus', function () {
+                this.parentElement.style.transform = 'translateX(5px)';
+            });
+            input.addEventListener('blur', function () {
+                this.parentElement.style.transform = 'translateX(0)';
+            });
+        });
+    </script>
 </body>
+
 </html>
