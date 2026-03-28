@@ -32,6 +32,11 @@ services:
         condition: service_healthy
     environment:
       DATABASE_URL: postgresql://soukeina@db:5432/fcp_app_db
+      DB_NAME: fcp_app_db
+      DB_USER: soukeina
+      DB_PASSWORD: soukeina
+      DB_HOST: db
+      DB_PORT: 5432
       POSTGRES_DB: fcp_app_db
       POSTGRES_USER: soukeina
       POSTGRES_PASSWORD: "soukeina"
