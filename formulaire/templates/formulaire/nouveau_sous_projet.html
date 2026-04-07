@@ -7,7 +7,8 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/formulaire/css/style.css" rel="stylesheet">
     <style>
-          .btn-action {
+        /* Styles personnalisés pour la page */
+        .btn-action {
             background: #5DBB63;
             color: white;
             border: none;
@@ -18,7 +19,11 @@
             text-decoration: none;
             display: inline-block;
         }
-         .table-detail {
+        .btn-action:hover {
+            transform: translateY(-2px);
+            color: white;
+        }
+        .table-detail {
             width: 100%;
             background: white;
             border-radius: 10px;
@@ -34,7 +39,7 @@
             padding: 12px;
             border-bottom: 1px solid #f0f0f0;
         }
-          .navbar {
+        .navbar {
             background: #f8f9fa;
             box-shadow: 0 4px 15px rgba(0,0,0,0.1);
             padding: 12px 0;
@@ -55,27 +60,17 @@
             transition: all 0.3s;
             margin: 0 5px;
         }
-        
         .nav-link:hover {
             color: #5DBB63 !important;
             transform: translateY(-2px);
         }
-         .welcome-section {
+        .welcome-section {
             background: white;
             border-radius: 20px;
             padding: 30px;
             margin-bottom: 30px;
             box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-            border-left: 10px solid #5DBB63 ;
-        }
-         .welcome-logo {
-            text-align: center;
-            margin-bottom: 20px;
-        }
-        
-        .welcome-logo img {
-            max-width: 100px;
-            height: auto;
+            border-left: 10px solid #5DBB63;
         }
         .section-title {
             background: #5DBB63;
@@ -103,43 +98,36 @@
             background: #5DBB63;
             color: white;
         }
-        .btn-add-row {
-            background: #28a745;
-            color: white;
+        /* Style pour la datalist (suggestions de villages) */
+        datalist {
+            background: white;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-      <nav class="navbar navbar-expand-lg navbar-dark">
+    <!-- ============================================
+         BARRE DE NAVIGATION
+    ============================================ -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
         <div class="container">
-            <!-- Logo et nom du projet -->
             <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
                 <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
-                
             </a>
-            <!-- Bouton pour mobile -->
             <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
                 <span class="navbar-toggler-icon"></span>
             </button>
-            <!-- Liens de navigation -->
             <div class="collapse navbar-collapse" id="navbarNav">
                 <ul class="navbar-nav ms-auto">
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:liste_sous_projets' %}">
-                            📋 Liste
-                        </a>
+                        <a class="nav-link" href="{% url 'formulaire:liste_sous_projets' %}">📋 Liste</a>
                     </li>
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:nouveau_sous_projet' %}">
-                            ➕ Nouveau
-                        </a>
+                        <a class="nav-link" href="{% url 'formulaire:nouveau_sous_projet' %}">➕ Nouveau</a>
                     </li>
-                   
                     <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:logout' %}">
-                            🚪 Déconnexion
-                        </a>
+                        <a class="nav-link" href="{% url 'formulaire:logout' %}">🚪 Déconnexion</a>
                     </li>
                 </ul>
             </div>
@@ -147,6 +135,7 @@
     </nav>
 
     <div class="container mt-5 mb-5">
+        <!-- Affichage des messages flash -->
         {% if messages %}
             {% for message in messages %}
                 <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
@@ -156,12 +145,15 @@
             {% endfor %}
         {% endif %}
 
+        <!-- En-tête de la page -->
         <div class="welcome-section">
             <h1>➕ Nouveau sous-projet</h1>
             <p class="mb-0">Remplissez toutes les sections ci-dessous</p>
         </div>
 
-    
+        <!-- ============================================
+             FORMULAIRE PRINCIPAL
+        ============================================ -->
         <form method="post" id="sousProjetForm">
             {% csrf_token %}
 
@@ -227,7 +219,7 @@
                 </div>
             </div>
 
-            <!-- SECTION 2 : Identification demandeur -->
+            <!-- SECTION 2 : Identification du demandeur -->
             <div class="section-title">2. Identification du demandeur</div>
             <div class="card">
                 <div class="card-body">
@@ -292,57 +284,64 @@
                 </div>
             </div>
 
-            <!-- SECTION 3 : Description et localisation -->
-            <!-- SECTION 3 : Description et localisation -->
-<div class="section-title">3. Description et localisation</div>
-<div class="card">
-    <div class="card-body">
-        <!-- Objectif -->
-        <div class="form-group mb-3">
-            <label class="form-label">Objectif du sous-projet</label>
-            {{ form.objectif_sous_projet }}
-        </div>
-        <!-- Principales activités -->
-        <div class="form-group mb-3">
-            <label class="form-label">Liste des principales activités</label>
-            {{ form.principales_activites }}
-            <small class="form-text">Décrivez les activités avec des objectifs quantitatifs</small>
-        </div>
-        <!-- Localisation -->
-        <h5 class="mt-4 mb-3">📍 Localisation</h5>
-        <div class="row g-3">
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label class="form-label">Wilaya</label>
-                    {{ form.wilaya }}
+            <!-- SECTION 3 : Description et localisation (avec hiérarchie complète) -->
+            <div class="section-title">3. Description et localisation</div>
+            <div class="card">
+                <div class="card-body">
+                    <!-- Objectif -->
+                    <div class="form-group mb-3">
+                        <label class="form-label">Objectif du sous-projet</label>
+                        {{ form.objectif_sous_projet }}
+                    </div>
+                    <!-- Principales activités -->
+                    <div class="form-group mb-3">
+                        <label class="form-label">Liste des principales activités</label>
+                        {{ form.principales_activites }}
+                        <small class="form-text">Décrivez les activités avec des objectifs quantitatifs</small>
+                    </div>
+                    <!-- Localisation (hiérarchie complète : Wilaya → Moughataa → Commune → Paysage → Village) -->
+                    <h5 class="mt-4 mb-3">📍 Localisation</h5>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Wilaya</label>
+                                {{ form.wilaya }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Moughataa</label>
+                                {{ form.moughataa }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Commune</label>
+                                {{ form.commune }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Paysage/ZOCA</label>
+                                {{ form.paysage }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Village</label>
+                                {{ form.village }}
+                                <!-- Datalist pour les suggestions de villages existants -->
+                                <datalist id="village-list"></datalist>
+                            </div>
+                        </div>
+                    </div>
                 </div>
             </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label class="form-label">Moughataa</label>
-                    {{ form.moughataa }}
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label class="form-label">Commune</label>
-                    {{ form.commune }}
-                </div>
-            </div>
-            <div class="col-md-3">
-                <div class="form-group">
-                    <label class="form-label">Village</label>
-                    {{ form.village }}
-                </div>
-            </div>
-        </div>
-    </div>
-</div>
 
             <!-- SECTION 4 : Estimation du coût global et sources de financement -->
             <div class="section-title">4. Estimation du coût global et sources de financement</div>
 
-            <!-- A. INFRASTRUCTURES -->
+            <!-- A. INFRASTRUCTURES (formset avec ajout/suppression) -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">A. INFRASTRUCTURES</h5>
@@ -370,7 +369,7 @@
                 </div>
             </div>
 
-            <!-- B. EQUIPEMENT -->
+            <!-- B. EQUIPEMENT (formset avec ajout/suppression) -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">B. EQUIPEMENT</h5>
@@ -398,7 +397,7 @@
                 </div>
             </div>
 
-            <!-- C. INTRANTS -->
+            <!-- C. INTRANTS (formset avec ajout/suppression) -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">C. INTRANTS</h5>
@@ -426,7 +425,7 @@
                 </div>
             </div>
 
-            <!-- D. FONCTIONNEMENT -->
+            <!-- D. FONCTIONNEMENT (une seule ligne) -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">D. FONCTIONNEMENT</h5>
@@ -467,7 +466,7 @@
                 </div>
             </div>
 
-            <!-- E. SERVICES -->
+            <!-- E. SERVICES (une seule ligne) -->
             <div class="card mb-4">
                 <div class="card-header">
                     <h5 class="mb-0">E. SERVICES</h5>
@@ -514,7 +513,7 @@
                 </div>
             </div>
 
-            <!-- SECTION 5 : Promoteur -->
+            <!-- SECTION 5 : Renseignement sur le promoteur -->
             <div class="section-title">5. Renseignement sur le promoteur</div>
             <div class="card">
                 <div class="card-body">
@@ -535,7 +534,7 @@
                 </div>
             </div>
 
-            <!-- SECTION 6 : Réalisations passées -->
+            <!-- SECTION 6 : Réalisations passées (3 années fixes) -->
             <div class="section-title">6. Réalisations passées (3 années)</div>
             <div class="card">
                 <div class="card-body">
@@ -543,8 +542,7 @@
                     <div class="table-responsive">
                         <table class="table-detail">
                             <thead>
-                                <tr><th>Année</th><th>Produit</th><th>Volume</th><th>Ventes (USD)</th></tr>
-                            </thead>
+                                <th>Année</th><th>Produit</th><th>Volume</th><th>Ventes (USD)</th> </thead>
                             <tbody>
                                 {% for real_form in realisation_formset %}
                                 <tr>
@@ -560,7 +558,7 @@
                 </div>
             </div>
 
-            <!-- SECTION 8 : Emprunts -->
+            <!-- SECTION 8 : Passifs (emprunts) - 3 dernières années (fixes) -->
             <div class="section-title">8. Passifs (emprunts) - 3 dernières années</div>
             <div class="card">
                 <div class="card-body">
@@ -568,8 +566,7 @@
                     <div class="table-responsive">
                         <table class="table-detail">
                             <thead>
-                                <tr><th>Année</th><th>Institution</th><th>Emprunté</th><th>Remboursé</th></tr>
-                            </thead>
+                                <th>Année</th><th>Institution</th><th>Emprunté</th><th>Remboursé</th> </thead>
                             <tbody>
                                 {% for emp_form in emprunt_formset %}
                                 <tr>
@@ -585,6 +582,7 @@
                 </div>
             </div>
 
+            <!-- Boutons d'action -->
             <div class="d-flex justify-content-between mt-5">
                 <a href="{% url 'formulaire:liste_sous_projets' %}" class="btn btn-secondary btn-lg">Annuler</a>
                 <button type="submit" class="btn btn-primary btn-action">Enregistrer le sous-projet</button>
@@ -592,26 +590,46 @@
         </form>
     </div>
 
+    <!-- ============================================
+         SCRIPTS
+    ============================================ -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        /**
+         * Fonction pour ajouter dynamiquement une ligne dans un formset
+         * @param {string} formsetPrefix - Préfixe du formset ('infra', 'equip', 'intrant')
+         */
         function addForm(formsetPrefix) {
             var totalForms = $('#id_' + formsetPrefix + '-TOTAL_FORMS');
             var formIndex = parseInt(totalForms.val());
             var newForm = $('#' + formsetPrefix + '-forms .formset-row:first').clone(true);
+            
+            // Mettre à jour les attributs name et id pour chaque champ
             newForm.find(':input').each(function() {
                 var name = $(this).attr('name').replace('-' + (formIndex-1) + '-', '-' + formIndex + '-');
                 var id = 'id_' + name;
                 $(this).attr({'name': name, 'id': id}).val('').removeAttr('checked');
             });
+            
+            // Mettre à jour les attributs for des labels
             newForm.find('label').each(function() {
                 var newFor = $(this).attr('for').replace('-' + (formIndex-1) + '-', '-' + formIndex + '-');
                 $(this).attr('for', newFor);
             });
+            
             $('#id_' + formsetPrefix + '-TOTAL_FORMS').val(formIndex + 1);
             $('#' + formsetPrefix + '-forms').append(newForm);
         }
 
+        // ============================================
+        // CHARGEMENT DYNAMIQUE DES LOCALISATIONS
+        // Hiérarchie : Wilaya → Moughataa → Commune → Paysage → Village
+        // ============================================
+        
+        /**
+         * Quand la wilaya change, charge les moughataas correspondantes
+         */
         $('#id_wilaya').change(function() {
             var wilayaId = $(this).val();
             if (wilayaId) {
@@ -624,11 +642,19 @@
                         $.each(data, function(index, moughataa) {
                             select.append('<option value="' + moughataa.id + '">' + moughataa.nom + '</option>');
                         });
+                        // Réinitialiser les champs dépendants
                         $('#id_commune').empty().append('<option value="">Sélectionnez d\'abord une moughataa</option>');
+                        $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
+                        $('#village-list').empty();
+                        $('#id_village').val('');
                     }
                 });
             }
         });
+
+        /**
+         * Quand la moughataa change, charge les communes correspondantes
+         */
         $('#id_moughataa').change(function() {
             var moughataaId = $(this).val();
             if (moughataaId) {
@@ -641,11 +667,70 @@
                         $.each(data, function(index, commune) {
                             select.append('<option value="' + commune.id + '">' + commune.nom + '</option>');
                         });
+                        // Réinitialiser les champs dépendants
+                        $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
+                        $('#village-list').empty();
+                        $('#id_village').val('');
                     }
                 });
             }
         });
 
+        /**
+         * Quand la commune change, charge les paysages correspondants
+         */
+        $('#id_commune').change(function() {
+            var communeId = $(this).val();
+            if (communeId) {
+                $.ajax({
+                    url: '/formulaire/api/get-paysages/',
+                    data: { 'commune_id': communeId },
+                    success: function(data) {
+                        var select = $('#id_paysage');
+                        select.empty().append('<option value="">Sélectionnez un paysage</option>');
+                        $.each(data, function(index, paysage) {
+                            select.append('<option value="' + paysage.id + '">' + paysage.nom + '</option>');
+                        });
+                        // Réinitialiser la datalist des villages
+                        $('#village-list').empty();
+                        $('#id_village').val('');
+                    }
+                });
+            } else {
+                $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
+                $('#village-list').empty();
+            }
+        });
+
+        /**
+         * Quand le paysage change, charge les villages existants dans la datalist
+         */
+        $('#id_paysage').change(function() {
+            var paysageId = $(this).val();
+            if (paysageId) {
+                $.ajax({
+                    url: '/formulaire/api/get-villages/',
+                    data: { 'paysage_id': paysageId },
+                    success: function(data) {
+                        var datalist = $('#village-list');
+                        datalist.empty();
+                        $.each(data, function(index, village) {
+                            datalist.append('<option value="' + village.nom + '">');
+                        });
+                    }
+                });
+            } else {
+                $('#village-list').empty();
+            }
+        });
+
+        // ============================================
+        // SAUVEGARDE AUTOMATIQUE (localStorage)
+        // ============================================
+        
+        /**
+         * Sauvegarde toutes les données du formulaire dans localStorage
+         */
         function saveFormData() {
             const formData = {};
             $('#sousProjetForm :input').each(function() {
@@ -656,6 +741,11 @@
             localStorage.setItem('formData', JSON.stringify(formData));
             console.log('💾 Données sauvegardées');
         }
+
+        /**
+         * Charge les données précédemment sauvegardées
+         * (désactivé car commenté)
+         */
         function loadFormData() {
             const savedData = localStorage.getItem('formData');
             if (savedData) {
@@ -665,14 +755,17 @@
                 }
             }
         }
+
+        // Initialisation au chargement de la page
         $(document).ready(function() {
-           // loadFormData();
-            setInterval(saveFormData, 30000);
-    // Effacer les données sauvegardées au moment de l'envoi du formulaire
-    $('#sousProjetForm').on('submit', function() {
-        localStorage.removeItem('formData');
-        localStorage.removeItem('currentStep');
-    });
+            // loadFormData(); // Décommenter pour restaurer les données sauvegardées
+            setInterval(saveFormData, 30000); // Sauvegarde toutes les 30 secondes
+            
+            // Efface les données sauvegardées lors de la soumission du formulaire
+            $('#sousProjetForm').on('submit', function() {
+                localStorage.removeItem('formData');
+                localStorage.removeItem('currentStep');
+            });
         });
     </script>
 </body>

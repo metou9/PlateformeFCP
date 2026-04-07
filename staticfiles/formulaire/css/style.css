@@ -1,0 +1,380 @@
+ .login-card {
+            background: white;
+            border-radius: 30px;
+            box-shadow: 0 25px 50px rgba(0,0,0,0.25);
+            padding: 30px;
+            width: 100%;
+            max-width: 500px;
+            transition: transform 0.3s, box-shadow 0.3s;
+            border: 5px solid #5DBB63;
+        }
+        
+        .login-card:hover {
+            transform: translateY(-5px);
+            box-shadow: 0 35px 60px rgba(0,0,0,0.3);
+        }
+        
+        .logo-container {
+            text-align: center;
+            margin-bottom: 25px;
+            position: relative;
+        }
+        
+        .logo {
+            max-width: 440px;
+            height: auto;
+            margin-bottom: 10px;
+            filter: drop-shadow(0 4px 8px rgba(0,0,0,0.1));
+        }
+        
+        .project-title {
+            text-align: center;
+            margin-bottom: 25px;
+        }
+        
+        .project-title h3 {
+            color: var(--primary-green);
+            font-weight: 700;
+            margin-bottom: 5px;
+            font-size: 1.5rem;
+        }
+        
+        .project-title p {
+            color: #666;
+            font-size: 0.85rem;
+            margin: 0;
+            line-height: 1.4;
+        }
+        
+        .login-header {
+            text-align: center;
+            margin-bottom: 30px;
+            position: relative;
+        }
+        
+        .login-header h2 {
+            color: var(--dark-green);
+            font-weight: 600;
+            margin-bottom: 8px;
+            font-size: 1.8rem;
+        }
+        
+        .login-header p {
+            color: #888;
+            font-size: 0.9rem;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            font-weight: 500;
+            color: var(--dark-green);
+            margin-bottom: 8px;
+            display: block;
+            font-size: 0.9rem;
+        }
+        
+        .form-control {
+            border-radius: 12px;
+            padding: 12px 15px;
+            border: 2px solid #e8e8e8;
+            transition: all 0.3s;
+            font-size: 1rem;
+            background: #fafafa;
+        }
+        
+        .form-control:focus {
+            border-color: var(--secondary-orange);
+            outline: none;
+            box-shadow: 0 0 0 3px rgba(230, 126, 34, 0.1);
+            background: white;
+        }
+        
+        .btn-login {
+            background: linear-gradient(135deg, var(--primary-green) 0%, var(--secondary-orange) 100%);
+            color: white;
+            border: none;
+            border-radius: 12px;
+            padding: 14px;
+            font-weight: 600;
+            width: 100%;
+            margin-top: 15px;
+            transition: all 0.3s;
+            font-size: 1rem;
+            cursor: pointer;
+            position: relative;
+            overflow: hidden;
+        }
+        
+        .btn-login:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px rgba(44, 110, 47, 0.3);
+        }
+        
+        .btn-login:active {
+            transform: translateY(0);
+        }
+        
+        .alert {
+            border-radius: 12px;
+            margin-bottom: 20px;
+            padding: 12px 15px;
+            border: none;
+        }
+        
+        .alert-success {
+            background: linear-gradient(135deg, #d4edda, #c3e6cb);
+            color: #155724;
+            border-left: 4px solid var(--primary-green);
+        }
+        
+        .alert-error {
+            background: linear-gradient(135deg, #f8d7da, #f5c6cb);
+            color: #721c24;
+            border-left: 4px solid #dc3545;
+        }
+        
+        .alert-info {
+            background: linear-gradient(135deg, #d1ecf1, #bee5eb);
+            color: #0c5460;
+            border-left: 4px solid var(--secondary-orange);
+        }
+        
+        .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+        }
+        
+        .footer small {
+            color: #aaa;
+            font-size: 0.75rem;
+        }
+        
+        /* Animation d'entrée */
+        @keyframes fadeInUp {
+            from {
+                opacity: 0;
+                transform: translateY(30px);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0);
+            }
+        }
+        
+        .login-card {
+            animation: fadeInUp 0.6s ease-out;
+        }
+        
+        /* Responsive */
+        @media (max-width: 576px) {
+            .login-card {
+                padding: 30px 25px;
+                max-width: 95%;
+            }
+            
+            .project-title h3 {
+                font-size: 1.2rem;
+            }
+            
+            .login-header h2 {
+                font-size: 1.5rem;
+            }
+            
+            .logo {
+                max-width: 100px;
+            }
+        }
+        
+       
+        
+        .login-card {
+            position: relative;
+        }
+  
+        /* ============================================
+           VARIABLES COULEURS (Palette PADISAM)
+        ============================================ */
+        :root {
+            --primary-green: #2c6e2f;
+            --primary-green-light: #3d8a3f;
+            --secondary-orange: #e67e22;
+            --secondary-orange-light: #f39c12;
+            --cream: #fef5e7;
+            --dark-green: #1e4a22;
+        }
+        
+        /* ============================================
+           STYLES GÉNÉRAUX
+        ============================================ */
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        /* ============================================
+           BARRE DE NAVIGATION
+        ============================================ */
+         .navbar {
+            background: #f8f9fa;
+            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
+            padding: 12px 0;
+        }
+        .navbar-brand {
+            color: white !important;
+            font-weight: bold;
+            font-size: 1.3rem;
+            display: flex;
+            align-items: center;
+        }
+        .navbar-brand img {
+            height: 40px;
+            margin-right: 10px;
+        }
+        .nav-link {
+            color: #5DBB63 !important;
+            transition: all 0.3s;
+            margin: 0 5px;
+        }
+        
+        .nav-link:hover {
+            color: #5DBB63 !important;
+            transform: translateY(-2px);
+        }
+        
+        .user-badge {
+            background: rgba(255,255,255,0.2);
+            color: white;
+            padding: 5px 15px;
+            border-radius: 25px;
+            font-size: 0.9em;
+        }
+        
+        /* ============================================
+           SECTION DE BIENVENUE
+        ============================================ */
+        .welcome-section {
+            background: white;
+            border-radius: 20px;
+            padding: 30px;
+            margin-bottom: 30px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            border-left: 10px solid #5DBB63;;
+        }
+        
+        .welcome-logo {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        
+        .welcome-logo img {
+            max-width: 100px;
+            height: auto;
+        }
+        
+        .welcome-title {
+            font-size: 1.8rem;
+            color: var(--dark-green);
+            font-weight: 600;
+        }
+        
+        .welcome-subtitle {
+            color: #666;
+            font-size: 0.9rem;
+            margin-bottom: 0;
+        }
+        
+        /* ============================================
+           CARTES D'ACCÈS RAPIDE
+        ============================================ */
+        .stat-card {
+    background: white;
+    border-radius: 20px;
+    padding: 30px 20px;
+    text-align: center;
+    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+    transition: all 0.3s;
+    cursor: pointer;
+    border: 1px solid #f0f0f0;
+}
+        
+       .stat-card:hover {
+    transform: translateY(-8px);
+    box-shadow: 0 15px 30px rgba(0,0,0,0.12);
+    border-color: var(--secondary-orange);
+}
+
+.stat-number {
+    font-size: 3.5rem;          /* Augmenter la taille */
+    font-weight: normal;
+    color: var(--primary-green); /* Couleur unie pour l'icône */
+    margin-bottom: 10px;
+    line-height: 1;
+}
+
+.stat-label {
+    color: var(--dark-green);
+    font-weight: 600;
+    margin-top: 10px;
+    font-size: 1.1rem;
+}
+
+.stat-card small {
+    color: #888;
+    font-size: 0.85rem;
+}
+        
+        /* ============================================
+           TABLEAU DES DERNIERS PROJETS
+        ============================================ */
+        .card {
+            border: none;
+            border-radius: 20px;
+            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+            overflow: hidden;
+        }
+        
+        .card-header {
+            background: #5DBB63;
+            color: white;
+            padding: 15px 20px;
+            font-weight: 600;
+        }
+        
+        .table th {
+            background-color: var(--cream);
+            color: var(--dark-green);
+            font-weight: 600;
+            border: none;
+        }
+        
+        .badge-agr {
+            background-color: var(--primary-green);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .badge-aci {
+            background-color: var(--secondary-orange);
+            color: white;
+            padding: 5px 12px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        
+        .btn-outline-primary {
+            border-color: var(--primary-green);
+            color: var(--primary-green);
+        }
+        
+        .btn-outline-primary:hover {
+            background-color: var(--primary-green);
+            border-color: var(--primary-green);
+        }
+    

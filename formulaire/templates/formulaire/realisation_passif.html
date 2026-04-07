@@ -1,0 +1,186 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Réalisations et Passifs - PADISAM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/formulaire/css/style.css" rel="stylesheet">
+    <style>
+        .progress-bar-custom {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 30px;
+        }
+        .progress-fill {
+            width: 100%;
+            height: 100%;
+            background: #5DBB63;
+            border-radius: 4px;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .step-badge {
+            background: #e0e0e0;
+            color: #666;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        .step-badge.completed {
+            background: #28a745;
+            color: white;
+        }
+        .step-badge.active {
+            background: #5DBB63;
+            color: white;
+        }
+        .btn-submit {
+            background: #5DBB63;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+        }
+        .btn-prev {
+            background: #6c757d;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+        }
+        .table-detail th {
+            background: #f8f9fa;
+            padding: 12px;
+        }
+    </style>
+</head>
+<body>
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
+                <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
+                PADISAM
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item"><a class="nav-link" href="{% url 'formulaire:liste_sous_projets' %}">📋 Liste</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'formulaire:nouveau_sous_projet' %}">➕ Nouveau</a></li>
+                    <li class="nav-item"><a class="nav-link" href="{% url 'formulaire:logout' %}">🚪 Déconnexion</a></li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-5">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <div class="progress-bar-custom">
+            <div class="progress-fill"></div>
+        </div>
+
+        <div class="step-indicator">
+            <span class="step-badge completed">📋 1. Infos générales</span>
+            <span class="step-badge completed">🏗️ 2. Infrastructures</span>
+            <span class="step-badge completed">🔧 3. Équipements</span>
+            <span class="step-badge completed">🌾 4. Intrants</span>
+            <span class="step-badge completed">⚙️ 5. Fonctionnement</span>
+            <span class="step-badge completed">🛠️ 6. Services</span>
+            <span class="step-badge active">📊 7. Réalisations/Passifs</span>
+        </div>
+
+        <div class="welcome-section">
+            <h1>📊 Réalisations et Passifs</h1>
+            <p class="mb-0">Étape 7/7 : Renseignez les réalisations passées et les emprunts</p>
+        </div>
+
+        <form method="post" action="{% url 'formulaire:save_realisation_passif' %}">
+            {% csrf_token %}
+
+            <!-- SECTION 6 : Réalisations passées -->
+            <div class="section-title">6. Réalisations passées (3 années)</div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    {{ realisation_formset.management_form }}
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Année</th>
+                                    <th>Produit</th>
+                                    <th>Volume</th>
+                                    <th>Ventes (USD)</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for real_form in realisation_formset %}
+                                <tr>
+                                    <td>{{ real_form.annee }}</td>
+                                    <td>{{ real_form.produit }}</td>
+                                    <td>{{ real_form.volume }}</td>
+                                    <td>{{ real_form.ventes_usd }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted">⚠️ Les 3 années sont obligatoires</small>
+                </div>
+            </div>
+
+            <!-- SECTION 8 : Emprunts -->
+            <div class="section-title">8. Passifs (emprunts) - 3 dernières années</div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    {{ emprunt_formset.management_form }}
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead class="table-light">
+                                <tr>
+                                    <th>Année</th>
+                                    <th>Institution financière</th>
+                                    <th>Montant emprunté</th>
+                                    <th>Montant remboursé</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for emp_form in emprunt_formset %}
+                                <tr>
+                                    <td>{{ emp_form.annee }}</td>
+                                    <td>{{ emp_form.institution_financiere }}</td>
+                                    <td>{{ emp_form.montant_emprunte }}</td>
+                                    <td>{{ emp_form.montant_rembourse }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
+                    <small class="text-muted">⚠️ Les 3 années sont obligatoires</small>
+                </div>
+            </div>
+
+            <!-- Boutons de navigation -->
+            <div class="d-flex justify-content-between mt-4">
+                <a href="{% url 'formulaire:financement_services' %}" class="btn-prev">← Précédent</a>
+                <button type="submit" class="btn-submit">✅ Enregistrer le sous-projet</button>
+            </div>
+        </form>
+    </div>
+</body>
+</html>

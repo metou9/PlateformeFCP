@@ -5,371 +5,166 @@ import django
 os.environ.setdefault('DJANGO_SETTINGS_MODULE', 'config.settings')
 django.setup()
 
-from formulaire.models import Wilaya, Moughataa, Commune
+from formulaire.models import Wilaya, Moughataa, Commune, Paysage, Village, SousProjet
 from django.db import transaction
 
 @transaction.atomic
 def import_all():
-    print("🚀 IMPORTATION COMPLÈTE MAURITANIE")
+    print("🚀 IMPORTATION DES DONNÉES DU DOCUMENT (uniquement)")
     print("=" * 60)
     
-    # Supprimer les anciennes données
+    # 1. Supprimer les sous-projets (clés étrangères)
+    print("🗑️  Suppression des sous-projets existants...")
+    sous_projets_count = SousProjet.objects.count()
+    SousProjet.objects.all().delete()
+    print(f"   ✅ {sous_projets_count} sous-projets supprimés")
+    
+    # 2. Supprimer les autres données
     print("🗑️  Suppression des anciennes données...")
+    Village.objects.all().delete()
+    Paysage.objects.all().delete()
     Commune.objects.all().delete()
     Moughataa.objects.all().delete()
     Wilaya.objects.all().delete()
+    print("   ✅ Toutes les localités supprimées")
     
-    # ============================================
-    # 1. WILAYAS (15)
-    # ============================================
-    wilayas_list = [
-        {"code": "01", "nom": "Hodh Ech Chargui"},
-        {"code": "02", "nom": "Hodh El Gharbi"},
-        {"code": "03", "nom": "Assaba"},
-        {"code": "04", "nom": "Gorgol"},
-        {"code": "05", "nom": "Brakna"},
-        {"code": "06", "nom": "Trarza"},
-        {"code": "07", "nom": "Adrar"},
-        {"code": "08", "nom": "Dakhlet Nouadhibou"},
-        {"code": "09", "nom": "Tagant"},
-        {"code": "10", "nom": "Guidimaka"},
-        {"code": "11", "nom": "Tiris Zemmour"},
-        {"code": "12", "nom": "Inchiri"},
-        {"code": "13", "nom": "Nouakchott Nord"},
-        {"code": "14", "nom": "Nouakchott Ouest"},
-        {"code": "15", "nom": "Nouakchott Sud"},
+    # Structure des données
+    data = [
+        {
+            "wilaya": "Gorgol",
+            "moughataa": "M'Bout",
+            "commune": "Edebaye Ehel Guelaye",
+            "paysage": "Djeibaba",
+            "villages": ["Djeibaba", "Nhal", "Guediama 1", "Guediama 2"]
+        },
+        {
+            "wilaya": "Gorgol",
+            "moughataa": "Monguel",
+            "commune": "Bokel",
+            "paysage": "Evedjar Ehel Cheikh",
+            "villages": ["Khmoumeini", "Ewmarly", "Vilke 1", "Vilke 2", "Codiwar", "Zbil", "Mbout"]
+        },
+        {
+            "wilaya": "Assaba",
+            "moughataa": "Barkewol",
+            "commune": "Rdheydia",
+            "paysage": "Lehneikatt",
+            "villages": ["Lehneykatt", "Eguinni", "Levrea", "Liksar 1", "Liksar 2", "Machrou", "Oulad maham", "Rdheidhi"]
+        },
+        {
+            "wilaya": "Assaba",
+            "moughataa": "Kankossa",
+            "commune": "Hamod",
+            "paysage": "Oudey Talaba",
+            "villages": ["Agwanite", "Guido", "Oudey Talaba 1", "Oudey Talaba 2", "Nezah"]
+        },
+        {
+            "wilaya": "Brakna",
+            "moughataa": "Maghtaà Lahjar",
+            "commune": "Sangrava",
+            "paysage": "Eguerj III",
+            "villages": ["Eguerj III", "Eguerj II", "Mayssara", "Machrouaa"]
+        },
+        {
+            "wilaya": "Brakna",
+            "moughataa": "Male",
+            "commune": "Male",
+            "paysage": "Sagh El Mohr",
+            "villages": ["Sagh Moher 1", "Sagh Moher 2", "Jektoub", "Abneir"]
+        },
+        {
+            "wilaya": "Brakna",
+            "moughataa": "Bababé",
+            "commune": "Bababé",
+            "paysage": "Bababé",
+            "villages": []
+        },
+        {
+            "wilaya": "Brakna",
+            "moughataa": "Boghé",
+            "commune": "Boghé",
+            "paysage": "CPB Extension",
+            "villages": []
+        },
+        {
+            "wilaya": "Trarza",
+            "moughataa": "Keur Macène",
+            "commune": "Mbalal",
+            "paysage": "Canal Aftout Essahili",
+            "villages": []
+        },
     ]
     
-    print("\n📌 Création des wilayas...")
-    wilayas = {}
-    for w in wilayas_list:
-        wilaya = Wilaya.objects.create(code=w["code"], nom=w["nom"])
-        wilayas[w["nom"]] = wilaya
-        print(f"  ✅ Wilaya: {wilaya.nom}")
+    wilayas_dict = {}
+    moughataas_dict = {}
+    communes_dict = {}
     
-    # ============================================
-    # 2. MOUGHATAAS (55)
-    # ============================================
-    print("\n📌 Création des moughataas...")
+    print("\n📌 Création des wilayas, moughataas, communes, paysages et villages...")
     
-    moughataas_list = [
-        # Hodh Ech Chargui (6)
-        {"nom": "Amourj", "wilaya": "Hodh Ech Chargui"},
-        {"nom": "Bassikounou", "wilaya": "Hodh Ech Chargui"},
-        {"nom": "Djiguenni", "wilaya": "Hodh Ech Chargui"},
-        {"nom": "Néma", "wilaya": "Hodh Ech Chargui"},
-        {"nom": "Oualata", "wilaya": "Hodh Ech Chargui"},
-        {"nom": "Timbedra", "wilaya": "Hodh Ech Chargui"},
-        
-        # Hodh El Gharbi (4)
-        {"nom": "Ayoun El Atrous", "wilaya": "Hodh El Gharbi"},
-        {"nom": "Kobenni", "wilaya": "Hodh El Gharbi"},
-        {"nom": "Tamchekett", "wilaya": "Hodh El Gharbi"},
-        {"nom": "Tintane", "wilaya": "Hodh El Gharbi"},
-        
-        # Assaba (5)
-        {"nom": "Aghoratt", "wilaya": "Assaba"},
-        {"nom": "Boumdeid", "wilaya": "Assaba"},
-        {"nom": "Guerou", "wilaya": "Assaba"},
-        {"nom": "Kankossa", "wilaya": "Assaba"},
-        {"nom": "Kiffa", "wilaya": "Assaba"},
-        
-        # Gorgol (5)
-        {"nom": "Kaédi", "wilaya": "Gorgol"},
-        {"nom": "M'Bout", "wilaya": "Gorgol"},
-        {"nom": "Maghama", "wilaya": "Gorgol"},
-        {"nom": "Monguel", "wilaya": "Gorgol"},
-        {"nom": "Lexeiba", "wilaya": "Gorgol"},
-        
-        # Brakna (5)
-        {"nom": "Aleg", "wilaya": "Brakna"},
-        {"nom": "Bababé", "wilaya": "Brakna"},
-        {"nom": "Boghé", "wilaya": "Brakna"},
-        {"nom": "M'Bagne", "wilaya": "Brakna"},
-        {"nom": "Magta Lahjar", "wilaya": "Brakna"},
-        
-        # Trarza (6)
-        {"nom": "Boutilimit", "wilaya": "Trarza"},
-        {"nom": "Keur Macène", "wilaya": "Trarza"},
-        {"nom": "Mederdra", "wilaya": "Trarza"},
-        {"nom": "Ouad Naga", "wilaya": "Trarza"},
-        {"nom": "R'Kiz", "wilaya": "Trarza"},
-        {"nom": "Rosso", "wilaya": "Trarza"},
-        
-        # Adrar (4)
-        {"nom": "Aoujeft", "wilaya": "Adrar"},
-        {"nom": "Atar", "wilaya": "Adrar"},
-        {"nom": "Chinguetti", "wilaya": "Adrar"},
-        {"nom": "Ouadane", "wilaya": "Adrar"},
-        
-        # Dakhlet Nouadhibou (2)
-        {"nom": "Chami", "wilaya": "Dakhlet Nouadhibou"},
-        {"nom": "Nouadhibou", "wilaya": "Dakhlet Nouadhibou"},
-        
-        # Tagant (3)
-        {"nom": "Moudjeria", "wilaya": "Tagant"},
-        {"nom": "Tichitt", "wilaya": "Tagant"},
-        {"nom": "Tidjikja", "wilaya": "Tagant"},
-        
-        # Guidimaka (2)
-        {"nom": "Ould Yengé", "wilaya": "Guidimaka"},
-        {"nom": "Sélibabi", "wilaya": "Guidimaka"},
-        
-        # Tiris Zemmour (3)
-        {"nom": "Bir Moghreïn", "wilaya": "Tiris Zemmour"},
-        {"nom": "F'Dérick", "wilaya": "Tiris Zemmour"},
-        {"nom": "Zouérate", "wilaya": "Tiris Zemmour"},
-        
-        # Inchiri (1)
-        {"nom": "Akjoujt", "wilaya": "Inchiri"},
-        
-        # Nouakchott Nord (3)
-        {"nom": "Dar Naim", "wilaya": "Nouakchott Nord"},
-        {"nom": "Teyarett", "wilaya": "Nouakchott Nord"},
-        {"nom": "Toujounine", "wilaya": "Nouakchott Nord"},
-        
-        # Nouakchott Ouest (3)
-        {"nom": "Ksar", "wilaya": "Nouakchott Ouest"},
-        {"nom": "Sebkha", "wilaya": "Nouakchott Ouest"},
-        {"nom": "Tevragh Zeina", "wilaya": "Nouakchott Ouest"},
-        
-        # Nouakchott Sud (3)
-        {"nom": "Arafat", "wilaya": "Nouakchott Sud"},
-        {"nom": "El Mina", "wilaya": "Nouakchott Sud"},
-        {"nom": "Riyad", "wilaya": "Nouakchott Sud"},
-    ]
+    wilaya_count = 0
+    moughataa_count = 0
+    commune_count = 0
+    paysage_count = 0
+    village_count = 0
     
-    moughataas = {}
-    for m in moughataas_list:
-        wilaya = wilayas.get(m["wilaya"])
-        if wilaya:
-            moughataa = Moughataa.objects.create(
-                nom=m["nom"],
-                wilaya=wilaya
+    for item in data:
+        # Wilaya : code = nom (unique)
+        wilaya_nom = item["wilaya"]
+        if wilaya_nom not in wilayas_dict:
+            wilaya, created = Wilaya.objects.get_or_create(
+                code=wilaya_nom,
+                defaults={"nom": wilaya_nom}
             )
-            moughataas[m["nom"]] = moughataa
-            print(f"  📌 Moughataa: {moughataa.nom} ({wilaya.nom})")
-    
-    # ============================================
-    # 3. COMMUNES (218)
-    # ============================================
-    print("\n📌 Création des communes...")
-    
-    communes_list = [
-        # Hodh Ech Chargui - Amourj
-        {"commune": "Amourj", "moughataa": "Amourj"},
-        {"commune": "Bousteille", "moughataa": "Amourj"},
-        {"commune": "Oum El Khair", "moughataa": "Amourj"},
-        {"commune": "Kamour", "moughataa": "Amourj"},
-        {"commune": "Adel Bagrou", "moughataa": "Amourj"},
-        {"commune": "Daghveg", "moughataa": "Amourj"},
+            wilayas_dict[wilaya_nom] = wilaya
+            if created:
+                wilaya_count += 1
+                print(f"  ✅ Wilaya: {wilaya.nom}")
         
-        # Hodh Ech Chargui - Bassikounou
-        {"commune": "Bassikounou", "moughataa": "Bassikounou"},
-        {"commune": "Dhar", "moughataa": "Bassikounou"},
-        {"commune": "El Megve", "moughataa": "Bassikounou"},
-        {"commune": "Fassale", "moughataa": "Bassikounou"},
-        
-        # Hodh Ech Chargui - Djiguenni
-        {"commune": "Djiguenni", "moughataa": "Djiguenni"},
-        {"commune": "Mabrouk", "moughataa": "Djiguenni"},
-        {"commune": "Ghlig Ehl Beye", "moughataa": "Djiguenni"},
-        {"commune": "Koumbi Saleh", "moughataa": "Djiguenni"},
-        {"commune": "Lahrach", "moughataa": "Djiguenni"},
-        {"commune": "Aoueinat Ezbel", "moughataa": "Djiguenni"},
-        {"commune": "Beneamane", "moughataa": "Djiguenni"},
-        {"commune": "Feirenni", "moughataa": "Djiguenni"},
-        
-        # Hodh Ech Chargui - Néma
-        {"commune": "Néma", "moughataa": "Néma"},
-        {"commune": "Achemine", "moughataa": "Néma"},
-        {"commune": "Agoueinit", "moughataa": "Néma"},
-        {"commune": "Bangou", "moughataa": "Néma"},
-        {"commune": "Hassi Etile", "moughataa": "Néma"},
-        {"commune": "Jerif", "moughataa": "Néma"},
-        {"commune": "Noual", "moughataa": "Néma"},
-        
-        # Hodh Ech Chargui - Timbedra
-        {"commune": "Timbedra", "moughataa": "Timbedra"},
-        {"commune": "Bousteila", "moughataa": "Timbedra"},
-        {"commune": "Kouroudjel", "moughataa": "Timbedra"},
-        {"commune": "Tenghadi", "moughataa": "Timbedra"},
-        {"commune": "Bougadoum", "moughataa": "Timbedra"},
-        {"commune": "Hasi M'Hadi", "moughataa": "Timbedra"},
-        {"commune": "Koubaj", "moughataa": "Timbedra"},
-        
-        # Hodh El Gharbi - Ayoun El Atrous
-        {"commune": "Ayoun El Atrous", "moughataa": "Ayoun El Atrous"},
-        {"commune": "Beneamane", "moughataa": "Ayoun El Atrous"},
-        {"commune": "Doueirare", "moughataa": "Ayoun El Atrous"},
-        {"commune": "Egjert", "moughataa": "Ayoun El Atrous"},
-        {"commune": "N'Savenni", "moughataa": "Ayoun El Atrous"},
-        {"commune": "Oum Lahyad", "moughataa": "Ayoun El Atrous"},
-        {"commune": "Tenaha", "moughataa": "Ayoun El Atrous"},
-        {"commune": "Voulaniya", "moughataa": "Ayoun El Atrous"},
-        
-        # Hodh El Gharbi - Kobenni
-        {"commune": "Kobenni", "moughataa": "Kobenni"},
-        {"commune": "Aghoratt", "moughataa": "Kobenni"},
-        {"commune": "El Ghayra", "moughataa": "Kobenni"},
-        {"commune": "Hamed", "moughataa": "Kobenni"},
-        {"commune": "Lehreijat", "moughataa": "Kobenni"},
-        {"commune": "Nebaghiya", "moughataa": "Kobenni"},
-        {"commune": "Radhi", "moughataa": "Kobenni"},
-        {"commune": "Timzine", "moughataa": "Kobenni"},
-        
-        # Hodh El Gharbi - Tamchekett
-        {"commune": "Tamchekett", "moughataa": "Tamchekett"},
-        {"commune": "El Mabrouk", "moughataa": "Tamchekett"},
-        
-        # Hodh El Gharbi - Tintane
-        {"commune": "Tintane", "moughataa": "Tintane"},
-        {"commune": "Bran", "moughataa": "Tintane"},
-        {"commune": "Devaa", "moughataa": "Tintane"},
-        {"commune": "El Ghabra", "moughataa": "Tintane"},
-        {"commune": "Legrane", "moughataa": "Tintane"},
-        {"commune": "Soudoud", "moughataa": "Tintane"},
-        {"commune": "Touil", "moughataa": "Tintane"},
-        {"commune": "Vréa Litama", "moughataa": "Tintane"},
-        
-        # Assaba - Aghoratt
-        {"commune": "Aghoratt", "moughataa": "Aghoratt"},
-        
-        # Assaba - Boumdeid
-        {"commune": "Boumdeid", "moughataa": "Boumdeid"},
-        {"commune": "Hsey Tin", "moughataa": "Boumdeid"},
-        {"commune": "Laweissi", "moughataa": "Boumdeid"},
-        
-        # Assaba - Guerou
-        {"commune": "Guerou", "moughataa": "Guerou"},
-        {"commune": "El Ghayra", "moughataa": "Guerou"},
-        {"commune": "Kamour", "moughataa": "Guerou"},
-        {"commune": "Oudey Jrid", "moughataa": "Guerou"},
-        
-        # Assaba - Kankossa
-        {"commune": "Kankossa", "moughataa": "Kankossa"},
-        {"commune": "Blajmil", "moughataa": "Kankossa"},
-        {"commune": "Hamed", "moughataa": "Kankossa"},
-        {"commune": "Laftah", "moughataa": "Kankossa"},
-        {"commune": "Sani", "moughataa": "Kankossa"},
-        
-        # Assaba - Kiffa
-        {"commune": "Kiffa", "moughataa": "Kiffa"},
-        
-        # Gorgol - Kaédi
-        {"commune": "Kaédi", "moughataa": "Kaédi"},
-        {"commune": "Djewol", "moughataa": "Kaédi"},
-        {"commune": "Ganki", "moughataa": "Kaédi"},
-        {"commune": "Lexeiba 1", "moughataa": "Kaédi"},
-        {"commune": "Néré Walo", "moughataa": "Kaédi"},
-        {"commune": "Tokomadji", "moughataa": "Kaédi"},
-        {"commune": "Toufndé Civé", "moughataa": "Kaédi"},
-        
-        # Gorgol - M'Bout
-        {"commune": "M'Bout", "moughataa": "M'Bout"},
-        {"commune": "Chelkhet Tiyab", "moughataa": "M'Bout"},
-        {"commune": "Dafort", "moughataa": "M'Bout"},
-        {"commune": "Lahrach", "moughataa": "M'Bout"},
-        {"commune": "Tensigh", "moughataa": "M'Bout"},
-        
-        # Gorgol - Maghama
-        {"commune": "Maghama", "moughataa": "Maghama"},
-        {"commune": "Beilouguet Litame", "moughataa": "Maghama"},
-        {"commune": "Daw", "moughataa": "Maghama"},
-        {"commune": "Dolol Civé", "moughataa": "Maghama"},
-        {"commune": "Sangué", "moughataa": "Maghama"},
-        {"commune": "Toulel", "moughataa": "Maghama"},
-        
-        # Gorgol - Monguel
-        {"commune": "Monguel", "moughataa": "Monguel"},
-        {"commune": "Bathet Moit", "moughataa": "Monguel"},
-        {"commune": "Azgueilem Tiyab", "moughataa": "Monguel"},
-        
-        # Brakna - Aleg
-        {"commune": "Aleg", "moughataa": "Aleg"},
-        {"commune": "Aghchorguitt", "moughataa": "Aleg"},
-        {"commune": "Bouhdida", "moughataa": "Aleg"},
-        {"commune": "Djellwar", "moughataa": "Aleg"},
-        
-        # Brakna - Bababé
-        {"commune": "Bababé", "moughataa": "Bababé"},
-        {"commune": "Aéré M'Bar", "moughataa": "Bababé"},
-        {"commune": "El Verae", "moughataa": "Bababé"},
-        
-        # Brakna - Boghé
-        {"commune": "Boghé", "moughataa": "Boghé"},
-        {"commune": "Dar El Barka", "moughataa": "Boghé"},
-        {"commune": "Ould Biram", "moughataa": "Boghé"},
-        
-        # Brakna - M'Bagne
-        {"commune": "M'Bagne", "moughataa": "M'Bagne"},
-        {"commune": "Bagodine", "moughataa": "M'Bagne"},
-        {"commune": "Niabina", "moughataa": "M'Bagne"},
-        
-        # Brakna - Magta Lahjar
-        {"commune": "Magta Lahjar", "moughataa": "Magta Lahjar"},
-        {"commune": "Djonaba", "moughataa": "Magta Lahjar"},
-        {"commune": "Sangrave", "moughataa": "Magta Lahjar"},
-        
-        # Trarza - Rosso
-        {"commune": "Rosso", "moughataa": "Rosso"},
-        {"commune": "Jeed El Mohrad", "moughataa": "Rosso"},
-        {"commune": "N'Diago", "moughataa": "Rosso"},
-        
-        # Trarza - Mederdra
-        {"commune": "Mederdra", "moughataa": "Mederdra"},
-        {"commune": "Bei Taouress", "moughataa": "Mederdra"},
-        {"commune": "Taguilalet", "moughataa": "Mederdra"},
-        
-        # Trarza - Boutilimit
-        {"commune": "Boutilimit", "moughataa": "Boutilimit"},
-        {"commune": "Ajar", "moughataa": "Boutilimit"},
-        {"commune": "El Moyesser", "moughataa": "Boutilimit"},
-        
-        # Adrar - Atar
-        {"commune": "Atar", "moughataa": "Atar"},
-        {"commune": "Aïn Ehel Taya", "moughataa": "Atar"},
-        {"commune": "Tawaz", "moughataa": "Atar"},
-        
-        # Adrar - Aoujeft
-        {"commune": "Aoujeft", "moughataa": "Aoujeft"},
-        {"commune": "Maaden", "moughataa": "Aoujeft"},
-        
-        # Adrar - Chinguetti
-        {"commune": "Chinguetti", "moughataa": "Chinguetti"},
-        
-        # Adrar - Ouadane
-        {"commune": "Ouadane", "moughataa": "Ouadane"},
-        
-        # Nouakchott Nord
-        {"commune": "Dar Naim", "moughataa": "Dar Naim"},
-        {"commune": "Teyarett", "moughataa": "Teyarett"},
-        {"commune": "Toujounine", "moughataa": "Toujounine"},
-        
-        # Nouakchott Ouest
-        {"commune": "Ksar", "moughataa": "Ksar"},
-        {"commune": "Sebkha", "moughataa": "Sebkha"},
-        {"commune": "Tevragh Zeina", "moughataa": "Tevragh Zeina"},
-        
-        # Nouakchott Sud
-        {"commune": "Arafat", "moughataa": "Arafat"},
-        {"commune": "El Mina", "moughataa": "El Mina"},
-        {"commune": "Riyad", "moughataa": "Riyad"},
-    ]
-    
-    count = 0
-    for item in communes_list:
-        moughataa = moughataas.get(item["moughataa"])
-        if moughataa:
-            Commune.objects.create(
-                nom=item["commune"],
-                moughataa=moughataa
+        # Moughataa
+        moughataa_nom = item["moughataa"]
+        key_m = (wilaya_nom, moughataa_nom)
+        if key_m not in moughataas_dict:
+            moughataa, created = Moughataa.objects.get_or_create(
+                nom=moughataa_nom,
+                wilaya=wilayas_dict[wilaya_nom]
             )
-            count += 1
-            if count % 20 == 0:
-                print(f"  ➜ {count} communes créées...")
-        else:
-            print(f"  ⚠️  Moughataa non trouvée: {item['moughataa']}")
+            moughataas_dict[key_m] = moughataa
+            if created:
+                moughataa_count += 1
+                print(f"    📌 Moughataa: {moughataa.nom}")
+        
+        # Commune
+        commune_nom = item["commune"]
+        key_c = (wilaya_nom, moughataa_nom, commune_nom)
+        if key_c not in communes_dict:
+            commune, created = Commune.objects.get_or_create(
+                nom=commune_nom,
+                moughataa=moughataas_dict[key_m]
+            )
+            communes_dict[key_c] = commune
+            if created:
+                commune_count += 1
+                print(f"      📍 Commune: {commune.nom}")
+        
+        # Paysage
+        paysage_nom = item["paysage"]
+        paysage, created = Paysage.objects.get_or_create(
+            nom=paysage_nom,
+            commune=communes_dict[key_c]
+        )
+        if created:
+            paysage_count += 1
+            print(f"        🌳 Paysage: {paysage.nom}")
+        
+        # Villages
+        for village_nom in item["villages"]:
+            village, created = Village.objects.get_or_create(
+                nom=village_nom,
+                paysage=paysage
+            )
+            if created:
+                village_count += 1
+                print(f"          🏡 Village: {village.nom}")
     
     # ============================================
     # RÉSULTATS
@@ -377,23 +172,19 @@ def import_all():
     print("\n" + "=" * 60)
     print("📊 RÉSULTAT FINAL")
     print("=" * 60)
-    print(f"🏛️  Wilayas: {Wilaya.objects.count()}/15")
-    print(f"📌 Moughataas: {Moughataa.objects.count()}/55")
-    print(f"📍 Communes: {Commune.objects.count()}/218")
+    print(f"🏛️  Wilayas créées: {wilaya_count}")
+    print(f"📌 Moughataas créées: {moughataa_count}")
+    print(f"📍 Communes créées: {commune_count}")
+    print(f"🌳 Paysages créés: {paysage_count}")
+    print(f"🏡 Villages créés: {village_count}")
     
-    # Vérification détaillée
     print("\n🔍 DÉTAIL PAR WILAYA:")
     for wilaya in Wilaya.objects.all().order_by('nom'):
-        nb_moughataas = wilaya.moughataas.count()
-        nb_communes = Commune.objects.filter(moughataa__wilaya=wilaya).count()
-        print(f"  {wilaya.nom}: {nb_moughataas} moughataas, {nb_communes} communes")
-        
-        # Afficher quelques moughataas avec leurs communes
-        for moughataa in wilaya.moughataas.all()[:2]:  # 2 premières
-            communes_m = moughataa.communes.all()[:3]  # 3 premières communes
-            if communes_m:
-                communes_str = ", ".join([c.nom for c in communes_m])
-                print(f"    • {moughataa.nom}: {communes_str}...")
+        nb_m = wilaya.moughataas.count()
+        nb_c = Commune.objects.filter(moughataa__wilaya=wilaya).count()
+        nb_p = Paysage.objects.filter(commune__moughataa__wilaya=wilaya).count()
+        nb_v = Village.objects.filter(paysage__commune__moughataa__wilaya=wilaya).count()
+        print(f"  {wilaya.nom}: {nb_m} moughataas, {nb_c} communes, {nb_p} paysages, {nb_v} villages")
 
 if __name__ == "__main__":
     import_all()

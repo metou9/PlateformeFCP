@@ -1,0 +1,407 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nouveau sous-projet - Étape 1/7 - PADISAM</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="/static/formulaire/css/style.css" rel="stylesheet">
+    <style>
+        .progress-bar-custom {
+            height: 8px;
+            background: #e0e0e0;
+            border-radius: 4px;
+            margin-bottom: 30px;
+        }
+        .progress-fill {
+            width: 14%;
+            height: 100%;
+            background: #5DBB63;
+            border-radius: 4px;
+        }
+        .step-indicator {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 30px;
+            flex-wrap: wrap;
+            gap: 5px;
+        }
+        .step-badge {
+            background: #e0e0e0;
+            color: #666;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-size: 0.8rem;
+        }
+        .step-badge.active {
+            background: #5DBB63;
+            color: white;
+        }
+        .step-badge.completed {
+            background: #28a745;
+            color: white;
+        }
+        .btn-next {
+            background: #5DBB63;
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 8px;
+        }
+        .btn-next:hover {
+            background: #4a9e4e;
+        }
+    </style>
+</head>
+<body>
+    <!-- Navigation -->
+    <nav class="navbar navbar-expand-lg navbar-dark">
+        <div class="container">
+            <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
+                <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
+                PADISAM
+            </a>
+            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
+                <span class="navbar-toggler-icon"></span>
+            </button>
+            <div class="collapse navbar-collapse" id="navbarNav">
+                <ul class="navbar-nav ms-auto">
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'formulaire:liste_sous_projets' %}">📋 Liste</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'formulaire:nouveau_sous_projet' %}">➕ Nouveau</a>
+                    </li>
+                    <li class="nav-item">
+                        <a class="nav-link" href="{% url 'formulaire:logout' %}">🚪 Déconnexion</a>
+                    </li>
+                </ul>
+            </div>
+        </div>
+    </nav>
+
+    <div class="container mt-4 mb-5">
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <!-- Barre de progression -->
+        <div class="progress-bar-custom">
+            <div class="progress-fill"></div>
+        </div>
+
+        <!-- Indicateur d'étapes -->
+        <div class="step-indicator">
+            <span class="step-badge active">📋 1. Infos générales</span>
+            <span class="step-badge">🏗️ 2. Infrastructures</span>
+            <span class="step-badge">🔧 3. Équipements</span>
+            <span class="step-badge">🌾 4. Intrants</span>
+            <span class="step-badge">⚙️ 5. Fonctionnement</span>
+            <span class="step-badge">🛠️ 6. Services</span>
+            <span class="step-badge">📊 7. Réalisations/Passifs</span>
+        </div>
+
+        <!-- En-tête -->
+        <div class="welcome-section">
+            <h1>📋 Nouveau sous-projet</h1>
+            <p class="mb-0">Étape 1/7 : Remplissez les informations générales</p>
+        </div>
+
+        <form method="post" action="{% url 'formulaire:save_sous_projet' %}">
+            {% csrf_token %}
+
+            <!-- SECTION 1 : Informations générales -->
+            <div class="section-title">1. Informations générales</div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Date du formulaire</label>
+                                {{ form.date_formulaire }}
+                                <small class="form-text">Date de saisie du formulaire</small>
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Intitulé du sous-projet</label>
+                                {{ form.intitule_sous_projet }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 2 : Type de sous-projet -->
+            <div class="section-title">2. Type de sous-projet</div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Guichet</label>
+                                {{ form.guichet }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Type projet</label>
+                                {{ form.type_projet }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Chaîne d'approvisionnement</label>
+                                {{ form.chaine_approvisionnement }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Marchés visés</label>
+                                {{ form.marches_vises }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Segment de la CA</label>
+                                {{ form.segment_ca }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 3 : Identification du demandeur -->
+            <div class="section-title">3. Identification du demandeur</div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Nom et statut juridique</label>
+                                {{ form.nom_statut_juridique }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Principal domaine d'activités</label>
+                                {{ form.principal_domaine_activites }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label">Adresse</label>
+                        {{ form.adresse }}
+                    </div>
+                    <div class="row">
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Personne contact (nom)</label>
+                                {{ form.personne_contact_nom }}
+                            </div>
+                        </div>
+                        <div class="col-md-6">
+                            <div class="form-group">
+                                <label class="form-label">Personne contact (fonction)</label>
+                                {{ form.personne_contact_fonction }}
+                            </div>
+                        </div>
+                    </div>
+                    <div class="row">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Téléphone</label>
+                                {{ form.telephone }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Fax</label>
+                                {{ form.fax }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Email</label>
+                                {{ form.email }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Femmes/jeunes?</label>
+                                {{ form.presente_par_femmes_jeunes }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 4 : Description et localisation -->
+            <div class="section-title">4. Description et localisation</div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="form-group mb-3">
+                        <label class="form-label">Objectif du sous-projet</label>
+                        {{ form.objectif_sous_projet }}
+                    </div>
+                    <div class="form-group mb-3">
+                        <label class="form-label">Liste des principales activités</label>
+                        {{ form.principales_activites }}
+                        <small class="form-text">Décrivez les activités avec des objectifs quantitatifs</small>
+                    </div>
+                    
+                    <h5 class="mt-4 mb-3">📍 Localisation</h5>
+                    <div class="row g-3">
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Wilaya</label>
+                                {{ form.wilaya }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Moughataa</label>
+                                {{ form.moughataa }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Commune</label>
+                                {{ form.commune }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Paysage/ZOCA</label>
+                                {{ form.paysage }}
+                            </div>
+                        </div>
+                        <div class="col-md-3">
+                            <div class="form-group">
+                                <label class="form-label">Village</label>
+                                {{ form.village }}
+                                <datalist id="village-list"></datalist>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- SECTION 5 : Renseignement sur le promoteur -->
+            <div class="section-title">5. Renseignement sur le promoteur</div>
+            <div class="card mb-4">
+                <div class="card-body">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="form-group">
+                                <label class="form-label">Année début activités</label>
+                                {{ form.annee_debut_activites }}
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="form-group">
+                                <label class="form-label">Historique</label>
+                                {{ form.historique_promoteur }}
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Bouton suivant -->
+            <div class="d-flex justify-content-end mt-4">
+                <button type="submit" class="btn-next">Suivant : Infrastructures →</button>
+            </div>
+        </form>
+    </div>
+
+    <!-- Scripts -->
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script>
+        // Chargement dynamique des localisations
+        $('#id_wilaya').change(function() {
+            var wilayaId = $(this).val();
+            if (wilayaId) {
+                $.ajax({
+                    url: '/formulaire/api/get-moughataas/',
+                    data: { 'wilaya_id': wilayaId },
+                    success: function(data) {
+                        var select = $('#id_moughataa');
+                        select.empty().append('<option value="">Sélectionnez une moughataa</option>');
+                        $.each(data, function(index, moughataa) {
+                            select.append('<option value="' + moughataa.id + '">' + moughataa.nom + '</option>');
+                        });
+                        $('#id_commune').empty().append('<option value="">Sélectionnez d\'abord une moughataa</option>');
+                        $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
+                        $('#village-list').empty();
+                        $('#id_village').val('');
+                    }
+                });
+            }
+        });
+
+        $('#id_moughataa').change(function() {
+            var moughataaId = $(this).val();
+            if (moughataaId) {
+                $.ajax({
+                    url: '/formulaire/api/get-communes/',
+                    data: { 'moughataa_id': moughataaId },
+                    success: function(data) {
+                        var select = $('#id_commune');
+                        select.empty().append('<option value="">Sélectionnez une commune</option>');
+                        $.each(data, function(index, commune) {
+                            select.append('<option value="' + commune.id + '">' + commune.nom + '</option>');
+                        });
+                        $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
+                        $('#village-list').empty();
+                        $('#id_village').val('');
+                    }
+                });
+            }
+        });
+
+        $('#id_commune').change(function() {
+            var communeId = $(this).val();
+            if (communeId) {
+                $.ajax({
+                    url: '/formulaire/api/get-paysages/',
+                    data: { 'commune_id': communeId },
+                    success: function(data) {
+                        var select = $('#id_paysage');
+                        select.empty().append('<option value="">Sélectionnez un paysage</option>');
+                        $.each(data, function(index, paysage) {
+                            select.append('<option value="' + paysage.id + '">' + paysage.nom + '</option>');
+                        });
+                        $('#village-list').empty();
+                        $('#id_village').val('');
+                    }
+                });
+            }
+        });
+
+        $('#id_paysage').change(function() {
+            var paysageId = $(this).val();
+            if (paysageId) {
+                $.ajax({
+                    url: '/formulaire/api/get-villages/',
+                    data: { 'paysage_id': paysageId },
+                    success: function(data) {
+                        var datalist = $('#village-list');
+                        datalist.empty();
+                        $.each(data, function(index, village) {
+                            datalist.append('<option value="' + village.nom + '">');
+                        });
+                    }
+                });
+            }
+        });
+    </script>
+</body>
+</html>
