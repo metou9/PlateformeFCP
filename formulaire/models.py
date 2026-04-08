@@ -173,7 +173,7 @@ class Infrastructure(models.Model):
     sous_projet = models.ForeignKey(SousProjet, on_delete=models.CASCADE, related_name='infrastructures')
     description = models.CharField(max_length=500)
     quantite = models.IntegerField(validators=[MinValueValidator(0)])
-    prix_unit = models.DecimalField(max_digits=15, decimal_places=2)
+    prix_unit = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True)
     montant_total = models.DecimalField(max_digits=15, decimal_places=2, editable=False, blank=True, null=True)
     subvention_padisam = models.DecimalField(max_digits=15, decimal_places=2)
     contribution_promoteur = models.DecimalField(max_digits=15, decimal_places=2)
@@ -194,7 +194,7 @@ class Equipement(models.Model):
     sous_projet = models.ForeignKey(SousProjet, on_delete=models.CASCADE, related_name='equipements')
     description = models.CharField(max_length=500)
     quantite = models.IntegerField(validators=[MinValueValidator(0)])
-    prix_unit = models.DecimalField(max_digits=15, decimal_places=2)
+    prix_unit = models.DecimalField(max_digits=15, decimal_places=2, default=0, null=True)
     montant_total = models.DecimalField(max_digits=15, decimal_places=2, editable=False, blank=True, null=True)
     subvention_padisam = models.DecimalField(max_digits=15, decimal_places=2)
     contribution_promoteur = models.DecimalField(max_digits=15, decimal_places=2)
@@ -232,12 +232,12 @@ class Intrant(models.Model):
 
 class Fonctionnement(models.Model):
     sous_projet = models.ForeignKey(SousProjet, on_delete=models.CASCADE, related_name='fonctionnements')
-    description = models.CharField(max_length=500)
+    description = models.CharField(blank=True, null=True, max_length=500)
     quantite = models.IntegerField(validators=[MinValueValidator(0)])
-    prix_unit = models.DecimalField(max_digits=15, decimal_places=2)
+    prix_unit = models.DecimalField(max_digits=15, blank=True, null=True, decimal_places=2)
     montant_total = models.DecimalField(max_digits=15, decimal_places=2, editable=False, blank=True, null=True)
-    contribution_promoteur = models.DecimalField(max_digits=15, decimal_places=2)
-    autre_financement = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    contribution_promoteur = models.DecimalField(max_digits=15, blank=True, null=True,decimal_places=2)
+    autre_financement = models.DecimalField(max_digits=15, blank=True, null=True, decimal_places=2, default=0)
     
     def save(self, *args, **kwargs):
         """Calcul automatique du montant_total avant sauvegarde"""
@@ -255,9 +255,9 @@ class Service(models.Model):
     quantite = models.IntegerField(validators=[MinValueValidator(0)])
     prix_unit = models.DecimalField(max_digits=15, decimal_places=2)
     montant_total = models.DecimalField(max_digits=15, decimal_places=2, editable=False, blank=True, null=True)
-    subvention_padisam = models.DecimalField(max_digits=15, decimal_places=2)
-    contribution_promoteur = models.DecimalField(max_digits=15, decimal_places=2)
-    autre_financement = models.DecimalField(max_digits=15, decimal_places=2, default=0)
+    subvention_padisam = models.DecimalField(max_digits=15, blank=True, null=True, decimal_places=2)
+    contribution_promoteur = models.DecimalField(max_digits=15,blank=True, null=True, decimal_places=2)
+    autre_financement = models.DecimalField(max_digits=15, blank=True, null=True, decimal_places=2, default=0)
     
     def save(self, *args, **kwargs):
         """Calcul automatique du montant_total avant sauvegarde"""
@@ -271,6 +271,23 @@ class Service(models.Model):
 # ============================================
 # 4. TABLE DES RÉALISATIONS PASSÉES
 # ============================================
+
+class Activite(models.Model):
+    """
+    Table des activités principales du sous-projet
+    Chaque activité peut avoir plusieurs réalisations
+    """
+    sous_projet = models.ForeignKey(SousProjet, on_delete=models.CASCADE, related_name='activites')
+    nom_activite = models.CharField(max_length=500, blank=True, null=True, verbose_name="Nom de l'activité")
+    realisations = models.TextField(verbose_name="Réalisations / Objectifs quantitatifs", blank=True, null=True)
+    
+    class Meta:
+        verbose_name = "Activité"
+        verbose_name_plural = "Activités"
+        ordering = ['id']
+    
+    def __str__(self):
+        return self.nom_activite[:50]
 
 class RealisationPassee(models.Model):
     """Table des réalisations passées"""

@@ -18,6 +18,7 @@ from .models import (
 from .forms import (
     SousProjetForm, InfrastructureFormSet, EquipementFormSet,
     IntrantFormSet, FonctionnementFormSet, ServiceFormSet,
+    ActiviteFormSet,
     RealisationFormSet, EmpruntFormSet
 )
 from .auth_forms import LoginForm
@@ -73,6 +74,157 @@ def login_required(view_func):
         return view_func(request, *args, **kwargs)
     return wrapper
 
+
+def detail_sous_projet(request, pk):
+    """Affiche le détail d'un sous-projet spécifique avec calcul des montants"""
+    sous_projet = get_object_or_404(SousProjet, pk=pk)
+    
+    # ============================================
+    # Calcul pour INFRASTRUCTURES (Prix unitaire × Quantité)
+    # ============================================
+    infrastructures = []
+    total_infra = 0
+    for infra in sous_projet.infrastructures.all():
+        quantite = infra.quantite or 0
+        prix_unit = infra.prix_unit or 0
+        montant_calcule = quantite * prix_unit
+        total_infra += montant_calcule
+        
+        infrastructures.append({
+            'id': infra.id,
+            'description': infra.description,
+            'quantite': quantite,
+            'prix_unit': prix_unit,
+            'montant_total': montant_calcule,
+            'subvention_padisam': infra.subvention_padisam,
+            'contribution_promoteur': infra.contribution_promoteur,
+            'autre_financement': infra.autre_financement,
+        })
+    
+    # ============================================
+    # Calcul pour EQUIPEMENTS (Prix unitaire × Quantité)
+    # ============================================
+    equipements = []
+    total_equip = 0
+    for equip in sous_projet.equipements.all():
+        quantite = equip.quantite or 0
+        prix_unit = equip.prix_unit or 0
+        montant_calcule = quantite * prix_unit
+        total_equip += montant_calcule
+        
+        equipements.append({
+            'id': equip.id,
+            'description': equip.description,
+            'quantite': quantite,
+            'prix_unit': prix_unit,
+            'montant_total': montant_calcule,
+            'subvention_padisam': equip.subvention_padisam,
+            'contribution_promoteur': equip.contribution_promoteur,
+            'autre_financement': equip.autre_financement,
+        })
+    
+    # ============================================
+    # Calcul pour INTRANTS (Prix unitaire × Quantité)
+    # ============================================
+    intrants = []
+    total_intrant = 0
+    for intrant in sous_projet.intrants.all():
+        quantite = intrant.quantite or 0
+        prix_unit = intrant.prix_unit or 0
+        montant_calcule = quantite * prix_unit
+        total_intrant += montant_calcule
+        
+        intrants.append({
+            'id': intrant.id,
+            'description': intrant.description,
+            'quantite': quantite,
+            'prix_unit': prix_unit,
+            'montant_total': montant_calcule,
+            'subvention_padisam': intrant.subvention_padisam,
+            'contribution_promoteur': intrant.contribution_promoteur,
+            'autre_financement': intrant.autre_financement,
+        })
+    
+    # ============================================
+    # Calcul pour FONCTIONNEMENT (Prix unitaire × Quantité)
+    # ============================================
+    fonctionnements = []
+    total_fonc = 0
+    for fonc in sous_projet.fonctionnements.all():
+        quantite = fonc.quantite or 0
+        prix_unit = fonc.prix_unit or 0
+        montant_calcule = quantite * prix_unit
+        total_fonc += montant_calcule
+        
+        fonctionnements.append({
+            'id': fonc.id,
+            'description': fonc.description,
+            'quantite': quantite,
+            'prix_unit': prix_unit,
+            'montant_total': montant_calcule,
+            'contribution_promoteur': fonc.contribution_promoteur,
+            'autre_financement': fonc.autre_financement,
+        })
+    
+    # ============================================
+    # Calcul pour SERVICES (Prix unitaire × Quantité)
+    # ============================================
+    services = []
+    total_serv = 0
+    for serv in sous_projet.services.all():
+        quantite = serv.quantite or 0
+        prix_unit = serv.prix_unit or 0
+        montant_calcule = quantite * prix_unit
+        total_serv += montant_calcule
+        
+        services.append({
+            'id': serv.id,
+            'description': serv.description,
+            'quantite': quantite,
+            'prix_unit': prix_unit,
+            'montant_total': montant_calcule,
+            'subvention_padisam': serv.subvention_padisam,
+            'contribution_promoteur': serv.contribution_promoteur,
+            'autre_financement': serv.autre_financement,
+        })
+    
+    # Grand total de tous les financements
+    grand_total = total_infra + total_equip + total_intrant + total_fonc + total_serv
+    
+    # Totaux des ventes
+    total_ventes = sum(real.ventes_usd or 0 for real in sous_projet.realisations.all())
+    
+    # Totaux des emprunts
+    total_emprunte = sum(emp.montant_emprunte or 0 for emp in sous_projet.emprunts.all())
+    total_rembourse = sum(emp.montant_rembourse or 0 for emp in sous_projet.emprunts.all())
+    
+    context = {
+        'sous_projet': sous_projet,
+        'user_name': request.session.get('user_name'),
+        'user_role': request.session.get('user_role'),
+        # Infrastructures
+        'infrastructures': infrastructures,
+        'total_infra': total_infra,
+        # Équipements
+        'equipements': equipements,
+        'total_equip': total_equip,
+        # Intrants
+        'intrants': intrants,
+        'total_intrant': total_intrant,
+        # Fonctionnements
+        'fonctionnements': fonctionnements,
+        'total_fonc': total_fonc,
+        # Services
+        'services': services,
+        'total_serv': total_serv,
+        # Grand total
+        'grand_total': grand_total,
+        # Ventes et emprunts
+        'total_ventes': total_ventes,
+        'total_emprunte': total_emprunte,
+        'total_rembourse': total_rembourse,
+    }
+    return render(request, 'formulaire/detail_sous_projet.html', context)
 
 # ============================================
 # VUES D'AUTHENTIFICATION
@@ -209,6 +361,38 @@ def financement_infrastructure(request):
 def save_infrastructure(request):
     """Sauvegarde de l'étape 2"""
     return financement_infrastructure(request)
+
+def nv_sous_projet(request):
+    """Étape 1: Formulaire des informations générales"""
+    if request.method == 'POST':
+        form = SousProjetForm(request.POST)
+        activite_formset = ActiviteFormSet(request.POST, prefix='activite')
+        
+        if form.is_valid() and activite_formset.is_valid():
+            sous_projet = form.save()
+            activite_formset.instance = sous_projet
+            activite_formset.save()
+            request.session['current_sous_projet_id'] = sous_projet.id
+            messages.success(request, '✅ Informations générales enregistrées')
+            return redirect('formulaire:financement_infrastructure')
+        else:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ {field}: {error}")
+    else:
+        sous_projet = get_current_sous_projet(request)
+        if sous_projet:
+            form = SousProjetForm(instance=sous_projet)
+            activite_formset = ActiviteFormSet(instance=sous_projet, prefix='activite')
+        else:
+            form = SousProjetForm()
+            activite_formset = ActiviteFormSet(prefix='activite')
+    
+    return render(request, 'formulaire/nv_sous_projet.html', {
+        'form': form,
+        'activite_formset': activite_formset,
+        'sous_projet': sous_projet
+    })
 
 
 # ============================================

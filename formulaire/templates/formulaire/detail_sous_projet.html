@@ -98,6 +98,11 @@
             color: #333;
             flex: 1;
         }
+        .non-renseigne {
+            color: #dc3545;
+            font-weight: bold;
+            font-style: italic;
+        }
         
         /* ============================================
            BADGES
@@ -221,10 +226,35 @@
             padding-top: 20px;
             border-top: 1px solid #f0f0f0;
         }
-
         .footer small {
             color: #aaa;
             font-size: 0.75rem;
+        }
+        
+        /* ============================================
+           TOTAUX
+        ============================================ */
+        .total-row {
+            background-color: #e8f5e9;
+            font-weight: bold;
+        }
+        .total-row td {
+            font-weight: bold;
+        }
+        .total-amount {
+            font-size: 1.1em;
+            color: #2c6e2f;
+        }
+        .bg-success {
+            background: #5DBB63 !important;
+        }
+        
+        /* ============================================
+           MONTANT CALCULÉ
+        ============================================ */
+        .montant-calcule {
+            background-color: #e8f5e9;
+            font-weight: bold;
         }
     </style>
 </head>
@@ -295,7 +325,7 @@
             <div class="col-md-3">
                 <div class="stat-card">
                     <div class="stat-number">{{ sous_projet.date_formulaire|date:"d/m/Y" }}</div>
-                    <div class="stat-label">Date création</div>
+                    <div class="stat-label">Date formulaire</div>
                 </div>
             </div>
             <div class="col-md-3">
@@ -336,25 +366,21 @@
                     <div class="col-md-6">
                         <div class="info-row">
                             <div class="info-label">Intitulé du sous-projet :</div>
-                            <div class="info-value">{{ sous_projet.intitule_sous_projet }}</div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">Type de sous-projet demandé :</div>
-                            <div class="info-value">{{ sous_projet.type_sous_projet_demande }}</div>
+                            <div class="info-value">{{ sous_projet.intitule_sous_projet|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                         <div class="info-row">
                             <div class="info-label">Chaîne d'approvisionnement :</div>
-                            <div class="info-value">{{ sous_projet.chaine_approvisionnement }}</div>
+                            <div class="info-value">{{ sous_projet.chaine_approvisionnement|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="info-row">
                             <div class="info-label">Marchés visés :</div>
-                            <div class="info-value">{{ sous_projet.marches_vises }}</div>
+                            <div class="info-value">{{ sous_projet.marches_vises|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                         <div class="info-row">
                             <div class="info-label">Segment de la CA :</div>
-                            <div class="info-value">{{ sous_projet.segment_ca }}</div>
+                            <div class="info-value">{{ sous_projet.segment_ca|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                         <div class="info-row">
                             <div class="info-label">Date de saisie :</div>
@@ -375,33 +401,45 @@
                     <div class="col-md-6">
                         <div class="info-row">
                             <div class="info-label">Nom et statut juridique :</div>
-                            <div class="info-value">{{ sous_projet.nom_statut_juridique }}</div>
+                            <div class="info-value">{{ sous_projet.nom_statut_juridique|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                         <div class="info-row">
                             <div class="info-label">Adresse :</div>
-                            <div class="info-value">{{ sous_projet.adresse }}</div>
+                            <div class="info-value">{{ sous_projet.adresse|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                         <div class="info-row">
                             <div class="info-label">Principal domaine d'activités :</div>
-                            <div class="info-value">{{ sous_projet.principal_domaine_activites }}</div>
+                            <div class="info-value">{{ sous_projet.principal_domaine_activites|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                     </div>
                     <div class="col-md-6">
                         <div class="info-row">
                             <div class="info-label">Personne contact :</div>
-                            <div class="info-value">{{ sous_projet.personne_contact_nom }} ({{ sous_projet.personne_contact_fonction }})</div>
+                            <div class="info-value">
+                                {% if sous_projet.personne_contact_nom or sous_projet.personne_contact_fonction %}
+                                    {{ sous_projet.personne_contact_nom|default:"" }} ({{ sous_projet.personne_contact_fonction|default:"" }})
+                                {% else %}
+                                    <span class="non-renseigne">Non renseigné</span>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="info-row">
                             <div class="info-label">Téléphone / Fax :</div>
-                            <div class="info-value">{{ sous_projet.telephone }} / {{ sous_projet.fax|default:"-" }}</div>
+                            <div class="info-value">
+                                {% if sous_projet.telephone or sous_projet.fax %}
+                                    {{ sous_projet.telephone|default:"-" }} / {{ sous_projet.fax|default:"-" }}
+                                {% else %}
+                                    <span class="non-renseigne">Non renseigné</span>
+                                {% endif %}
+                            </div>
                         </div>
                         <div class="info-row">
                             <div class="info-label">Email :</div>
-                            <div class="info-value">{{ sous_projet.email }}</div>
+                            <div class="info-value">{{ sous_projet.email|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                         <div class="info-row">
                             <div class="info-label">Présenté par femmes/jeunes :</div>
-                            <div class="info-value">{{ sous_projet.presente_par_femmes_jeunes }}</div>
+                            <div class="info-value">{{ sous_projet.presente_par_femmes_jeunes|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                     </div>
                 </div>
@@ -409,48 +447,82 @@
         </div>
         
         <!-- ============================================
-             SECTION 3: Description et localisation (AVEC PAYSAGE)
+             SECTION 3: Objectif du sous-projet
         ============================================ -->
-        <div class="section-title">3. Description et localisation</div>
+        <div class="section-title">3. Objectif du sous-projet</div>
         <div class="info-card">
             <div class="card-body">
                 <div class="info-row">
-                    <div class="info-label">Objectif du sous-projet :</div>
-                    <div class="info-value">{{ sous_projet.objectif_sous_projet }}</div>
+                    <div class="info-label">Objectif :</div>
+                    <div class="info-value">{{ sous_projet.objectif_sous_projet|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                 </div>
-                <div class="info-row">
-                    <div class="info-label">Principales activités :</div>
-                    <div class="info-value">{{ sous_projet.principales_activites }}</div>
-                </div>
-                
-                <h5 class="mt-4 mb-3">📍 Localisation</h5>
+            </div>
+        </div>
+        
+        <!-- ============================================
+             SECTION 4: Liste des principales activités
+        ============================================ -->
+        <div class="section-title">4. Liste des principales activités</div>
+        <div class="info-card">
+            <div class="card-body">
+                {% if sous_projet.activites.all %}
+                    <div class="table-responsive">
+                        <table class="table-detail">
+                            <thead>
+                                <tr>
+                                    <th>Activité</th>
+                                    <th>Réalisations / Objectifs quantitatifs</th>
+                                </tr>
+                            </thead>
+                            <tbody>
+                                {% for activite in sous_projet.activites.all %}
+                                <tr>
+                                    <td><strong>{{ activite.nom_activite }}</strong></td>
+                                    <td>{{ activite.realisations|linebreaks|default:"-" }}</td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </tr>
+                    </div>
+                {% else %}
+                    <p class="text-muted">Aucune activité renseignée</p>
+                {% endif %}
+            </div>
+        </div>
+        
+        <!-- ============================================
+             SECTION 5: Localisation
+        ============================================ -->
+        <div class="section-title">5. Localisation</div>
+        <div class="info-card">
+            <div class="card-body">
                 <div class="row">
                     <div class="col-md-2">
                         <div class="info-row">
                             <div class="info-label">Wilaya :</div>
-                            <div class="info-value">{{ sous_projet.wilaya.nom|default:"-" }}</div>
+                            <div class="info-value">{{ sous_projet.wilaya.nom|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                     </div>
                     <div class="col-md-2">
                         <div class="info-row">
                             <div class="info-label">Moughataa :</div>
-                            <div class="info-value">{{ sous_projet.moughataa.nom|default:"-" }}</div>
+                            <div class="info-value">{{ sous_projet.moughataa.nom|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                     </div>
                     <div class="col-md-2">
                         <div class="info-row">
                             <div class="info-label">Commune :</div>
-                            <div class="info-value">{{ sous_projet.commune.nom|default:"-" }}</div>
+                            <div class="info-value">{{ sous_projet.commune.nom|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                     </div>
-                    <div class="col-md-2">
+                    <div class="col-md-3">
                         <div class="info-row">
-                            <div class="info-label">Paysage :</div>
+                            <div class="info-label">Paysage/ZOCA :</div>
                             <div class="info-value">
                                 {% if sous_projet.paysage %}
                                     {{ sous_projet.paysage.nom }}
                                 {% else %}
-                                    -
+                                    <span class="non-renseigne">Non renseigné</span>
                                 {% endif %}
                             </div>
                         </div>
@@ -458,7 +530,7 @@
                     <div class="col-md-3">
                         <div class="info-row">
                             <div class="info-label">Village :</div>
-                            <div class="info-value">{{ sous_projet.village|default:"-" }}</div>
+                            <div class="info-value">{{ sous_projet.village|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                     </div>
                 </div>
@@ -466,135 +538,279 @@
         </div>
         
         <!-- ============================================
-             SECTION 4: Financements
+             SECTION 6: Financements
         ============================================ -->
-        <div class="section-title">4. Estimation du coût global et sources de financement</div>
+        <div class="section-title">6. Estimation du coût global et sources de financement</div>
         
         <!-- A. INFRASTRUCTURES -->
-        {% if sous_projet.infrastructures.all %}
+        {% if infrastructures %}
         <div class="info-card">
             <div class="card-header"><h5 class="mb-0">A. INFRASTRUCTURES</h5></div>
             <div class="card-body">
-                <table class="table-detail">
-                    <thead>
-                        汽<th>Description</th><th>Quantité</th><th>Montant Total</th><th>Subvention</th><th>Contribution</th><th>Autre</th> </thead>
-                    <tbody>
-                        {% for infra in sous_projet.infrastructures.all %}
-                        <tr>
-                            <td>{{ infra.description }}</td>
-                            <td>{{ infra.quantite }}</td>
-                            <td class="amount">{{ infra.montant_total }}</td>
-                            <td>{{ infra.subvention_padisam }}</td>
-                            <td>{{ infra.contribution_promoteur }}</td>
-                            <td>{{ infra.autre_financement }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table-detail">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Montant Total (Qté × PU)</th>
+                                <th>Subvention</th>
+                                <th>Contribution</th>
+                                <th>Autre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for infra in infrastructures %}
+                            <tr>
+                                <td>{{ infra.description }}</td>
+                                <td>{{ infra.quantite }}</td>
+                                <td>{{ infra.prix_unit|floatformat:2 }} MRU</td>
+                                <td class="amount montant-calcule">{{ infra.montant_total|floatformat:2 }} MRU</td>
+                                <td>{{ infra.subvention_padisam|floatformat:2 }}</td>
+                                <td>{{ infra.contribution_promoteur|floatformat:2 }}</td>
+                                <td>{{ infra.autre_financement|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="total-row">
+                                <td colspan="3"><strong>Total Infrastructures</strong></td>
+                                <td class="amount total-amount"><strong>{{ total_infra|floatformat:2 }} MRU</strong></td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div class="alert alert-info mt-3">
+                    <strong>💡 Note :</strong> Le montant total est calculé automatiquement (Quantité × Prix unitaire)
+                </div>
             </div>
         </div>
         {% endif %}
         
         <!-- B. EQUIPEMENTS -->
-        {% if sous_projet.equipements.all %}
+        {% if equipements %}
         <div class="info-card">
             <div class="card-header"><h5 class="mb-0">B. EQUIPEMENTS</h5></div>
             <div class="card-body">
-                <table class="table-detail">
-                    <thead>
-                        汽<th>Description</th><th>Quantité</th><th>Montant Total</th><th>Subvention</th><th>Contribution</th><th>Autre</th> </thead>
-                    <tbody>
-                        {% for equip in sous_projet.equipements.all %}
-                        <tr>
-                            <td>{{ equip.description }}</td>
-                            <td>{{ equip.quantite }}</td>
-                            <td class="amount">{{ equip.montant_total }}</td>
-                            <td>{{ equip.subvention_padisam }}</td>
-                            <td>{{ equip.contribution_promoteur }}</td>
-                            <td>{{ equip.autre_financement }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table-detail">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Montant Total (Qté × PU)</th>
+                                <th>Subvention</th>
+                                <th>Contribution</th>
+                                <th>Autre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for equip in equipements %}
+                            <tr>
+                                <td>{{ equip.description }}</td>
+                                <td>{{ equip.quantite }}</td>
+                                <td>{{ equip.prix_unit|floatformat:2 }} MRU</td>
+                                <td class="amount montant-calcule">{{ equip.montant_total|floatformat:2 }} MRU</td>
+                                <td>{{ equip.subvention_padisam|floatformat:2 }}</td>
+                                <td>{{ equip.contribution_promoteur|floatformat:2 }}</td>
+                                <td>{{ equip.autre_financement|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="total-row">
+                                <td colspan="3"><strong>Total Équipements</strong></td>
+                                <td class="amount total-amount"><strong>{{ total_equip|floatformat:2 }} MRU</strong></td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         {% endif %}
         
         <!-- C. INTRANTS -->
-        {% if sous_projet.intrants.all %}
+        {% if intrants %}
         <div class="info-card">
             <div class="card-header"><h5 class="mb-0">C. INTRANTS</h5></div>
             <div class="card-body">
-                <table class="table-detail">
-                    <thead>
-                        汽<th>Description</th><th>Quantité</th><th>Montant Total</th><th>Subvention</th><th>Contribution</th><th>Autre</th> </thead>
-                    <tbody>
-                        {% for intrant in sous_projet.intrants.all %}
-                        <tr>
-                            <td>{{ intrant.description }}</td>
-                            <td>{{ intrant.quantite }}</td>
-                            <td class="amount">{{ intrant.montant_total }}</td>
-                            <td>{{ intrant.subvention_padisam }}</td>
-                            <td>{{ intrant.contribution_promoteur }}</td>
-                            <td>{{ intrant.autre_financement }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table-detail">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Montant Total (Qté × PU)</th>
+                                <th>Subvention</th>
+                                <th>Contribution</th>
+                                <th>Autre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for intrant in intrants %}
+                            <tr>
+                                <td>{{ intrant.description }}</td>
+                                <td>{{ intrant.quantite }}</td>
+                                <td>{{ intrant.prix_unit|floatformat:2 }} MRU</td>
+                                <td class="amount montant-calcule">{{ intrant.montant_total|floatformat:2 }} MRU</td>
+                                <td>{{ intrant.subvention_padisam|floatformat:2 }}</td>
+                                <td>{{ intrant.contribution_promoteur|floatformat:2 }}</td>
+                                <td>{{ intrant.autre_financement|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="total-row">
+                                <td colspan="3"><strong>Total Intrants</strong></td>
+                                <td class="amount total-amount"><strong>{{ total_intrant|floatformat:2 }} MRU</strong></td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         {% endif %}
         
         <!-- D. FONCTIONNEMENT -->
-        {% if sous_projet.fonctionnement_description %}
+        {% if fonctionnements %}
         <div class="info-card">
             <div class="card-header"><h5 class="mb-0">D. FONCTIONNEMENT</h5></div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3"><div class="info-row"><div class="info-label">Description :</div><div class="info-value">{{ sous_projet.fonctionnement_description }}</div></div></div>
-                    <div class="col-md-1"><div class="info-row"><div class="info-label">Qté :</div><div class="info-value">{{ sous_projet.fonctionnement_quantite }}</div></div></div>
-                    <div class="col-md-2"><div class="info-row"><div class="info-label">Montant :</div><div class="info-value">{{ sous_projet.fonctionnement_montant_total }}</div></div></div>
-                    <div class="col-md-3"><div class="info-row"><div class="info-label">Contribution :</div><div class="info-value">{{ sous_projet.fonctionnement_contribution_promoteur }}</div></div></div>
-                    <div class="col-md-3"><div class="info-row"><div class="info-label">Autre :</div><div class="info-value">{{ sous_projet.fonctionnement_autre_financement }}</div></div></div>
+                <div class="table-responsive">
+                    <table class="table-detail">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Montant Total (Qté × PU)</th>
+                                <th>Contribution</th>
+                                <th>Autre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for fonc in fonctionnements %}
+                            <tr>
+                                <td>{{ fonc.description }}</td>
+                                <td>{{ fonc.quantite }}</td>
+                                <td>{{ fonc.prix_unit|floatformat:2 }} MRU</td>
+                                <td class="amount montant-calcule">{{ fonc.montant_total|floatformat:2 }} MRU</td>
+                                <td>{{ fonc.contribution_promoteur|floatformat:2 }}</td>
+                                <td>{{ fonc.autre_financement|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="total-row">
+                                <td colspan="3"><strong>Total Fonctionnement</strong></td>
+                                <td class="amount total-amount"><strong>{{ total_fonc|floatformat:2 }} MRU</strong></td>
+                                <td colspan="2"></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
         {% endif %}
         
         <!-- E. SERVICES -->
-        {% if sous_projet.service_description %}
+        {% if services %}
         <div class="info-card">
             <div class="card-header"><h5 class="mb-0">E. SERVICES</h5></div>
             <div class="card-body">
-                <div class="row">
-                    <div class="col-md-3"><div class="info-row"><div class="info-label">Description :</div><div class="info-value">{{ sous_projet.service_description }}</div></div></div>
-                    <div class="col-md-1"><div class="info-row"><div class="info-label">Qté :</div><div class="info-value">{{ sous_projet.service_quantite }}</div></div></div>
-                    <div class="col-md-2"><div class="info-row"><div class="info-label">Montant :</div><div class="info-value">{{ sous_projet.service_montant_total }}</div></div></div>
-                    <div class="col-md-2"><div class="info-row"><div class="info-label">Subvention :</div><div class="info-value">{{ sous_projet.service_subvention_padisam }}</div></div></div>
-                    <div class="col-md-2"><div class="info-row"><div class="info-label">Contribution :</div><div class="info-value">{{ sous_projet.service_contribution_promoteur }}</div></div></div>
-                    <div class="col-md-2"><div class="info-row"><div class="info-label">Autre :</div><div class="info-value">{{ sous_projet.service_autre_financement }}</div></div></div>
+                <div class="table-responsive">
+                    <table class="table-detail">
+                        <thead>
+                            <tr>
+                                <th>Description</th>
+                                <th>Quantité</th>
+                                <th>Prix unitaire</th>
+                                <th>Montant Total (Qté × PU)</th>
+                                <th>Subvention</th>
+                                <th>Contribution</th>
+                                <th>Autre</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for serv in services %}
+                            <tr>
+                                <td>{{ serv.description }}</td>
+                                <td>{{ serv.quantite }}</td>
+                                <td>{{ serv.prix_unit|floatformat:2 }} MRU</td>
+                                <td class="amount montant-calcule">{{ serv.montant_total|floatformat:2 }} MRU</td>
+                                <td>{{ serv.subvention_padisam|floatformat:2 }}</td>
+                                <td>{{ serv.contribution_promoteur|floatformat:2 }}</td>
+                                <td>{{ serv.autre_financement|floatformat:2 }}</td>
+                            </tr>
+                            {% endfor %}
+                            <tr class="total-row">
+                                <td colspan="3"><strong>Total Services</strong></td>
+                                <td class="amount total-amount"><strong>{{ total_serv|floatformat:2 }} MRU</strong></td>
+                                <td colspan="3"></td>
+                            </tr>
+                        </tbody>
+                    </table>
                 </div>
             </div>
         </div>
         {% endif %}
         
+        <!-- Récapitulatif général -->
+        <div class="info-card">
+            <div class="card-header bg-success text-white">
+                <h5 class="mb-0">📊 RÉCAPITULATIF GÉNÉRAL DES FINANCEMENTS</h5>
+            </div>
+            <div class="card-body">
+                <div class="row">
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">Infrastructures :</div>
+                            <div class="info-value amount">{{ total_infra|default:"0"|floatformat:2 }} MRU</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Équipements :</div>
+                            <div class="info-value amount">{{ total_equip|default:"0"|floatformat:2 }} MRU</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Intrants :</div>
+                            <div class="info-value amount">{{ total_intrant|default:"0"|floatformat:2 }} MRU</div>
+                        </div>
+                    </div>
+                    <div class="col-md-6">
+                        <div class="info-row">
+                            <div class="info-label">Fonctionnement :</div>
+                            <div class="info-value amount">{{ total_fonc|default:"0"|floatformat:2 }} MRU</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label">Services :</div>
+                            <div class="info-value amount">{{ total_serv|default:"0"|floatformat:2 }} MRU</div>
+                        </div>
+                        <div class="info-row">
+                            <div class="info-label"><strong>GRAND TOTAL :</strong></div>
+                            <div class="info-value amount total-amount">
+                                <strong>{{ grand_total|default:"0"|floatformat:2 }} MRU</strong>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
         <!-- ============================================
-             SECTION 5: Promoteur
+             SECTION 7: Promoteur
         ============================================ -->
-        <div class="section-title">5. Renseignement sur le promoteur</div>
+        <div class="section-title">7. Renseignement sur le promoteur</div>
         <div class="info-card">
             <div class="card-body">
                 <div class="row">
                     <div class="col-md-4">
                         <div class="info-row">
-                            <div class="info-label">Année début :</div>
-                            <div class="info-value">{{ sous_projet.annee_debut_activites }}</div>
+                            <div class="info-label">Année début activités :</div>
+                            <div class="info-value">{{ sous_projet.annee_debut_activites|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                     </div>
                     <div class="col-md-8">
                         <div class="info-row">
                             <div class="info-label">Historique :</div>
-                            <div class="info-value">{{ sous_projet.historique_promoteur }}</div>
+                            <div class="info-value">{{ sous_projet.historique_promoteur|default:"<span class='non-renseigne'>Non renseigné</span>" }}</div>
                         </div>
                     </div>
                 </div>
@@ -602,49 +818,67 @@
         </div>
         
         <!-- ============================================
-             SECTION 6: Réalisations
+             SECTION 8: Réalisations passées
         ============================================ -->
         {% if sous_projet.realisations.all %}
-        <div class="section-title">6. Réalisations passées</div>
+        <div class="section-title">8. Réalisations passées</div>
         <div class="info-card">
             <div class="card-body">
-                <table class="table-detail">
-                    <thead><tr><th>Année</th><th>Produit</th><th>Volume</th><th>Ventes (USD)</th></tr></thead>
-                    <tbody>
-                        {% for real in sous_projet.realisations.all %}
-                        <tr>
-                            <td>{{ real.annee }}</td>
-                            <td>{{ real.produit }}</td>
-                            <td>{{ real.volume }}</td>
-                            <td class="amount">{{ real.ventes_usd }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table-detail">
+                        <thead>
+                            <tr>
+                                <th>Année</th>
+                                <th>Produit</th>
+                                <th>Volume</th>
+                                <th>Ventes (USD)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for real in sous_projet.realisations.all %}
+                            <tr>
+                                <td>{{ real.annee }}</td>
+                                <td>{{ real.produit }}</td>
+                                <td>{{ real.volume }}</td>
+                                <td class="amount">{{ real.ventes_usd|floatformat:2 }} USD</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         {% endif %}
         
         <!-- ============================================
-             SECTION 8: Emprunts
+             SECTION 9: Passifs (emprunts)
         ============================================ -->
         {% if sous_projet.emprunts.all %}
-        <div class="section-title">8. Passifs (emprunts)</div>
+        <div class="section-title">9. Passifs (emprunts)</div>
         <div class="info-card">
             <div class="card-body">
-                <table class="table-detail">
-                    <thead><tr><th>Année</th><th>Institution</th><th>Montant emprunté</th><th>Montant remboursé</th></tr></thead>
-                    <tbody>
-                        {% for emp in sous_projet.emprunts.all %}
-                        <tr>
-                            <td>{{ emp.annee }}</td>
-                            <td>{{ emp.institution_financiere }}</td>
-                            <td class="amount">{{ emp.montant_emprunte }}</td>
-                            <td class="amount">{{ emp.montant_rembourse }}</td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
+                <div class="table-responsive">
+                    <table class="table-detail">
+                        <thead>
+                            <tr>
+                                <th>Année</th>
+                                <th>Institution</th>
+                                <th>Montant emprunté</th>
+                                <th>Montant remboursé</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            {% for emp in sous_projet.emprunts.all %}
+                            <tr>
+                                <td>{{ emp.annee }}</td>
+                                <td>{{ emp.institution_financiere }}</td>
+                                <td class="amount">{{ emp.montant_emprunte|floatformat:2 }} MRU</td>
+                                <td class="amount">{{ emp.montant_rembourse|floatformat:2 }} MRU</td>
+                            </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
             </div>
         </div>
         {% endif %}
@@ -656,13 +890,13 @@
             <a href="{% url 'formulaire:liste_sous_projets' %}" class="btn-secondary">← Retour à la liste</a>
             <a href="{% url 'formulaire:nouveau_sous_projet' %}" class="btn-action">➕ Créer un nouveau sous-projet</a>
         </div>
+        
         <div class="footer">
             <small>
-                &copy; {% now "Y" %} Binor & Associés/ID - Tous droits réservés<br>
+                &copy; {% now "Y" %} Binor & Associés/ID - Tous droits réservés
             </small>
         </div>
     </div>
-    
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
 </body>

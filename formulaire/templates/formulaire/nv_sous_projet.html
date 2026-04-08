@@ -51,6 +51,25 @@
         .btn-next:hover {
             background: #4a9e4e;
         }
+        .formset-row {
+            background: #f8f9fa;
+            padding: 20px;
+            margin-bottom: 15px;
+            border-radius: 10px;
+            border: 2px solid #e0e0e0;
+        }
+        .btn-add-row {
+            background: #28a745;
+            color: white;
+            border: none;
+            padding: 8px 15px;
+            border-radius: 5px;
+            margin-top: 10px;
+            cursor: pointer;
+        }
+        .btn-add-row:hover {
+            background: #218838;
+        }
     </style>
 </head>
 <body>
@@ -219,12 +238,14 @@
                             <div class="form-group">
                                 <label class="form-label">Téléphone</label>
                                 {{ form.telephone }}
+                                <small class="form-text">8 chiffres</small>
                             </div>
                         </div>
                         <div class="col-md-3">
                             <div class="form-group">
                                 <label class="form-label">Fax</label>
                                 {{ form.fax }}
+                                <small class="form-text">4 chiffres</small>
                             </div>
                         </div>
                         <div class="col-md-3">
@@ -243,21 +264,77 @@
                 </div>
             </div>
 
-            <!-- SECTION 4 : Description et localisation -->
-            <div class="section-title">4. Description et localisation</div>
+            <!-- SECTION 4 : Objectif du sous-projet -->
+            <div class="section-title">4. Objectif du sous-projet</div>
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="form-group mb-3">
                         <label class="form-label">Objectif du sous-projet</label>
                         {{ form.objectif_sous_projet }}
                     </div>
-                    <div class="form-group mb-3">
-                        <label class="form-label">Liste des principales activités</label>
-                        {{ form.principales_activites }}
-                        <small class="form-text">Décrivez les activités avec des objectifs quantitatifs</small>
+                </div>
+            </div>
+
+            <!-- SECTION 5 : Liste des principales activités (Table Activite) -->
+            <div class="section-title">5. Liste des principales activités</div>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">📋 Activités et réalisations</h5>
+                </div>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <small>💡 Renseignez chaque activité avec ses objectifs quantitatifs et réalisations prévues</small>
                     </div>
                     
-                    <h5 class="mt-4 mb-3">📍 Localisation</h5>
+                    {{ activite_formset.management_form }}
+                    <div id="activite-forms">
+                        {% for activite_form in activite_formset %}
+                        <div class="formset-row">
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <div class="form-group">
+                                        <label class="form-label">Nom de l'activité</label>
+                                        {{ activite_form.nom_activite }}
+                                        {% if activite_form.nom_activite.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {% for error in activite_form.nom_activite.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                                <div class="col-md-7">
+                                    <div class="form-group">
+                                        <label class="form-label">Réalisations / Objectifs quantitatifs</label>
+                                        {{ activite_form.realisations }}
+                                        {% if activite_form.realisations.errors %}
+                                            <div class="text-danger small mt-1">
+                                                {% for error in activite_form.realisations.errors %}
+                                                    {{ error }}
+                                                {% endfor %}
+                                            </div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+                            <div class="text-end mt-2">
+                                <label class="text-danger">
+                                    {{ activite_form.DELETE }} Supprimer cette activité
+                                </label>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+                    
+                    <button type="button" class="btn-add-row" id="add-activite-btn">+ Ajouter une activité</button>
+                </div>
+            </div>
+
+            <!-- SECTION 6 : Localisation -->
+            <div class="section-title">6. Localisation</div>
+            <div class="card mb-4">
+                <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-3">
                             <div class="form-group">
@@ -294,8 +371,8 @@
                 </div>
             </div>
 
-            <!-- SECTION 5 : Renseignement sur le promoteur -->
-            <div class="section-title">5. Renseignement sur le promoteur</div>
+            <!-- SECTION 7 : Renseignement sur le promoteur -->
+            <div class="section-title">7. Renseignement sur le promoteur</div>
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="row">
@@ -325,7 +402,68 @@
     <!-- Scripts -->
     <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
     <script>
-        // Chargement dynamique des localisations
+        // ============================================
+        // FONCTION POUR AJOUTER UNE LIGNE D'ACTIVITÉ
+        // ============================================
+        function addActiviteRow() {
+            var totalForms = $('#id_activite-TOTAL_FORMS');
+            var formIndex = parseInt(totalForms.val());
+            var container = $('#activite-forms');
+            var firstRow = container.find('.formset-row:first');
+            
+            if (firstRow.length === 0) {
+                console.error('Aucune ligne trouvée');
+                return;
+            }
+            
+            var newRow = firstRow.clone(true);
+            
+            // Nettoyer les valeurs des champs
+            newRow.find('input, textarea').each(function() {
+                $(this).val('');
+            });
+            
+            // Mettre à jour les IDs et noms
+            newRow.find('[name]').each(function() {
+                var name = $(this).attr('name');
+                if (name) {
+                    var newName = name.replace(/-\d+-/, '-' + formIndex + '-');
+                    $(this).attr('name', newName);
+                    $(this).attr('id', 'id_' + newName);
+                }
+            });
+            
+            // Mettre à jour les labels
+            newRow.find('label').each(function() {
+                var forAttr = $(this).attr('for');
+                if (forAttr) {
+                    var newFor = forAttr.replace(/-\d+-/, '-' + formIndex + '-');
+                    $(this).attr('for', newFor);
+                }
+            });
+            
+            // Supprimer les messages d'erreur
+            newRow.find('.text-danger').remove();
+            
+            // Incrémenter le compteur
+            totalForms.val(formIndex + 1);
+            
+            // Ajouter la nouvelle ligne
+            container.append(newRow);
+            
+            // Faire défiler vers la nouvelle ligne
+            newRow[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+        }
+        
+        // Bouton pour ajouter une activité
+        $('#add-activite-btn').click(function() {
+            addActiviteRow();
+        });
+        
+        // ============================================
+        // CHARGEMENT DYNAMIQUE DES LOCALISATIONS
+        // ============================================
+        
         $('#id_wilaya').change(function() {
             var wilayaId = $(this).val();
             if (wilayaId) {

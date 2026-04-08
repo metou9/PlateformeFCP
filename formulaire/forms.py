@@ -5,7 +5,7 @@ from django.forms import BaseInlineFormSet
 
 from .models import (
     SousProjet, Infrastructure, Equipement, Intrant,
-    Fonctionnement, Service,
+    Fonctionnement, Service, Activite,
     RealisationPassee, PassifEmprunt,
     Wilaya, Moughataa, Commune, Paysage, Village
 )
@@ -240,12 +240,36 @@ class SousProjetForm(forms.ModelForm):
         for field_name, field in self.fields.items():
             if field.required:
                 field.widget.attrs['class'] = field.widget.attrs.get('class', '') + ' required-field'
+
+class ActiviteForm(forms.ModelForm):
+    class Meta:
+        model = Activite
+        fields = ['nom_activite', 'realisations']
+        widgets = {
+            'nom_activite': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom de l\'activité'}),
+            'realisations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Objectifs quantitatifs, réalisations...'}),
+        }
+
+
+class BaseActiviteFormSet(BaseInlineFormSet):
+    """Formset pour les activités avec possibilité d'ajout/suppression"""
+    pass
+
+
+# Formset pour les activités (plusieurs lignes possibles)
+ActiviteFormSet = inlineformset_factory(
+    SousProjet, Activite,
+    form=ActiviteForm,
+    extra=3,           # 3 lignes vides par défaut
+    can_delete=True,   # L'utilisateur peut supprimer une ligne
+    formset=BaseActiviteFormSet
+)           
     
     # ============================================
     # VALIDATION SUPPLÉMENTAIRE POUR LE TÉLÉPHONE ET FAX
     # ============================================
     
-    def clean_telephone(self):
+def clean_telephone(self):
         telephone = self.cleaned_data.get('telephone')
         if telephone and not telephone.isdigit():
             raise forms.ValidationError('Le numéro de téléphone doit contenir uniquement des chiffres.')
@@ -253,7 +277,7 @@ class SousProjetForm(forms.ModelForm):
             raise forms.ValidationError('Le numéro de téléphone doit contenir exactement 8 chiffres.')
         return telephone
     
-    def clean_fax(self):
+def clean_fax(self):
         fax = self.cleaned_data.get('fax')
         if fax and not fax.isdigit():
             raise forms.ValidationError('Le fax doit contenir uniquement des chiffres.')
@@ -382,6 +406,9 @@ class BaseRealisationFormSet(BaseFormSet):
         if len(self.forms) != 3:
             raise forms.ValidationError("❌ Vous devez fournir exactement 3 années de réalisations.")
         return self.forms
+
+
+
 
 
 # ============================================
