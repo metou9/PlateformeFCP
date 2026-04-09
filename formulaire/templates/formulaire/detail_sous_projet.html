@@ -256,6 +256,13 @@
             background-color: #e8f5e9;
             font-weight: bold;
         }
+        
+        /* ============================================
+           FILTRE PERSONNALISÉ POUR LA MULTIPLICATION
+        ============================================ */
+        .multiply {
+            font-weight: bold;
+        }
     </style>
 </head>
 <body>
@@ -482,7 +489,7 @@
                                 </tr>
                                 {% endfor %}
                             </tbody>
-                        </tr>
+                        </table>
                     </div>
                 {% else %}
                     <p class="text-muted">Aucune activité renseignée</p>
@@ -543,7 +550,7 @@
         <div class="section-title">6. Estimation du coût global et sources de financement</div>
         
         <!-- A. INFRASTRUCTURES -->
-        {% if infrastructures %}
+        {% if sous_projet.infrastructures.all %}
         <div class="info-card">
             <div class="card-header"><h5 class="mb-0">A. INFRASTRUCTURES</h5></div>
             <div class="card-body">
@@ -561,22 +568,20 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for infra in infrastructures %}
+                            {% for infra in sous_projet.infrastructures.all %}
                             <tr>
                                 <td>{{ infra.description }}</td>
                                 <td>{{ infra.quantite }}</td>
                                 <td>{{ infra.prix_unit|floatformat:2 }} MRU</td>
-                                <td class="amount montant-calcule">{{ infra.montant_total|floatformat:2 }} MRU</td>
+                                <!-- Calcul du montant total = Quantité × Prix unitaire -->
+                                <td class="amount montant-calcule">
+                                    {% widthratio infra.quantite 1 infra.prix_unit %} MRU
+                                </td>
                                 <td>{{ infra.subvention_padisam|floatformat:2 }}</td>
                                 <td>{{ infra.contribution_promoteur|floatformat:2 }}</td>
                                 <td>{{ infra.autre_financement|floatformat:2 }}</td>
                             </tr>
                             {% endfor %}
-                            <tr class="total-row">
-                                <td colspan="3"><strong>Total Infrastructures</strong></td>
-                                <td class="amount total-amount"><strong>{{ total_infra|floatformat:2 }} MRU</strong></td>
-                                <td colspan="3"></td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -588,7 +593,7 @@
         {% endif %}
         
         <!-- B. EQUIPEMENTS -->
-        {% if equipements %}
+        {% if sous_projet.equipements.all %}
         <div class="info-card">
             <div class="card-header"><h5 class="mb-0">B. EQUIPEMENTS</h5></div>
             <div class="card-body">
@@ -606,22 +611,19 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for equip in equipements %}
+                            {% for equip in sous_projet.equipements.all %}
                             <tr>
                                 <td>{{ equip.description }}</td>
                                 <td>{{ equip.quantite }}</td>
                                 <td>{{ equip.prix_unit|floatformat:2 }} MRU</td>
-                                <td class="amount montant-calcule">{{ equip.montant_total|floatformat:2 }} MRU</td>
+                                <td class="amount montant-calcule">
+                                    {% widthratio equip.quantite 1 equip.prix_unit %} MRU
+                                </td>
                                 <td>{{ equip.subvention_padisam|floatformat:2 }}</td>
                                 <td>{{ equip.contribution_promoteur|floatformat:2 }}</td>
                                 <td>{{ equip.autre_financement|floatformat:2 }}</td>
                             </tr>
                             {% endfor %}
-                            <tr class="total-row">
-                                <td colspan="3"><strong>Total Équipements</strong></td>
-                                <td class="amount total-amount"><strong>{{ total_equip|floatformat:2 }} MRU</strong></td>
-                                <td colspan="3"></td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -630,7 +632,7 @@
         {% endif %}
         
         <!-- C. INTRANTS -->
-        {% if intrants %}
+        {% if sous_projet.intrants.all %}
         <div class="info-card">
             <div class="card-header"><h5 class="mb-0">C. INTRANTS</h5></div>
             <div class="card-body">
@@ -648,22 +650,19 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for intrant in intrants %}
+                            {% for intrant in sous_projet.intrants.all %}
                             <tr>
                                 <td>{{ intrant.description }}</td>
                                 <td>{{ intrant.quantite }}</td>
                                 <td>{{ intrant.prix_unit|floatformat:2 }} MRU</td>
-                                <td class="amount montant-calcule">{{ intrant.montant_total|floatformat:2 }} MRU</td>
+                                <td class="amount montant-calcule">
+                                    {% widthratio intrant.quantite 1 intrant.prix_unit %} MRU
+                                </td>
                                 <td>{{ intrant.subvention_padisam|floatformat:2 }}</td>
                                 <td>{{ intrant.contribution_promoteur|floatformat:2 }}</td>
                                 <td>{{ intrant.autre_financement|floatformat:2 }}</td>
                             </tr>
                             {% endfor %}
-                            <tr class="total-row">
-                                <td colspan="3"><strong>Total Intrants</strong></td>
-                                <td class="amount total-amount"><strong>{{ total_intrant|floatformat:2 }} MRU</strong></td>
-                                <td colspan="3"></td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -672,7 +671,7 @@
         {% endif %}
         
         <!-- D. FONCTIONNEMENT -->
-        {% if fonctionnements %}
+        {% if sous_projet.fonctionnements.all %}
         <div class="info-card">
             <div class="card-header"><h5 class="mb-0">D. FONCTIONNEMENT</h5></div>
             <div class="card-body">
@@ -689,21 +688,18 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for fonc in fonctionnements %}
+                            {% for fonc in sous_projet.fonctionnements.all %}
                             <tr>
                                 <td>{{ fonc.description }}</td>
                                 <td>{{ fonc.quantite }}</td>
                                 <td>{{ fonc.prix_unit|floatformat:2 }} MRU</td>
-                                <td class="amount montant-calcule">{{ fonc.montant_total|floatformat:2 }} MRU</td>
+                                <td class="amount montant-calcule">
+                                    {% widthratio fonc.quantite 1 fonc.prix_unit %} MRU
+                                </td>
                                 <td>{{ fonc.contribution_promoteur|floatformat:2 }}</td>
                                 <td>{{ fonc.autre_financement|floatformat:2 }}</td>
                             </tr>
                             {% endfor %}
-                            <tr class="total-row">
-                                <td colspan="3"><strong>Total Fonctionnement</strong></td>
-                                <td class="amount total-amount"><strong>{{ total_fonc|floatformat:2 }} MRU</strong></td>
-                                <td colspan="2"></td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
@@ -712,7 +708,7 @@
         {% endif %}
         
         <!-- E. SERVICES -->
-        {% if services %}
+        {% if sous_projet.services.all %}
         <div class="info-card">
             <div class="card-header"><h5 class="mb-0">E. SERVICES</h5></div>
             <div class="card-body">
@@ -730,69 +726,25 @@
                             </tr>
                         </thead>
                         <tbody>
-                            {% for serv in services %}
+                            {% for serv in sous_projet.services.all %}
                             <tr>
                                 <td>{{ serv.description }}</td>
                                 <td>{{ serv.quantite }}</td>
                                 <td>{{ serv.prix_unit|floatformat:2 }} MRU</td>
-                                <td class="amount montant-calcule">{{ serv.montant_total|floatformat:2 }} MRU</td>
+                                <td class="amount montant-calcule">
+                                    {% widthratio serv.quantite 1 serv.prix_unit %} MRU
+                                </td>
                                 <td>{{ serv.subvention_padisam|floatformat:2 }}</td>
                                 <td>{{ serv.contribution_promoteur|floatformat:2 }}</td>
                                 <td>{{ serv.autre_financement|floatformat:2 }}</td>
                             </tr>
                             {% endfor %}
-                            <tr class="total-row">
-                                <td colspan="3"><strong>Total Services</strong></td>
-                                <td class="amount total-amount"><strong>{{ total_serv|floatformat:2 }} MRU</strong></td>
-                                <td colspan="3"></td>
-                            </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
         </div>
         {% endif %}
-        
-        <!-- Récapitulatif général -->
-        <div class="info-card">
-            <div class="card-header bg-success text-white">
-                <h5 class="mb-0">📊 RÉCAPITULATIF GÉNÉRAL DES FINANCEMENTS</h5>
-            </div>
-            <div class="card-body">
-                <div class="row">
-                    <div class="col-md-6">
-                        <div class="info-row">
-                            <div class="info-label">Infrastructures :</div>
-                            <div class="info-value amount">{{ total_infra|default:"0"|floatformat:2 }} MRU</div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">Équipements :</div>
-                            <div class="info-value amount">{{ total_equip|default:"0"|floatformat:2 }} MRU</div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">Intrants :</div>
-                            <div class="info-value amount">{{ total_intrant|default:"0"|floatformat:2 }} MRU</div>
-                        </div>
-                    </div>
-                    <div class="col-md-6">
-                        <div class="info-row">
-                            <div class="info-label">Fonctionnement :</div>
-                            <div class="info-value amount">{{ total_fonc|default:"0"|floatformat:2 }} MRU</div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label">Services :</div>
-                            <div class="info-value amount">{{ total_serv|default:"0"|floatformat:2 }} MRU</div>
-                        </div>
-                        <div class="info-row">
-                            <div class="info-label"><strong>GRAND TOTAL :</strong></div>
-                            <div class="info-value amount total-amount">
-                                <strong>{{ grand_total|default:"0"|floatformat:2 }} MRU</strong>
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-        </div>
         
         <!-- ============================================
              SECTION 7: Promoteur
@@ -899,5 +851,20 @@
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        // Fonction pour calculer et afficher le montant total
+        document.addEventListener('DOMContentLoaded', function() {
+            // Pour chaque ligne, calculer le montant total
+            document.querySelectorAll('.montant-ligne').forEach(function(row) {
+                var quantite = parseFloat(row.querySelector('.quantite')?.innerText || 0);
+                var prixUnit = parseFloat(row.querySelector('.prix-unit')?.innerText || 0);
+                var montantTotal = quantite * prixUnit;
+                var montantCell = row.querySelector('.montant-total');
+                if (montantCell) {
+                    montantCell.innerText = montantTotal.toFixed(2) + ' MRU';
+                }
+            });
+        });
+    </script>
 </body>
 </html>
