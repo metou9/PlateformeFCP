@@ -7,230 +7,348 @@
     <!-- Bootstrap CSS -->
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <style>
-        /* ============================================
-           VARIABLES COULEURS (Palette PADISAM)
-        ============================================ */
-        :root {
-            --primary-green: #2c6e2f;
-            --primary-green-light: #3d8a3f;
-            --secondary-orange: #e67e22;
-            --secondary-orange-light: #f39c12;
-            --cream: #fef5e7;
-            --dark-green: #1e4a22;
-        }
-        
-        /* ============================================
-           STYLES GÉNÉRAUX
-        ============================================ */
-        body {
-            background-color: #f8f9fa;
-            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-        }
-        
-        /* ============================================
-           BARRE DE NAVIGATION
-        ============================================ */
-        .navbar {
-            background: #f8f9fa;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            padding: 12px 0;
-        }
-        
-        .navbar-brand {
-            color: white !important;
-            font-weight: bold;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
-        }
-        
-        .navbar-brand img {
-            height: 40px;
-            margin-right: 10px;
-        }
-        
-        .nav-link {
-            color: #5DBB63 !important;
-            transition: all 0.3s;
-            margin: 0 5px;
-        }
-        
-        .nav-link:hover {
-            color: #5DBB63 !important;
-            transform: translateY(-2px);
-        }
-        
-        .user-badge {
-            background: rgba(255,255,255,0.2);
-            color: white;
-            padding: 5px 15px;
-            border-radius: 25px;
-            font-size: 0.9em;
-        }
-        
-        /* ============================================
-           SECTION DE BIENVENUE
-        ============================================ */
-        .welcome-section {
-            background: white;
-            border-radius: 20px;
-            padding: 30px;
-            margin-bottom: 30px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-            border-left: 10px solid #5DBB63 ;
-        }
-        
-        .welcome-logo {
+    :root {
+        --primary-green: #2c6e2f;
+        --primary-green-light: #3d8a3f;
+        --secondary-orange: #e67e22;
+        --secondary-orange-light: #f39c12;
+        --cream: #fef5e7;
+        --dark-green: #1e4a22;
+        --menu-green: #5DBB63;
+        --menu-muted: #a8bda9;
+    }
+
+    body {
+        background-color: #f8f9fa;
+        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+    }
+
+    /* ============================================
+       NAVBAR
+    ============================================ */
+    .custom-navbar {
+        background: #f8f9fa;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        padding: 10px 0;
+    }
+
+    .navbar-brand {
+        display: flex;
+        align-items: center;
+        padding: 0;
+        margin: 0;
+    }
+
+    .navbar-brand img {
+        height: 40px;
+        width: auto;
+        display: block;
+    }
+
+    .main-nav-link {
+        color: var(--menu-green) !important;
+        font-size: 0.88rem;
+        font-weight: 600;
+        margin: 0 6px;
+        white-space: nowrap;
+    }
+
+    .main-nav-link:hover,
+    .main-nav-link:focus {
+        color: var(--primary-green-light) !important;
+    }
+
+    .custom-dropdown {
+        border: none;
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        padding: 8px 0;
+        min-width: 250px;
+        margin-top: 10px;
+    }
+
+    .custom-dropdown .dropdown-item {
+        padding: 10px 16px;
+        font-size: 0.95rem;
+        background: transparent;
+    }
+
+    .active-submenu {
+        color: var(--menu-green);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .active-submenu:hover {
+        color: var(--primary-green-light);
+        background-color: #f3f8f3;
+    }
+
+    .disabled-submenu {
+        color: var(--menu-muted) !important;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .navbar-toggler {
+        border: none;
+    }
+
+    .navbar-toggler:focus {
+        box-shadow: none;
+    }
+     .footer {
             text-align: center;
-            margin-bottom: 20px;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
         }
-        
-        .welcome-logo img {
-            max-width: 100px;
-            height: auto;
-        }
-        
-        .welcome-title {
-            font-size: 1.8rem;
-            color: var(--dark-green);
-            font-weight: 600;
-        }
-        
-        .welcome-subtitle {
-            color: #666;
-            font-size: 0.9rem;
-            margin-bottom: 0;
-        }
-        
-        /* ============================================
-           CARTES D'ACCÈS RAPIDE
-        ============================================ */
-        .stat-card {
-    background: white;
-    border-radius: 20px;
-    padding: 30px 20px;
-    text-align: center;
-    box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-    transition: all 0.3s;
-    cursor: pointer;
-    border: 1px solid #f0f0f0;
-}
-        
-       .stat-card:hover {
-    transform: translateY(-8px);
-    box-shadow: 0 15px 30px rgba(0,0,0,0.12);
-    border-color: var(--secondary-orange);
-}
 
-.stat-number {
-    font-size: 3.5rem;          /* Augmenter la taille */
-    font-weight: normal;
-    color: var(--primary-green); /* Couleur unie pour l'icône */
-    margin-bottom: 10px;
-    line-height: 1;
-}
+        .footer small {
+            color: #aaa;
+            font-size: 0.75rem;
+        }
 
-.stat-label {
-    color: var(--dark-green);
-    font-weight: 600;
-    margin-top: 10px;
-    font-size: 1.1rem;
-}
+    @media (max-width: 991.98px) {
+        .navbar-brand img {
+            height: 52px;
+        }
 
-.stat-card small {
-    color: #888;
-    font-size: 0.85rem;
-}
-        
-        /* ============================================
-           TABLEAU DES DERNIERS PROJETS
-        ============================================ */
-        .card {
-            border: none;
-            border-radius: 20px;
-            box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-            overflow: hidden;
+        .main-nav-link {
+            margin: 6px 0;
         }
-        
-        .card-header {
-            background:#5DBB63;
-            color: white;
-            padding: 15px 20px;
-            font-weight: 600;
+
+        .custom-dropdown {
+            box-shadow: none;
+            border: 1px solid #e9ecef;
+            margin-top: 0;
         }
-        
-        .table th {
-            background-color: var(--cream);
-            color: var(--dark-green);
-            font-weight: 600;
-            border: none;
+    }
+
+    /* ============================================
+       SECTION DE BIENVENUE
+    ============================================ */
+    .welcome-section {
+        background: white;
+        border-radius: 20px;
+        padding: 30px;
+        margin-bottom: 30px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        border-left: 10px solid var(--menu-green);
+    }
+
+    .welcome-logo {
+        text-align: center;
+        margin-bottom: 20px;
+    }
+
+    .welcome-logo img {
+        max-width: 100px;
+        height: auto;
+    }
+
+    .welcome-title {
+        font-size: 1.8rem;
+        color: var(--dark-green);
+        font-weight: 600;
+    }
+
+    .welcome-subtitle {
+        color: #666;
+        font-size: 0.9rem;
+        margin-bottom: 0;
+    }
+
+    /* ============================================
+       CARTES
+    ============================================ */
+    .stat-card {
+        background: white;
+        border-radius: 20px;
+        padding: 30px 20px;
+        text-align: center;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
+        transition: all 0.3s;
+        cursor: pointer;
+        border: 1px solid #f0f0f0;
+    }
+
+    .stat-card:hover {
+        transform: translateY(-8px);
+        box-shadow: 0 15px 30px rgba(0,0,0,0.12);
+        border-color: var(--secondary-orange);
+    }
+
+    .stat-number {
+        font-size: 3.5rem;
+        font-weight: normal;
+        color: var(--primary-green);
+        margin-bottom: 10px;
+        line-height: 1;
+    }
+
+    .stat-label {
+        color: var(--dark-green);
+        font-weight: 600;
+        margin-top: 10px;
+        font-size: 1.1rem;
+    }
+
+    .stat-card small {
+        color: #888;
+        font-size: 0.85rem;
+    }
+
+    /* ============================================
+       TABLEAU
+    ============================================ */
+    .card {
+        border: none;
+        border-radius: 20px;
+        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
+        overflow: hidden;
+    }
+
+    .card-header {
+        background: var(--menu-green);
+        color: white;
+        padding: 15px 20px;
+        font-weight: 600;
+    }
+
+    .table th {
+        background-color: var(--cream);
+        color: var(--dark-green);
+        font-weight: 600;
+        border: none;
+    }
+
+    .badge-agr {
+        background-color: var(--primary-green);
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+    }
+
+    .badge-aci {
+        background-color: var(--secondary-orange);
+        color: white;
+        padding: 5px 12px;
+        border-radius: 20px;
+        font-size: 0.8rem;
+    }
+
+    .btn-outline-primary {
+        border-color: var(--primary-green);
+        color: var(--primary-green);
+    }
+
+    .btn-outline-primary:hover {
+        background-color: var(--primary-green);
+        border-color: var(--primary-green);
+    }
+
+    /* ============================================
+       RESPONSIVE
+    ============================================ */
+    @media (max-width: 1200px) {
+        .nav-sections {
+            gap: 24px;
         }
-        
-        .badge-agr {
-            background-color: var(--primary-green);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
+
+        .nav-group {
+            min-width: 200px;
         }
-        
-        .badge-aci {
-            background-color: var(--secondary-orange);
-            color: white;
-            padding: 5px 12px;
-            border-radius: 20px;
-            font-size: 0.8rem;
+    }
+
+    @media (max-width: 992px) {
+        .navbar-brand img {
+            height: 56px;
         }
-        
-        .btn-outline-primary {
-            border-color: var(--primary-green);
-            color: var(--primary-green);
+
+        .nav-sections {
+            width: 100%;
+            margin-top: 15px;
+            gap: 20px;
         }
-        
-        .btn-outline-primary:hover {
-            background-color: var(--primary-green);
-            border-color: var(--primary-green);
+
+        .nav-group {
+            min-width: 100%;
         }
-    </style>
+    }
+</style>
 </head>
 <body>
     <!-- ============================================
          BARRE DE NAVIGATION AVEC LOGO ET BRAND
     ============================================ -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <!-- Logo et nom du projet -->
-            <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
-                <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
-                
-            </a>
-            <!-- Bouton pour mobile -->
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <!-- Liens de navigation -->
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:liste_sous_projets' %}">
-                            📋 Liste
-                        </a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:nouveau_sous_projet' %}">
-                            ➕ Nouveau
-                        </a>
-                    </li>
-                   
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:logout' %}">
-                            🚪 Déconnexion
-                        </a>
-                    </li>
-                </ul>
-            </div>
+  <nav class="navbar navbar-expand-lg custom-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
+            <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPadisam" aria-controls="navbarPadisam" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarPadisam">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="dossiersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Dossiers
+                    </a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="dossiersDropdown">
+                        <li>
+                            <a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">
+                                Nouveau dossier
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item active-submenu" href="{% url 'formulaire:liste_sous_projets' %}">
+                                Liste des dossiers
+                            </a>
+                        </li>
+                        <li>
+                            <span class="dropdown-item disabled-submenu">Archivage numérique</span>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="examenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Examen des dossiers
+                    </a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="examenDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Présélection</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Dossiers rejetés</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Procès-verbal</span></li>
+                    </ul>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Transmission &amp; suite
+                    </a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Dossiers transmis</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Screening E&amp;S</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Plans d’affaires</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Évaluation technique et financière</span></li>
+                    </ul>
+                </li>
+
+                <li class="nav-item ms-lg-3">
+                    <a class="nav-link main-nav-link" href="{% url 'formulaire:logout' %}">
+                        Déconnexion
+                    </a>
+                </li>
+            </ul>
         </div>
-    </nav>
+    </div>
+</nav>
 
     <div class="container mt-5">
         <!-- Affichage des messages flash -->
@@ -334,9 +452,9 @@
         </div>
         
         <!-- Pied de page -->
-        <div class="text-center mt-4 pb-4">
-            <small class="text-muted">
-                &copy; {% now "Y" %} PADISAM - Ministère de l'Agriculture, Mauritanie
+        <div class="footer">
+            <small>
+                &copy; {% now "Y" %} Binor & Associés / I&D - Tous droits réservés<br>
             </small>
         </div>
     </div>

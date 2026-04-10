@@ -48,15 +48,43 @@ def clean_formset_data(post_data, prefix):
     return post_data
 
 
+def get_current_user(request):
+    """Récupère l'utilisateur connecté depuis la session."""
+    user_id = request.session.get('user_id')
+    if not user_id:
+        return None
+    try:
+        return Utilisateur.objects.select_related('wilaya').get(id=user_id, actif=True)
+    except Utilisateur.DoesNotExist:
+        return None
+
+
+def is_agent_saisie(utilisateur):
+    return bool(utilisateur and utilisateur.role == 'agent')
+
+
+def get_accessible_sous_projets(utilisateur):
+    queryset = SousProjet.objects.all()
+    if is_agent_saisie(utilisateur):
+        if utilisateur.wilaya_id:
+            queryset = queryset.filter(wilaya_id=utilisateur.wilaya_id)
+        else:
+            queryset = queryset.none()
+    return queryset
+
+
 def get_current_sous_projet(request):
     """
     Récupère le sous-projet en cours de création depuis la session
+    en respectant les droits d'accès de l'utilisateur.
     """
     sous_projet_id = request.session.get('current_sous_projet_id')
-    if sous_projet_id:
+    utilisateur = get_current_user(request)
+    if sous_projet_id and utilisateur:
         try:
-            return SousProjet.objects.get(id=sous_projet_id)
+            return get_accessible_sous_projets(utilisateur).get(id=sous_projet_id)
         except SousProjet.DoesNotExist:
+            request.session.pop('current_sous_projet_id', None)
             return None
     return None
 
@@ -247,6 +275,8 @@ def login_view(request):
                     request.session['user_id'] = utilisateur.id
                     request.session['user_name'] = f"{utilisateur.prenom} {utilisateur.nom}"
                     request.session['user_role'] = utilisateur.role
+                    request.session['user_wilaya_id'] = utilisateur.wilaya_id
+                    request.session['user_wilaya_nom'] = utilisateur.wilaya.nom if utilisateur.wilaya else ''
                     
                     utilisateur.dernier_login = timezone.now()
                     utilisateur.save()
@@ -278,12 +308,15 @@ def logout_view(request):
 @login_required
 def accueil(request):
     """Page d'accueil après connexion"""
-    total_projets = SousProjet.objects.count()
-    derniers_projets = SousProjet.objects.all().order_by('-date_creation')[:5]
+    utilisateur = get_current_user(request)
+    sous_projets = get_accessible_sous_projets(utilisateur)
+    total_projets = sous_projets.count()
+    derniers_projets = sous_projets.order_by('-date_creation')[:5]
     
     context = {
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
+        'user_wilaya_nom': request.session.get('user_wilaya_nom'),
         'total_projets': total_projets,
         'derniers_projets': derniers_projets,
         'now': timezone.now(),
@@ -297,11 +330,29 @@ def accueil(request):
 
 @login_required
 def nouveau_sous_projet(request):
-    """Étape 1: Formulaire des informations générales"""
+    """Étape 1: Formulaire des informations générales + activités"""
+    utilisateur = get_current_user(request)
+    sous_projet = get_current_sous_projet(request)
+
+    if is_agent_saisie(utilisateur) and not utilisateur.wilaya_id:
+        messages.error(request, "Cet agent n'a pas de wilaya affectée. Impossible de créer un sous-projet.")
+        return redirect('formulaire:accueil')
+
     if request.method == 'POST':
-        form = SousProjetForm(request.POST)
-        if form.is_valid():
-            sous_projet = form.save()
+        form = SousProjetForm(request.POST, instance=sous_projet, user=utilisateur)
+        activite_formset = ActiviteFormSet(
+            request.POST,
+            instance=sous_projet if sous_projet else SousProjet(),
+            prefix='activite'
+        )
+
+        if form.is_valid() and activite_formset.is_valid():
+            sous_projet = form.save(commit=False)
+            if is_agent_saisie(utilisateur):
+                sous_projet.wilaya = utilisateur.wilaya
+            sous_projet.save()
+            activite_formset.instance = sous_projet
+            activite_formset.save()
             request.session['current_sous_projet_id'] = sous_projet.id
             messages.success(request, '✅ Informations générales enregistrées')
             return redirect('formulaire:financement_infrastructure')
@@ -309,15 +360,23 @@ def nouveau_sous_projet(request):
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"❌ {field}: {error}")
+            if activite_formset.non_form_errors():
+                for error in activite_formset.non_form_errors():
+                    messages.error(request, f"❌ Activités: {error}")
     else:
-        # Récupérer les données de session si elles existent
-        sous_projet = get_current_sous_projet(request)
         if sous_projet:
-            form = SousProjetForm(instance=sous_projet)
+            form = SousProjetForm(instance=sous_projet, user=utilisateur)
+            activite_formset = ActiviteFormSet(instance=sous_projet, prefix='activite')
         else:
-            form = SousProjetForm()
+            form = SousProjetForm(user=utilisateur)
+            activite_formset = ActiviteFormSet(prefix='activite')
     
-    return render(request, 'formulaire/nv_sous_projet.html', {'form': form})
+    return render(request, 'formulaire/nv_sous_projet.html', {
+        'form': form,
+        'activite_formset_data': activite_formset,
+        'sous_projet': sous_projet,
+        'user_wilaya_nom': request.session.get('user_wilaya_nom'),
+    })
 
 
 @login_required
@@ -383,15 +442,26 @@ def nv_sous_projet(request):
         sous_projet = get_current_sous_projet(request)
         if sous_projet:
             form = SousProjetForm(instance=sous_projet)
+            # Important: instance ET prefix
             activite_formset = ActiviteFormSet(instance=sous_projet, prefix='activite')
         else:
             form = SousProjetForm()
+            # Important: prefix seulement
             activite_formset = ActiviteFormSet(prefix='activite')
+    
+      # DEBUG
+    print("=" * 50)
+    print("🔍 VUE nv_sous_projet - AVANT RENDER")
+    print(f"activite_formset: {activite_formset}")
+    print(f"Nombre de forms: {len(activite_formset.forms)}")
+    print("=" * 50)
     
     return render(request, 'formulaire/nv_sous_projet.html', {
         'form': form,
-        'activite_formset': activite_formset,
-        'sous_projet': sous_projet
+        'activite_formset_data': activite_formset,
+        'sous_projet': sous_projet,
+        'test_nombre': len(activite_formset.forms),
+
     })
 
 
@@ -610,29 +680,34 @@ def save_realisation_passif(request):
 
 @login_required
 def liste_sous_projets(request):
-    """Affiche la liste de tous les sous-projets"""
-    sous_projets = SousProjet.objects.all().order_by('-date_creation')
+    """Affiche la liste des sous-projets accessibles à l'utilisateur"""
+    utilisateur = get_current_user(request)
+    sous_projets = get_accessible_sous_projets(utilisateur).order_by('-date_creation')
     return render(request, 'formulaire/liste_sous_projets.html', {
         'sous_projets': sous_projets,
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
+        'user_wilaya_nom': request.session.get('user_wilaya_nom'),
     })
 
 
 @login_required
 def detail_sous_projet(request, pk):
-    """Affiche le détail d'un sous-projet spécifique"""
-    sous_projet = get_object_or_404(SousProjet, pk=pk)
+    """Affiche le détail d'un sous-projet accessible à l'utilisateur"""
+    utilisateur = get_current_user(request)
+    sous_projet = get_object_or_404(get_accessible_sous_projets(utilisateur), pk=pk)
     return render(request, 'formulaire/detail_sous_projet.html', {
         'sous_projet': sous_projet,
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
+        'user_wilaya_nom': request.session.get('user_wilaya_nom'),
     })
 
 @login_required
 def supprimer_sous_projet(request, pk):
-    """Supprime un sous-projet spécifique"""
-    sous_projet = get_object_or_404(SousProjet, pk=pk)
+    """Supprime un sous-projet accessible à l'utilisateur"""
+    utilisateur = get_current_user(request)
+    sous_projet = get_object_or_404(get_accessible_sous_projets(utilisateur), pk=pk)
     
     if request.method == 'POST':
         intitule = sous_projet.intitule_sous_projet
@@ -649,6 +724,12 @@ def supprimer_sous_projet(request, pk):
 def get_moughataas(request):
     """API: Récupère les moughataas d'une wilaya donnée"""
     wilaya_id = request.GET.get('wilaya_id')
+    user_role = request.session.get('user_role')
+    user_wilaya_id = request.session.get('user_wilaya_id')
+
+    if user_role == 'agent' and user_wilaya_id and str(wilaya_id) != str(user_wilaya_id):
+        return JsonResponse([], safe=False)
+
     if wilaya_id:
         moughataas = Moughataa.objects.filter(wilaya_id=wilaya_id).order_by('nom')
         data = [{'id': m.id, 'nom': m.nom} for m in moughataas]
@@ -659,10 +740,15 @@ def get_moughataas(request):
 def get_communes(request):
     """API: Récupère les communes d'une moughataa donnée"""
     moughataa_id = request.GET.get('moughataa_id')
+    user_role = request.session.get('user_role')
+    user_wilaya_id = request.session.get('user_wilaya_id')
+
     if moughataa_id and moughataa_id.isdigit():
         try:
-            communes = Commune.objects.filter(moughataa_id=moughataa_id).order_by('nom')
-            data = [{'id': c.id, 'nom': c.nom} for c in communes]
+            communes = Commune.objects.filter(moughataa_id=moughataa_id)
+            if user_role == 'agent' and user_wilaya_id:
+                communes = communes.filter(moughataa__wilaya_id=user_wilaya_id)
+            data = [{'id': c.id, 'nom': c.nom} for c in communes.order_by('nom')]
             return JsonResponse(data, safe=False)
         except Exception:
             return JsonResponse([], safe=False)
@@ -672,10 +758,15 @@ def get_communes(request):
 def get_paysages(request):
     """API: Récupère les paysages d'une commune donnée"""
     commune_id = request.GET.get('commune_id')
+    user_role = request.session.get('user_role')
+    user_wilaya_id = request.session.get('user_wilaya_id')
+
     if commune_id and commune_id.isdigit():
         try:
-            paysages = Paysage.objects.filter(commune_id=commune_id).order_by('nom')
-            data = [{'id': p.id, 'nom': p.nom} for p in paysages]
+            paysages = Paysage.objects.filter(commune_id=commune_id)
+            if user_role == 'agent' and user_wilaya_id:
+                paysages = paysages.filter(commune__moughataa__wilaya_id=user_wilaya_id)
+            data = [{'id': p.id, 'nom': p.nom} for p in paysages.order_by('nom')]
             return JsonResponse(data, safe=False)
         except Exception:
             return JsonResponse([], safe=False)

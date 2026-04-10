@@ -7,6 +7,119 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/formulaire/css/style.css" rel="stylesheet">
     <style>
+
+           :root {
+        --primary-green: #2c6e2f;
+        --primary-green-light: #3d8a3f;
+        --secondary-orange: #e67e22;
+        --secondary-orange-light: #f39c12;
+        --cream: #fef5e7;
+        --dark-green: #1e4a22;
+        --menu-green: #5DBB63;
+        --menu-muted: #a8bda9;
+    }
+        body {
+            background-color: #f8f9fa;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+             .custom-navbar {
+        background: #f8f9fa;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        padding: 10px 0;
+    }
+
+    .navbar-brand {
+        display: flex;
+        align-items: center;
+        padding: 0;
+        margin: 0;
+    }
+
+    .navbar-brand img {
+        height: 40px;
+        width: auto;
+        display: block;
+    }
+
+    .main-nav-link {
+        color: var(--menu-green) !important;
+        font-size: 0.88rem;
+        font-weight: 600;
+        margin: 0 6px;
+        white-space: nowrap;
+    }
+
+    .main-nav-link:hover,
+    .main-nav-link:focus {
+        color: var(--primary-green-light) !important;
+    }
+
+    .custom-dropdown {
+        border: none;
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        padding: 8px 0;
+        min-width: 250px;
+        margin-top: 10px;
+    }
+
+    .custom-dropdown .dropdown-item {
+        padding: 10px 16px;
+        font-size: 0.95rem;
+        background: transparent;
+    }
+
+    .active-submenu {
+        color: var(--menu-green);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .active-submenu:hover {
+        color: var(--primary-green-light);
+        background-color: #f3f8f3;
+    }
+
+    .disabled-submenu {
+        color: var(--menu-muted) !important;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .navbar-toggler {
+        border: none;
+    }
+
+    .navbar-toggler:focus {
+        box-shadow: none;
+    }
+     .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
+        }
+
+        .footer small {
+            color: #aaa;
+            font-size: 0.75rem;
+        }
+
+    @media (max-width: 991.98px) {
+        .navbar-brand img {
+            height: 52px;
+        }
+
+        .main-nav-link {
+            margin: 6px 0;
+        }
+
+        .custom-dropdown {
+            box-shadow: none;
+            border: 1px solid #e9ecef;
+            margin-top: 0;
+        }
+    }
         .progress-bar-custom {
             height: 8px;
             background: #e0e0e0;
@@ -74,30 +187,72 @@
 </head>
 <body>
     <!-- Navigation -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
-                <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
-                PADISAM
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:liste_sous_projets' %}">📋 Liste</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:nouveau_sous_projet' %}">➕ Nouveau</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:logout' %}">🚪 Déconnexion</a>
-                    </li>
-                </ul>
-            </div>
+  <nav class="navbar navbar-expand-lg custom-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
+            <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPadisam" aria-controls="navbarPadisam" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarPadisam">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="dossiersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Dossiers
+                    </a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="dossiersDropdown">
+                        <li>
+                            <a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">
+                                Nouveau dossier
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item active-submenu" href="{% url 'formulaire:liste_sous_projets' %}">
+                                Liste des dossiers
+                            </a>
+                        </li>
+                        <li>
+                            <span class="dropdown-item disabled-submenu">Archivage numérique</span>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="examenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Examen des dossiers
+                    </a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="examenDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Présélection</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Dossiers rejetés</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Procès-verbal</span></li>
+                    </ul>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Transmission &amp; suite
+                    </a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Dossiers transmis</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Screening E&amp;S</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Plans d’affaires</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Évaluation technique et financière</span></li>
+                    </ul>
+                </li>
+
+                <li class="nav-item ms-lg-3">
+                    <a class="nav-link main-nav-link" href="{% url 'formulaire:logout' %}">
+                        Déconnexion
+                    </a>
+                </li>
+            </ul>
         </div>
-    </nav>
+    </div>
+</nav>
 
     <div class="container mt-4 mb-5">
         {% if messages %}
@@ -143,7 +298,6 @@
                             <div class="form-group">
                                 <label class="form-label">Date du formulaire</label>
                                 {{ form.date_formulaire }}
-                                <small class="form-text">Date de saisie du formulaire</small>
                             </div>
                         </div>
                         <div class="col-md-6">
@@ -275,61 +429,61 @@
                 </div>
             </div>
 
-            <!-- SECTION 5 : Liste des principales activités (Table Activite) -->
-            <div class="section-title">5. Liste des principales activités</div>
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">📋 Activités et réalisations</h5>
-                </div>
-                <div class="card-body">
-                    <div class="alert alert-info">
-                        <small>💡 Renseignez chaque activité avec ses objectifs quantitatifs et réalisations prévues</small>
-                    </div>
-                    
-                    {{ activite_formset.management_form }}
-                    <div id="activite-forms">
-                        {% for activite_form in activite_formset %}
-                        <div class="formset-row">
-                            <div class="row">
-                                <div class="col-md-5">
-                                    <div class="form-group">
-                                        <label class="form-label">Nom de l'activité</label>
-                                        {{ activite_form.nom_activite }}
-                                        {% if activite_form.nom_activite.errors %}
-                                            <div class="text-danger small mt-1">
-                                                {% for error in activite_form.nom_activite.errors %}
-                                                    {{ error }}
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-                                    </div>
+<!-- SECTION 5 : Liste des principales activités -->
+<div class="section-title">5. Liste des principales activités</div>
+<div class="card mb-4">
+    <div class="card-header">
+        <h5 class="mb-0">📋 Activités et Objectifs quantitatifs</h5>
+    </div>
+    <div class="card-body">
+      
+        
+        <div class="alert alert-info">
+            <small>💡 Renseignez chaque activité avec ses objectifs quantitatifs</small>
+        </div>
+        
+        {{ activite_formset_data.management_form }}
+        <div id="activite-forms">
+            {% for activite_form in activite_formset_data %}
+            <div class="formset-row">
+                <div class="row">
+                    <div class="col-md-5">
+                        <div class="form-group">
+                            <label class="form-label">Nom de l'activité</label>
+                            {{ activite_form.nom_activite }}
+                            {% if activite_form.nom_activite.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in activite_form.nom_activite.errors %}
+                                        {{ error }}
+                                    {% endfor %}
                                 </div>
-                                <div class="col-md-7">
-                                    <div class="form-group">
-                                        <label class="form-label">Réalisations / Objectifs quantitatifs</label>
-                                        {{ activite_form.realisations }}
-                                        {% if activite_form.realisations.errors %}
-                                            <div class="text-danger small mt-1">
-                                                {% for error in activite_form.realisations.errors %}
-                                                    {{ error }}
-                                                {% endfor %}
-                                            </div>
-                                        {% endif %}
-                                    </div>
-                                </div>
-                            </div>
-                            <div class="text-end mt-2">
-                                <label class="text-danger">
-                                    {{ activite_form.DELETE }} Supprimer cette activité
-                                </label>
-                            </div>
+                            {% endif %}
                         </div>
-                        {% endfor %}
                     </div>
-                    
-                    <button type="button" class="btn-add-row" id="add-activite-btn">+ Ajouter une activité</button>
+                    <div class="col-md-5">
+                        <div class="form-group">
+                            <label class="form-label">Objectifs quantitatifs</label>
+                            {{ activite_form.realisations }}
+                            {% if activite_form.realisations.errors %}
+                                <div class="text-danger small mt-1">
+                                    {% for error in activite_form.realisations.errors %}
+                                        {{ error }}
+                                    {% endfor %}
+                                </div>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="text-end mt-2">
+                    <small>{{ activite_form.DELETE }} Supprimer cette activité</small>
                 </div>
             </div>
+            {% endfor %}
+        </div>
+        
+        <button type="button" class="btn-add-row" id="add-activite-btn">+ Ajouter une activité</button>
+    </div>
+</div>
 
             <!-- SECTION 6 : Localisation -->
             <div class="section-title">6. Localisation</div>
@@ -400,146 +554,153 @@
     </div>
 
     <!-- Scripts -->
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-    <script>
-        // ============================================
-        // FONCTION POUR AJOUTER UNE LIGNE D'ACTIVITÉ
-        // ============================================
-        function addActiviteRow() {
-            var totalForms = $('#id_activite-TOTAL_FORMS');
-            var formIndex = parseInt(totalForms.val());
-            var container = $('#activite-forms');
-            var firstRow = container.find('.formset-row:first');
-            
-            if (firstRow.length === 0) {
-                console.error('Aucune ligne trouvée');
-                return;
-            }
-            
-            var newRow = firstRow.clone(true);
-            
-            // Nettoyer les valeurs des champs
-            newRow.find('input, textarea').each(function() {
-                $(this).val('');
-            });
-            
-            // Mettre à jour les IDs et noms
-            newRow.find('[name]').each(function() {
-                var name = $(this).attr('name');
-                if (name) {
-                    var newName = name.replace(/-\d+-/, '-' + formIndex + '-');
-                    $(this).attr('name', newName);
-                    $(this).attr('id', 'id_' + newName);
-                }
-            });
-            
-            // Mettre à jour les labels
-            newRow.find('label').each(function() {
-                var forAttr = $(this).attr('for');
-                if (forAttr) {
-                    var newFor = forAttr.replace(/-\d+-/, '-' + formIndex + '-');
-                    $(this).attr('for', newFor);
-                }
-            });
-            
-            // Supprimer les messages d'erreur
-            newRow.find('.text-danger').remove();
-            
-            // Incrémenter le compteur
-            totalForms.val(formIndex + 1);
-            
-            // Ajouter la nouvelle ligne
-            container.append(newRow);
-            
-            // Faire défiler vers la nouvelle ligne
-            newRow[0].scrollIntoView({ behavior: 'smooth', block: 'center' });
+   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+$(document).ready(function() {
+    // ============================================
+    // FONCTION POUR AJOUTER UNE LIGNE D'ACTIVITÉ
+    // ============================================
+    function addActiviteRow() {
+        var totalForms = $('#id_activite-TOTAL_FORMS');
+        var formIndex = parseInt(totalForms.val());
+        
+        // Récupérer le premier formulaire comme template
+        var templateRow = $('#activite-forms .formset-row:first');
+        
+        if (templateRow.length === 0) {
+            console.error("Aucune ligne template trouvée");
+            return;
         }
         
-        // Bouton pour ajouter une activité
-        $('#add-activite-btn').click(function() {
-            addActiviteRow();
+        // Cloner la ligne template
+        var newRow = templateRow.clone(true);
+        
+        // Nettoyer les valeurs des champs dans la nouvelle ligne
+        newRow.find(':input').each(function() {
+            var name = $(this).attr('name');
+            var id = $(this).attr('id');
+            
+            if (name) {
+                // Remplacer l'index dans le nom
+                var newName = name.replace(/activite-\d+-/, 'activite-' + formIndex + '-');
+                $(this).attr('name', newName);
+            }
+            
+            if (id) {
+                // Remplacer l'index dans l'id
+                var newId = id.replace(/activite-\d+-/, 'activite-' + formIndex + '-');
+                $(this).attr('id', newId);
+            }
+            
+            // Vider la valeur du champ
+            $(this).val('');
+            
+            // Enlever l'attribut checked pour les checkboxes
+            $(this).removeAttr('checked');
         });
         
-        // ============================================
-        // CHARGEMENT DYNAMIQUE DES LOCALISATIONS
-        // ============================================
+        // Mettre à jour les labels
+        newRow.find('label').each(function() {
+            var forAttr = $(this).attr('for');
+            if (forAttr) {
+                var newFor = forAttr.replace(/activite-\d+-/, 'activite-' + formIndex + '-');
+                $(this).attr('for', newFor);
+            }
+        });
         
-        $('#id_wilaya').change(function() {
-            var wilayaId = $(this).val();
-            if (wilayaId) {
-                $.ajax({
-                    url: '/formulaire/api/get-moughataas/',
-                    data: { 'wilaya_id': wilayaId },
-                    success: function(data) {
-                        var select = $('#id_moughataa');
-                        select.empty().append('<option value="">Sélectionnez une moughataa</option>');
-                        $.each(data, function(index, moughataa) {
-                            select.append('<option value="' + moughataa.id + '">' + moughataa.nom + '</option>');
-                        });
-                        $('#id_commune').empty().append('<option value="">Sélectionnez d\'abord une moughataa</option>');
-                        $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
-                        $('#village-list').empty();
-                        $('#id_village').val('');
-                    }
-                });
-            }
-        });
+        // Ajouter la nouvelle ligne au conteneur
+        $('#activite-forms').append(newRow);
+        
+        // Incrémenter le compteur TOTAL_FORMS
+        totalForms.val(formIndex + 1);
+    }
+    
+    // Attacher l'événement au bouton
+    $('#add-activite-btn').click(function() {
+        addActiviteRow();
+    });
+    
+    // ============================================
+    // CHARGEMENT DYNAMIQUE DES LOCALISATIONS
+    // ============================================
+    
+    $('#id_wilaya').change(function() {
+        var wilayaId = $(this).val();
+        if (wilayaId) {
+            $.ajax({
+                url: '/formulaire/api/get-moughataas/',
+                data: { 'wilaya_id': wilayaId },
+                success: function(data) {
+                    var select = $('#id_moughataa');
+                    select.empty().append('<option value="">Sélectionnez une moughataa</option>');
+                    $.each(data, function(index, moughataa) {
+                        select.append('<option value="' + moughataa.id + '">' + moughataa.nom + '</option>');
+                    });
+                    $('#id_commune').empty().append('<option value="">Sélectionnez d\'abord une moughataa</option>');
+                    $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
+                    $('#village-list').empty();
+                    $('#id_village').val('');
+                }
+            });
+        }
+    });
 
-        $('#id_moughataa').change(function() {
-            var moughataaId = $(this).val();
-            if (moughataaId) {
-                $.ajax({
-                    url: '/formulaire/api/get-communes/',
-                    data: { 'moughataa_id': moughataaId },
-                    success: function(data) {
-                        var select = $('#id_commune');
-                        select.empty().append('<option value="">Sélectionnez une commune</option>');
-                        $.each(data, function(index, commune) {
-                            select.append('<option value="' + commune.id + '">' + commune.nom + '</option>');
-                        });
-                        $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
-                        $('#village-list').empty();
-                        $('#id_village').val('');
-                    }
-                });
-            }
-        });
+    $('#id_moughataa').change(function() {
+        var moughataaId = $(this).val();
+        if (moughataaId) {
+            $.ajax({
+                url: '/formulaire/api/get-communes/',
+                data: { 'moughataa_id': moughataaId },
+                success: function(data) {
+                    var select = $('#id_commune');
+                    select.empty().append('<option value="">Sélectionnez une commune</option>');
+                    $.each(data, function(index, commune) {
+                        select.append('<option value="' + commune.id + '">' + commune.nom + '</option>');
+                    });
+                    $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
+                    $('#village-list').empty();
+                    $('#id_village').val('');
+                }
+            });
+        }
+    });
 
-        $('#id_commune').change(function() {
-            var communeId = $(this).val();
-            if (communeId) {
-                $.ajax({
-                    url: '/formulaire/api/get-paysages/',
-                    data: { 'commune_id': communeId },
-                    success: function(data) {
-                        var select = $('#id_paysage');
-                        select.empty().append('<option value="">Sélectionnez un paysage</option>');
-                        $.each(data, function(index, paysage) {
-                            select.append('<option value="' + paysage.id + '">' + paysage.nom + '</option>');
-                        });
-                        $('#village-list').empty();
-                        $('#id_village').val('');
-                    }
-                });
-            }
-        });
+    $('#id_commune').change(function() {
+        var communeId = $(this).val();
+        if (communeId) {
+            $.ajax({
+                url: '/formulaire/api/get-paysages/',
+                data: { 'commune_id': communeId },
+                success: function(data) {
+                    var select = $('#id_paysage');
+                    select.empty().append('<option value="">Sélectionnez un paysage</option>');
+                    $.each(data, function(index, paysage) {
+                        select.append('<option value="' + paysage.id + '">' + paysage.nom + '</option>');
+                    });
+                    $('#village-list').empty();
+                    $('#id_village').val('');
+                }
+            });
+        }
+    });
 
-        $('#id_paysage').change(function() {
-            var paysageId = $(this).val();
-            if (paysageId) {
-                $.ajax({
-                    url: '/formulaire/api/get-villages/',
-                    data: { 'paysage_id': paysageId },
-                    success: function(data) {
-                        var datalist = $('#village-list');
-                        datalist.empty();
-                        $.each(data, function(index, village) {
-                            datalist.append('<option value="' + village.nom + '">');
-                        });
-                    }
-                });
-            }
-        });
-    </script>
+    $('#id_paysage').change(function() {
+        var paysageId = $(this).val();
+        if (paysageId) {
+            $.ajax({
+                url: '/formulaire/api/get-villages/',
+                data: { 'paysage_id': paysageId },
+                success: function(data) {
+                    var datalist = $('#village-list');
+                    datalist.empty();
+                    $.each(data, function(index, village) {
+                        datalist.append('<option value="' + village.nom + '">');
+                    });
+                }
+            });
+        }
+    });
+});
+</script>
 </body>
 </html>

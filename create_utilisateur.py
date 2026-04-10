@@ -17,7 +17,7 @@ sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 django.setup()
 
 from django.contrib.auth.hashers import make_password
-from formulaire.models import Utilisateur
+from formulaire.models import Utilisateur, Wilaya
 
 # Liste des utilisateurs à insérer
 utilisateurs = [
@@ -28,7 +28,8 @@ utilisateurs = [
         'password': 'admin12',
         'role': 'admin',
         'email': 'mamadou.diallo@fcp.com',
-        'actif': True
+        'actif': True,
+        'wilaya_code': None
     },
     {
         'nom': 'Diop',
@@ -37,7 +38,8 @@ utilisateurs = [
         'password': 'adiop123',
         'role': 'agent',
         'email': 'aissatou.diop@fcp.com',
-        'actif': True
+        'actif': True,
+        'wilaya_code': 'Gorgol'
     },
     {
         'nom': 'Sow',
@@ -46,7 +48,8 @@ utilisateurs = [
         'password': 'osow123',
         'role': 'agent',
         'email': 'oumar.sow@fcp.com',
-        'actif': True
+        'actif': True,
+        'wilaya_code': 'Assaba'
     },
     {
         'nom': 'Ba',
@@ -55,7 +58,8 @@ utilisateurs = [
         'password': 'fba123',
         'role': 'agent',
         'email': 'fatou.ba@fcp.com',
-        'actif': True
+        'actif': True,
+        'wilaya_code': 'Brakna'
     },
     {
         'nom': 'Ndiaye',
@@ -64,7 +68,8 @@ utilisateurs = [
         'password': 'mndiaye123',
         'role': 'agent',
         'email': 'modou.ndiaye@fcp.com',
-        'actif': True
+        'actif': True,
+        'wilaya_code': 'Trarza'
     },
     {
         'nom': 'Sy',
@@ -73,7 +78,8 @@ utilisateurs = [
         'password': 'asy123',
         'role': 'superviseur',
         'email': 'aminata.sy@fcp.com',
-        'actif': True
+        'actif': True,
+        'wilaya_code': None
     },
     {
         'nom': 'Faye',
@@ -82,7 +88,8 @@ utilisateurs = [
         'password': 'ifaye123',
         'role': 'consultant',
         'email': 'ibrahima.faye@fcp.com',
-        'actif': True
+        'actif': True,
+        'wilaya_code': None
     }
 ]
 
@@ -95,12 +102,21 @@ def creer_utilisateur(data):
             return False
         
         # Créer l'utilisateur avec la méthode set_password qui hash automatiquement
+        wilaya = None
+        wilaya_code = data.get('wilaya_code')
+        if wilaya_code:
+            wilaya = Wilaya.objects.filter(code=wilaya_code).first()
+            if not wilaya:
+                print(f"⚠️  Wilaya introuvable pour le code {wilaya_code} - utilisateur non créé")
+                return False
+
         utilisateur = Utilisateur(
             nom=data['nom'],
             prenom=data['prenom'],
             username=data['username'],
             email=data['email'],
             role=data['role'],
+            wilaya=wilaya,
             actif=data.get('actif', True)
         )
         
@@ -108,7 +124,7 @@ def creer_utilisateur(data):
         utilisateur.set_password(data['password'])
         utilisateur.save()
         
-        print(f"✅ Utilisateur créé : {utilisateur.username} - {utilisateur.prenom} {utilisateur.nom} ({utilisateur.role})")
+        print(f"✅ Utilisateur créé : {utilisateur.username} - {utilisateur.prenom} {utilisateur.nom} ({utilisateur.role}) - Wilaya: {utilisateur.wilaya.nom if utilisateur.wilaya else 'Aucune'}")
         return True
         
     except Exception as e:

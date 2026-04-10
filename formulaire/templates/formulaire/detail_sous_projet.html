@@ -9,6 +9,16 @@
         /* ============================================
            STYLES GÉNÉRAUX
         ============================================ */
+        :root {
+        --primary-green: #2c6e2f;
+        --primary-green-light: #3d8a3f;
+        --secondary-orange: #e67e22;
+        --secondary-orange-light: #f39c12;
+        --cream: #fef5e7;
+        --dark-green: #1e4a22;
+        --menu-green: #5DBB63;
+        --menu-muted: #a8bda9;
+    }
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
@@ -17,31 +27,104 @@
         /* ============================================
            BARRE DE NAVIGATION
         ============================================ */
-        .navbar {
-            background: #f8f9fa;
-            box-shadow: 0 4px 15px rgba(0,0,0,0.1);
-            padding: 12px 0;
+          .custom-navbar {
+        background: #f8f9fa;
+        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
+        padding: 10px 0;
+    }
+
+    .navbar-brand {
+        display: flex;
+        align-items: center;
+        padding: 0;
+        margin: 0;
+    }
+
+    .navbar-brand img {
+        height: 40px;
+        width: auto;
+        display: block;
+    }
+
+    .main-nav-link {
+        color: var(--menu-green) !important;
+        font-size: 0.88rem;
+        font-weight: 600;
+        margin: 0 6px;
+        white-space: nowrap;
+    }
+
+    .main-nav-link:hover,
+    .main-nav-link:focus {
+        color: var(--primary-green-light) !important;
+    }
+
+    .custom-dropdown {
+        border: none;
+        border-radius: 14px;
+        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
+        padding: 8px 0;
+        min-width: 250px;
+        margin-top: 10px;
+    }
+
+    .custom-dropdown .dropdown-item {
+        padding: 10px 16px;
+        font-size: 0.95rem;
+        background: transparent;
+    }
+
+    .active-submenu {
+        color: var(--menu-green);
+        text-decoration: none;
+        transition: all 0.2s ease;
+    }
+
+    .active-submenu:hover {
+        color: var(--primary-green-light);
+        background-color: #f3f8f3;
+    }
+
+    .disabled-submenu {
+        color: var(--menu-muted) !important;
+        cursor: not-allowed;
+        pointer-events: none;
+    }
+
+    .navbar-toggler {
+        border: none;
+    }
+
+    .navbar-toggler:focus {
+        box-shadow: none;
+    }
+     .footer {
+            text-align: center;
+            margin-top: 30px;
+            padding-top: 20px;
+            border-top: 1px solid #f0f0f0;
         }
-        .navbar-brand {
-            color: white !important;
-            font-weight: bold;
-            font-size: 1.3rem;
-            display: flex;
-            align-items: center;
+
+        .footer small {
+            color: #aaa;
+            font-size: 0.75rem;
         }
+
+    @media (max-width: 991.98px) {
         .navbar-brand img {
-            height: 40px;
-            margin-right: 10px;
+            height: 52px;
         }
-        .nav-link {
-            color: #5DBB63 !important;
-            transition: all 0.3s;
-            margin: 0 5px;
+
+        .main-nav-link {
+            margin: 6px 0;
         }
-        .nav-link:hover {
-            color: #5DBB63 !important;
-            transform: translateY(-2px);
+
+        .custom-dropdown {
+            box-shadow: none;
+            border: 1px solid #e9ecef;
+            margin-top: 0;
         }
+    }
         
         /* ============================================
            EN-TÊTE ET SECTIONS
@@ -269,29 +352,72 @@
     <!-- ============================================
          BARRE DE NAVIGATION
     ============================================ -->
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
-                <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:liste_sous_projets' %}">📋 Liste</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:nouveau_sous_projet' %}">➕ Nouveau</a>
-                    </li>
-                    <li class="nav-item">
-                        <a class="nav-link" href="{% url 'formulaire:logout' %}">🚪 Déconnexion</a>
-                    </li>
-                </ul>
-            </div>
+  <nav class="navbar navbar-expand-lg custom-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
+            <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPadisam" aria-controls="navbarPadisam" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarPadisam">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="dossiersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Dossiers
+                    </a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="dossiersDropdown">
+                        <li>
+                            <a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">
+                                Nouveau dossier
+                            </a>
+                        </li>
+                        <li>
+                            <a class="dropdown-item active-submenu" href="{% url 'formulaire:liste_sous_projets' %}">
+                                Liste des dossiers
+                            </a>
+                        </li>
+                        <li>
+                            <span class="dropdown-item disabled-submenu">Archivage numérique</span>
+                        </li>
+                    </ul>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="examenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Examen des dossiers
+                    </a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="examenDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Présélection</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Dossiers rejetés</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Procès-verbal</span></li>
+                    </ul>
+                </li>
+
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+                        Transmission &amp; suite
+                    </a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Dossiers transmis</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Screening E&amp;S</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Plans d’affaires</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Évaluation technique et financière</span></li>
+                    </ul>
+                </li>
+
+                <li class="nav-item ms-lg-3">
+                    <a class="nav-link main-nav-link" href="{% url 'formulaire:logout' %}">
+                        Déconnexion
+                    </a>
+                </li>
+            </ul>
         </div>
-    </nav>
+    </div>
+</nav>
 
     <!-- ============================================
          CONTENU PRINCIPAL
@@ -845,7 +971,7 @@
         
         <div class="footer">
             <small>
-                &copy; {% now "Y" %} Binor & Associés/ID - Tous droits réservés
+                &copy; {% now "Y" %} Binor & Associés / I&D - Tous droits réservés<br>
             </small>
         </div>
     </div>

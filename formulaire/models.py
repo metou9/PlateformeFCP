@@ -92,6 +92,7 @@ class SousProjet(models.Model):
         ('AG', 'AG'),
         ('EL', 'EL'),
         ('ENV', 'ENV'),
+        ('SER', 'SER'),
     ]
     
     OUI_NON_CHOICES = [
@@ -103,19 +104,18 @@ class SousProjet(models.Model):
     date_saisie = models.DateTimeField(auto_now_add=True, verbose_name="Date de saisie")
     date_formulaire = models.DateField(verbose_name="Date du formulaire")
     intitule_sous_projet = models.CharField(max_length=500, verbose_name="Intitulé du sous-projet")
-    guichet = models.CharField(max_length=3, choices=GUICHET_CHOICES, blank=True, null=True, verbose_name="Guichet")
-    type_projet = models.CharField(max_length=3, choices=TYPE_PROJET_CHOICES, blank=True, null=True, verbose_name="Type de projet")
+    guichet = models.CharField(max_length=3, choices=GUICHET_CHOICES, verbose_name="Guichet")
+    type_projet = models.CharField(max_length=3, choices=TYPE_PROJET_CHOICES, verbose_name="Type de projet")
     chaine_approvisionnement = models.CharField(max_length=500, blank=True, null=True, verbose_name="Chaîne d'approvisionnement")
     marches_vises = models.TextField(help_text="Marchés visés / clients identifiés", blank=True, null=True, verbose_name="Marchés visés")
     segment_ca = models.CharField(max_length=500, blank=True, null=True, verbose_name="Segment de la CA")
     
     # 2. Identification du demandeur
-    nom_statut_juridique = models.CharField(max_length=500, blank=True, null=True, verbose_name="Nom et statut juridique")
+    nom_statut_juridique = models.CharField(max_length=500, verbose_name="Nom et statut juridique")
     adresse = models.TextField(blank=True, null=True, verbose_name="Adresse")
-    principal_domaine_activites = models.TextField(blank=True, null=True, verbose_name="Principal domaine d'activités")
-    personne_contact_nom = models.CharField(max_length=200, blank=True, null=True, verbose_name="Personne contact (nom)")
+    personne_contact_nom = models.CharField(max_length=200, verbose_name="Personne contact (nom)")
     personne_contact_fonction = models.CharField(max_length=200,blank=True, null=True, verbose_name="Personne contact (fonction)")
-    telephone = models.CharField(max_length=50, blank=True, null=True, verbose_name="Téléphone")
+    telephone = models.CharField(max_length=50, verbose_name="Téléphone")
     fax = models.CharField(max_length=50, blank=True, null=True, verbose_name="Fax")
     email = models.EmailField(blank=True, null=True, verbose_name="Email")
     
@@ -142,7 +142,7 @@ class SousProjet(models.Model):
     moughataa = models.ForeignKey(Moughataa, on_delete=models.PROTECT, verbose_name="Moughataa")
     commune = models.ForeignKey(Commune, on_delete=models.PROTECT, verbose_name="Commune")
     paysage = models.ForeignKey(Paysage, on_delete=models.SET_NULL, null=True, blank=True, related_name='sous_projets', verbose_name="Paysage")
-    village = models.CharField(max_length=200, blank=True, null=True, help_text="Nom du village ou quartier", verbose_name="Village")
+    village = models.CharField(max_length=200, help_text="Nom du village ou quartier", verbose_name="Village")
     
     # 5. Renseignement sur le promoteur
     annee_debut_activites = models.IntegerField(
@@ -279,7 +279,7 @@ class Activite(models.Model):
     """
     sous_projet = models.ForeignKey(SousProjet, on_delete=models.CASCADE, related_name='activites')
     nom_activite = models.CharField(max_length=500, blank=True, null=True, verbose_name="Nom de l'activité")
-    realisations = models.TextField(verbose_name="Réalisations / Objectifs quantitatifs", blank=True, null=True)
+    realisations = models.TextField(verbose_name="Objectifs quantitatifs", blank=True, null=True)
     
     class Meta:
         verbose_name = "Activité"
@@ -345,6 +345,15 @@ class Utilisateur(models.Model):
     username = models.CharField(max_length=50, unique=True, verbose_name="Nom d'utilisateur")
     password = models.CharField(max_length=128, verbose_name="Mot de passe")
     role = models.CharField(max_length=20, choices=ROLE_CHOICES, default='agent', verbose_name="Rôle")
+    wilaya = models.ForeignKey(
+        Wilaya,
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='utilisateurs',
+        verbose_name="Wilaya d'affectation", 
+        default=0
+    )
     email = models.EmailField(blank=True, null=True, verbose_name="Email")
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
     dernier_login = models.DateTimeField(null=True, blank=True, verbose_name="Dernière connexion")
@@ -357,6 +366,10 @@ class Utilisateur(models.Model):
     def check_password(self, raw_password):
         """Vérifie le mot de passe"""
         return check_password(raw_password, self.password)
+
+    def clean(self):
+        if self.role == 'agent' and not self.wilaya:
+            raise ValidationError({'wilaya': "La wilaya est obligatoire pour un agent de saisie."})
     
     class Meta:
         verbose_name = "Utilisateur"

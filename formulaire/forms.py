@@ -210,66 +210,83 @@ class SousProjetForm(forms.ModelForm):
     class Meta:
         model = SousProjet
         exclude = ['date_saisie', 'date_creation', 'date_modification']
-        
-        # Les widgets sont déjà définis dans les champs ci-dessus
-        # On garde uniquement les champs qui n'ont pas été redéfinis
         widgets = {
             'objectif_sous_projet': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
-            'principales_activites': forms.Textarea(attrs={'class': 'form-control', 'rows': 6}),
         }
     
     def __init__(self, *args, **kwargs):
+        self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
-        
+
+        # Wilaya accessible selon le rôle
+        chosen_wilaya_id = None
+        if self.user and getattr(self.user, 'role', None) == 'agent':
+            if getattr(self.user, 'wilaya_id', None):
+                self.fields['wilaya'].queryset = Wilaya.objects.filter(pk=self.user.wilaya_id)
+                self.fields['wilaya'].empty_label = None
+                self.fields['wilaya'].initial = self.user.wilaya
+                self.fields['wilaya'].help_text = f"Wilaya affectée : {self.user.wilaya.nom}"
+                chosen_wilaya_id = self.user.wilaya_id
+            else:
+                self.fields['wilaya'].queryset = Wilaya.objects.none()
+        elif 'wilaya' in self.data:
+            try:
+                chosen_wilaya_id = int(self.data.get('wilaya'))
+            except (ValueError, TypeError):
+                chosen_wilaya_id = None
+        elif self.instance.pk and self.instance.wilaya_id:
+            chosen_wilaya_id = self.instance.wilaya_id
+
         # Initialiser les querysets pour les champs dynamiques
-        self.fields['moughataa'].queryset = Moughataa.objects.all()
-        self.fields['commune'].queryset = Commune.objects.all()
-        self.fields['paysage'].queryset = Paysage.objects.none()
-        
-        # Chargement dynamique des paysages
+        if chosen_wilaya_id:
+            self.fields['moughataa'].queryset = Moughataa.objects.filter(wilaya_id=chosen_wilaya_id).order_by('nom')
+        else:
+            self.fields['moughataa'].queryset = Moughataa.objects.none()
+
+        chosen_moughataa_id = None
+        if 'moughataa' in self.data:
+            try:
+                chosen_moughataa_id = int(self.data.get('moughataa'))
+            except (ValueError, TypeError):
+                chosen_moughataa_id = None
+        elif self.instance.pk and self.instance.moughataa_id:
+            chosen_moughataa_id = self.instance.moughataa_id
+
+        if chosen_moughataa_id:
+            self.fields['commune'].queryset = Commune.objects.filter(moughataa_id=chosen_moughataa_id).order_by('nom')
+        else:
+            self.fields['commune'].queryset = Commune.objects.none()
+
+        chosen_commune_id = None
         if 'commune' in self.data:
             try:
-                commune_id = int(self.data.get('commune'))
-                self.fields['paysage'].queryset = Paysage.objects.filter(commune_id=commune_id)
+                chosen_commune_id = int(self.data.get('commune'))
             except (ValueError, TypeError):
-                pass
-        elif self.instance.pk and self.instance.commune:
-            self.fields['paysage'].queryset = Paysage.objects.filter(commune=self.instance.commune)
-        
-        # Ajouter les classes CSS pour les champs obligatoires (optionnel)
+                chosen_commune_id = None
+        elif self.instance.pk and self.instance.commune_id:
+            chosen_commune_id = self.instance.commune_id
+
+        if chosen_commune_id:
+            self.fields['paysage'].queryset = Paysage.objects.filter(commune_id=chosen_commune_id).order_by('nom')
+        else:
+            self.fields['paysage'].queryset = Paysage.objects.none()
+
+        # Ajouter les classes CSS pour les champs obligatoires
         for field_name, field in self.fields.items():
             if field.required:
                 field.widget.attrs['class'] = field.widget.attrs.get('class', '') + ' required-field'
 
-class ActiviteForm(forms.ModelForm):
-    class Meta:
-        model = Activite
-        fields = ['nom_activite', 'realisations']
-        widgets = {
-            'nom_activite': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom de l\'activité'}),
-            'realisations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Objectifs quantitatifs, réalisations...'}),
-        }
+    def clean_wilaya(self):
+        wilaya = self.cleaned_data.get('wilaya')
+        if self.user and getattr(self.user, 'role', None) == 'agent':
+            if not getattr(self.user, 'wilaya_id', None):
+                raise forms.ValidationError("Cet agent n'a pas de wilaya affectée.")
+            if not wilaya or wilaya.id != self.user.wilaya_id:
+                raise forms.ValidationError("Vous ne pouvez saisir que des sous-projets de votre wilaya.")
+            return self.user.wilaya
+        return wilaya
 
-
-class BaseActiviteFormSet(BaseInlineFormSet):
-    """Formset pour les activités avec possibilité d'ajout/suppression"""
-    pass
-
-
-# Formset pour les activités (plusieurs lignes possibles)
-ActiviteFormSet = inlineformset_factory(
-    SousProjet, Activite,
-    form=ActiviteForm,
-    extra=3,           # 3 lignes vides par défaut
-    can_delete=True,   # L'utilisateur peut supprimer une ligne
-    formset=BaseActiviteFormSet
-)           
-    
-    # ============================================
-    # VALIDATION SUPPLÉMENTAIRE POUR LE TÉLÉPHONE ET FAX
-    # ============================================
-    
-def clean_telephone(self):
+    def clean_telephone(self):
         telephone = self.cleaned_data.get('telephone')
         if telephone and not telephone.isdigit():
             raise forms.ValidationError('Le numéro de téléphone doit contenir uniquement des chiffres.')
@@ -277,13 +294,42 @@ def clean_telephone(self):
             raise forms.ValidationError('Le numéro de téléphone doit contenir exactement 8 chiffres.')
         return telephone
     
-def clean_fax(self):
+    def clean_fax(self):
         fax = self.cleaned_data.get('fax')
         if fax and not fax.isdigit():
             raise forms.ValidationError('Le fax doit contenir uniquement des chiffres.')
         if fax and len(fax) != 4:
             raise forms.ValidationError('Le fax doit contenir exactement 4 chiffres.')
         return fax
+
+
+# ============================================
+# FORMULAIRE POUR LES ACTIVITÉS
+# ============================================
+
+class ActiviteForm(forms.ModelForm):
+    class Meta:
+        model = Activite
+        fields = ['nom_activite', 'realisations']
+        widgets = {
+            'nom_activite': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom de l\'activité'}),
+            'realisations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Objectifs quantitatifs'}),
+        }
+
+
+class BaseActiviteFormSet(BaseInlineFormSet):
+    pass
+
+
+# Version CORRECTE - sans fields dans inlineformset_factory
+ActiviteFormSet = inlineformset_factory(
+    SousProjet,
+    Activite,
+    form=ActiviteForm,           # Utilise le formulaire personnalisé
+    extra=1,
+    can_delete=True,
+    formset=BaseActiviteFormSet
+)
 
 
 # ============================================
@@ -406,9 +452,6 @@ class BaseRealisationFormSet(BaseFormSet):
         if len(self.forms) != 3:
             raise forms.ValidationError("❌ Vous devez fournir exactement 3 années de réalisations.")
         return self.forms
-
-
-
 
 
 # ============================================
