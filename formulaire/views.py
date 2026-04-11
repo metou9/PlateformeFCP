@@ -1,58 +1,56 @@
 """
 formulaire/views.py
-Vues de l'application FCP
+Vues principales de l'application FCP / PADISAM
 """
 
-from django.shortcuts import render, redirect, get_object_or_404
-from django.contrib import messages
-from django.http import JsonResponse
-from django.utils import timezone
-from django.contrib.auth import logout
 from functools import wraps
 
-from .models import (
-    SousProjet, Wilaya, Moughataa, Commune, Paysage, Village, 
-    Utilisateur, Infrastructure, Equipement, Intrant, 
-    Fonctionnement, Service, RealisationPassee, PassifEmprunt
-)
-from .forms import (
-    SousProjetForm, InfrastructureFormSet, EquipementFormSet,
-    IntrantFormSet, FonctionnementFormSet, ServiceFormSet,
-    ActiviteFormSet,
-    RealisationFormSet, EmpruntFormSet
-)
+from django.contrib import messages
+from django.contrib.auth import logout
+from django.forms import inlineformset_factory
+from django.http import JsonResponse
+from django.shortcuts import get_object_or_404, redirect, render
+from django.utils import timezone
+from django.db.models import Sum
+
 from .auth_forms import LoginForm
+from .forms import (
+    SousProjetForm,
+    InfrastructureFormSet,
+    EquipementFormSet,
+    IntrantFormSet,
+    FonctionnementFormSet,
+    ServiceFormSet,
+    RealisationFormSet,
+    EmpruntFormSet,
+)
+from .models import (
+    SousProjet,
+    Wilaya,
+    Moughataa,
+    Commune,
+    Paysage,
+    Village,
+    Utilisateur,
+    Infrastructure,
+    Equipement,
+    Intrant,
+    Fonctionnement,
+    Service,
+    Activite,
+)
 
 
-# ============================================
-# FONCTIONS UTILITAIRES
-# ============================================
-
-def clean_formset_data(post_data, prefix):
-    """
-    Supprime les formulaires vides d'un formset
-    """
-    total_forms = int(post_data.get(f'{prefix}-TOTAL_FORMS', 0))
-    for i in range(total_forms - 1, -1, -1):
-        has_data = False
-        for key, value in post_data.items():
-            if key.startswith(f'{prefix}-{i}-') and value:
-                has_data = True
-                break
-        if not has_data:
-            keys_to_del = [k for k in post_data.keys() if k.startswith(f'{prefix}-{i}-')]
-            for key in keys_to_del:
-                del post_data[key]
-            post_data[f'{prefix}-TOTAL_FORMS'] = str(total_forms - 1)
-            total_forms -= 1
-    return post_data
-
+# =========================================================
+# OUTILS GÉNÉRAUX
+# =========================================================
 
 def get_current_user(request):
-    """Récupère l'utilisateur connecté depuis la session."""
+    """Récupère l'utilisateur connecté à partir de la session."""
     user_id = request.session.get('user_id')
     if not user_id:
         return None
+
     try:
         return Utilisateur.objects.select_related('wilaya').get(id=user_id, actif=True)
     except Utilisateur.DoesNotExist:
@@ -60,41 +58,47 @@ def get_current_user(request):
 
 
 def is_agent_saisie(utilisateur):
+    """Retourne True si l'utilisateur est un agent de saisie."""
     return bool(utilisateur and utilisateur.role == 'agent')
 
 
 def get_accessible_sous_projets(utilisateur):
+    """
+    Sous-projets visibles selon le rôle.
+    - Agent : seulement sa wilaya
+    - Autres rôles : tous
+    """
     queryset = SousProjet.objects.all()
+
     if is_agent_saisie(utilisateur):
         if utilisateur.wilaya_id:
             queryset = queryset.filter(wilaya_id=utilisateur.wilaya_id)
         else:
             queryset = queryset.none()
+
     return queryset
 
 
 def get_current_sous_projet(request):
     """
-    Récupère le sous-projet en cours de création depuis la session
-    en respectant les droits d'accès de l'utilisateur.
+    Récupère le sous-projet en cours depuis la session.
+    Si le sous-projet n'est plus accessible, on nettoie la session.
     """
     sous_projet_id = request.session.get('current_sous_projet_id')
     utilisateur = get_current_user(request)
+
     if sous_projet_id and utilisateur:
         try:
             return get_accessible_sous_projets(utilisateur).get(id=sous_projet_id)
         except SousProjet.DoesNotExist:
             request.session.pop('current_sous_projet_id', None)
             return None
+
     return None
 
 
-# ============================================
-# DÉCORATEUR POUR PROTÉGER LES VUES
-# ============================================
-
 def login_required(view_func):
-    """Décorateur pour vérifier que l'utilisateur est connecté"""
+    """Décorateur de protection des vues."""
     @wraps(view_func)
     def wrapper(request, *args, **kwargs):
         if not request.session.get('user_id'):
@@ -103,234 +107,128 @@ def login_required(view_func):
     return wrapper
 
 
-def detail_sous_projet(request, pk):
-    """Affiche le détail d'un sous-projet spécifique avec calcul des montants"""
-    sous_projet = get_object_or_404(SousProjet, pk=pk)
-    
-    # ============================================
-    # Calcul pour INFRASTRUCTURES (Prix unitaire × Quantité)
-    # ============================================
-    infrastructures = []
-    total_infra = 0
-    for infra in sous_projet.infrastructures.all():
-        quantite = infra.quantite or 0
-        prix_unit = infra.prix_unit or 0
-        montant_calcule = quantite * prix_unit
-        total_infra += montant_calcule
-        
-        infrastructures.append({
-            'id': infra.id,
-            'description': infra.description,
-            'quantite': quantite,
-            'prix_unit': prix_unit,
-            'montant_total': montant_calcule,
-            'subvention_padisam': infra.subvention_padisam,
-            'contribution_promoteur': infra.contribution_promoteur,
-            'autre_financement': infra.autre_financement,
-        })
-    
-    # ============================================
-    # Calcul pour EQUIPEMENTS (Prix unitaire × Quantité)
-    # ============================================
-    equipements = []
-    total_equip = 0
-    for equip in sous_projet.equipements.all():
-        quantite = equip.quantite or 0
-        prix_unit = equip.prix_unit or 0
-        montant_calcule = quantite * prix_unit
-        total_equip += montant_calcule
-        
-        equipements.append({
-            'id': equip.id,
-            'description': equip.description,
-            'quantite': quantite,
-            'prix_unit': prix_unit,
-            'montant_total': montant_calcule,
-            'subvention_padisam': equip.subvention_padisam,
-            'contribution_promoteur': equip.contribution_promoteur,
-            'autre_financement': equip.autre_financement,
-        })
-    
-    # ============================================
-    # Calcul pour INTRANTS (Prix unitaire × Quantité)
-    # ============================================
-    intrants = []
-    total_intrant = 0
-    for intrant in sous_projet.intrants.all():
-        quantite = intrant.quantite or 0
-        prix_unit = intrant.prix_unit or 0
-        montant_calcule = quantite * prix_unit
-        total_intrant += montant_calcule
-        
-        intrants.append({
-            'id': intrant.id,
-            'description': intrant.description,
-            'quantite': quantite,
-            'prix_unit': prix_unit,
-            'montant_total': montant_calcule,
-            'subvention_padisam': intrant.subvention_padisam,
-            'contribution_promoteur': intrant.contribution_promoteur,
-            'autre_financement': intrant.autre_financement,
-        })
-    
-    # ============================================
-    # Calcul pour FONCTIONNEMENT (Prix unitaire × Quantité)
-    # ============================================
-    fonctionnements = []
-    total_fonc = 0
-    for fonc in sous_projet.fonctionnements.all():
-        quantite = fonc.quantite or 0
-        prix_unit = fonc.prix_unit or 0
-        montant_calcule = quantite * prix_unit
-        total_fonc += montant_calcule
-        
-        fonctionnements.append({
-            'id': fonc.id,
-            'description': fonc.description,
-            'quantite': quantite,
-            'prix_unit': prix_unit,
-            'montant_total': montant_calcule,
-            'contribution_promoteur': fonc.contribution_promoteur,
-            'autre_financement': fonc.autre_financement,
-        })
-    
-    # ============================================
-    # Calcul pour SERVICES (Prix unitaire × Quantité)
-    # ============================================
-    services = []
-    total_serv = 0
-    for serv in sous_projet.services.all():
-        quantite = serv.quantite or 0
-        prix_unit = serv.prix_unit or 0
-        montant_calcule = quantite * prix_unit
-        total_serv += montant_calcule
-        
-        services.append({
-            'id': serv.id,
-            'description': serv.description,
-            'quantite': quantite,
-            'prix_unit': prix_unit,
-            'montant_total': montant_calcule,
-            'subvention_padisam': serv.subvention_padisam,
-            'contribution_promoteur': serv.contribution_promoteur,
-            'autre_financement': serv.autre_financement,
-        })
-    
-    # Grand total de tous les financements
-    grand_total = total_infra + total_equip + total_intrant + total_fonc + total_serv
-    
-    # Totaux des ventes
-    total_ventes = sum(real.ventes_usd or 0 for real in sous_projet.realisations.all())
-    
-    # Totaux des emprunts
-    total_emprunte = sum(emp.montant_emprunte or 0 for emp in sous_projet.emprunts.all())
-    total_rembourse = sum(emp.montant_rembourse or 0 for emp in sous_projet.emprunts.all())
-    
-    context = {
-        'sous_projet': sous_projet,
-        'user_name': request.session.get('user_name'),
-        'user_role': request.session.get('user_role'),
-        # Infrastructures
-        'infrastructures': infrastructures,
-        'total_infra': total_infra,
-        # Équipements
-        'equipements': equipements,
-        'total_equip': total_equip,
-        # Intrants
-        'intrants': intrants,
-        'total_intrant': total_intrant,
-        # Fonctionnements
-        'fonctionnements': fonctionnements,
-        'total_fonc': total_fonc,
-        # Services
-        'services': services,
-        'total_serv': total_serv,
-        # Grand total
-        'grand_total': grand_total,
-        # Ventes et emprunts
-        'total_ventes': total_ventes,
-        'total_emprunte': total_emprunte,
-        'total_rembourse': total_rembourse,
-    }
-    return render(request, 'formulaire/detail_sous_projet.html', context)
+# =========================================================
+# FABRIQUES DE FORMSETS DYNAMIQUES
+# =========================================================
+# IMPORTANT :
+# On garde les widgets/styles définis dans forms.py.
+# On ne recrée PAS les formsets de financement à la main.
+# On clone seulement la classe et on ajuste `extra`.
 
-# ============================================
-# VUES D'AUTHENTIFICATION
-# ============================================
+def clone_formset_with_extra(base_formset_class, extra_value):
+    """
+    Clone un formset existant en conservant ses widgets et options,
+    puis remplace simplement la propriété extra.
+    """
+    CustomFormSet = type(
+        f"Custom{base_formset_class.__name__}",
+        (base_formset_class,),
+        {'extra': extra_value}
+    )
+    return CustomFormSet
+
+def get_activite_formset_class(extra=0):
+    """
+    Formset dynamique pour les activités.
+    Ici on garde le formulaire custom ActiviteForm.
+    """
+    from .forms import ActiviteForm, BaseActiviteFormSet
+    return inlineformset_factory(
+        SousProjet,
+        Activite,
+        form=ActiviteForm,
+        extra=extra,
+        can_delete=True,
+        formset=BaseActiviteFormSet
+    )
+
+
+# =========================================================
+# AUTHENTIFICATION
+# =========================================================
 
 def login_view(request):
-    """Page de connexion"""
+    """Page de connexion."""
     if request.session.get('user_id'):
         return redirect('formulaire:accueil')
-    
+
     if request.method == 'POST':
         form = LoginForm(request.POST)
+
         if form.is_valid():
             username = form.cleaned_data['username']
             password = form.cleaned_data['password']
-            
+
             try:
                 utilisateur = Utilisateur.objects.get(username=username)
+
                 if utilisateur.check_password(password) and utilisateur.actif:
                     request.session['user_id'] = utilisateur.id
                     request.session['user_name'] = f"{utilisateur.prenom} {utilisateur.nom}"
                     request.session['user_role'] = utilisateur.role
                     request.session['user_wilaya_id'] = utilisateur.wilaya_id
                     request.session['user_wilaya_nom'] = utilisateur.wilaya.nom if utilisateur.wilaya else ''
-                    
+
                     utilisateur.dernier_login = timezone.now()
                     utilisateur.save()
-                    
-                    messages.success(request, f"Bienvenue {utilisateur.prenom}!")
+
+                    messages.success(request, f"Bienvenue {utilisateur.prenom} !")
                     return redirect('formulaire:accueil')
                 else:
-                    messages.error(request, "Mot de passe incorrect ou compte inactif")
+                    messages.error(request, "Mot de passe incorrect ou compte inactif.")
+
             except Utilisateur.DoesNotExist:
-                messages.error(request, "Nom d'utilisateur inexistant")
+                messages.error(request, "Nom d'utilisateur inexistant.")
     else:
         form = LoginForm()
-    
+
     return render(request, 'formulaire/login.html', {'form': form})
 
 
 def logout_view(request):
-    """Déconnexion"""
+    """Déconnexion."""
     logout(request)
     request.session.flush()
-    messages.success(request, "Vous avez été déconnecté")
+    messages.success(request, "Vous avez été déconnecté.")
     return redirect('formulaire:login')
 
 
-# ============================================
-# VUES PROTÉGÉES DE L'APPLICATION
-# ============================================
+# =========================================================
+# ACCUEIL
+# =========================================================
 
 @login_required
 def accueil(request):
-    """Page d'accueil après connexion"""
+    """Page d'accueil."""
     utilisateur = get_current_user(request)
     sous_projets = get_accessible_sous_projets(utilisateur)
-    total_projets = sous_projets.count()
-    derniers_projets = sous_projets.order_by('-date_creation')[:5]
-    
+
     context = {
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
-        'total_projets': total_projets,
-        'derniers_projets': derniers_projets,
+        'total_projets': sous_projets.count(),
+        'derniers_projets': sous_projets.order_by('-date_creation')[:5],
         'now': timezone.now(),
     }
     return render(request, 'formulaire/accueil.html', context)
 
 
-# ============================================
-# ÉTAPE 1: INFORMATIONS GÉNÉRALES
-# ============================================
+# =========================================================
+# ÉTAPE 1 : INFORMATIONS GÉNÉRALES + ACTIVITÉS
+# =========================================================
 
 @login_required
 def nouveau_sous_projet(request):
-    """Étape 1: Formulaire des informations générales + activités"""
+    """
+    Étape 1 :
+    - formulaire principal
+    - activités
+
+    Règle :
+    - nouveau dossier : 1 ligne activité
+    - refresh / dossier existant : pas de ligne vide supplémentaire
+    """
     utilisateur = get_current_user(request)
     sous_projet = get_current_sous_projet(request)
 
@@ -340,7 +238,9 @@ def nouveau_sous_projet(request):
 
     if request.method == 'POST':
         form = SousProjetForm(request.POST, instance=sous_projet, user=utilisateur)
-        activite_formset = ActiviteFormSet(
+
+        ActiviteDynamicFormSet = get_activite_formset_class(extra=0)
+        activite_formset = ActiviteDynamicFormSet(
             request.POST,
             instance=sous_projet if sous_projet else SousProjet(),
             prefix='activite'
@@ -348,29 +248,40 @@ def nouveau_sous_projet(request):
 
         if form.is_valid() and activite_formset.is_valid():
             sous_projet = form.save(commit=False)
+
             if is_agent_saisie(utilisateur):
                 sous_projet.wilaya = utilisateur.wilaya
+
             sous_projet.save()
+
             activite_formset.instance = sous_projet
             activite_formset.save()
+
             request.session['current_sous_projet_id'] = sous_projet.id
-            messages.success(request, '✅ Informations générales enregistrées')
+            messages.success(request, "✅ Informations générales enregistrées.")
             return redirect('formulaire:financement_infrastructure')
-        else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"❌ {field}: {error}")
-            if activite_formset.non_form_errors():
-                for error in activite_formset.non_form_errors():
-                    messages.error(request, f"❌ Activités: {error}")
+
+        for field, errors in form.errors.items():
+            for error in errors:
+                messages.error(request, f"❌ {field} : {error}")
+
+        if activite_formset.non_form_errors():
+            for error in activite_formset.non_form_errors():
+                messages.error(request, f"❌ Activités : {error}")
+
     else:
-        if sous_projet:
-            form = SousProjetForm(instance=sous_projet, user=utilisateur)
-            activite_formset = ActiviteFormSet(instance=sous_projet, prefix='activite')
+        form = SousProjetForm(instance=sous_projet, user=utilisateur) if sous_projet else SousProjetForm(user=utilisateur)
+
+        if sous_projet and sous_projet.pk and sous_projet.activites.exists():
+            ActiviteDynamicFormSet = get_activite_formset_class(extra=0)
         else:
-            form = SousProjetForm(user=utilisateur)
-            activite_formset = ActiviteFormSet(prefix='activite')
-    
+            ActiviteDynamicFormSet = get_activite_formset_class(extra=1)
+
+        activite_formset = ActiviteDynamicFormSet(
+            instance=sous_projet if sous_projet else SousProjet(),
+            prefix='activite'
+        )
+
     return render(request, 'formulaire/nv_sous_projet.html', {
         'form': form,
         'activite_formset_data': activite_formset,
@@ -381,308 +292,302 @@ def nouveau_sous_projet(request):
 
 @login_required
 def save_sous_projet(request):
-    """Sauvegarde de l'étape 1"""
+    """Alias de sauvegarde étape 1."""
     return nouveau_sous_projet(request)
 
 
-# ============================================
-# ÉTAPE 2: INFRASTRUCTURES
-# ============================================
+# =========================================================
+# ÉTAPE 2 : INFRASTRUCTURES
+# =========================================================
 
 @login_required
 def financement_infrastructure(request):
-    """Étape 2: Gestion des infrastructures"""
+    """
+    Étape 2 :
+    - premier affichage : 3 lignes vides
+    - refresh / données existantes : 0 ligne vide supplémentaire
+    """
     sous_projet = get_current_sous_projet(request)
     if not sous_projet:
         return redirect('formulaire:nouveau_sous_projet')
-    
+
+    DynamicInfrastructureFormSet = clone_formset_with_extra(
+        InfrastructureFormSet,
+        0 if sous_projet.infrastructures.exists() else 3
+    )
+
     if request.method == 'POST':
-        formset = InfrastructureFormSet(request.POST, instance=sous_projet, prefix='infra')
+        formset = DynamicInfrastructureFormSet(request.POST, instance=sous_projet, prefix='infra')
         if formset.is_valid():
             formset.save()
-            messages.success(request, '✅ Infrastructures enregistrées')
+            messages.success(request, "✅ Infrastructures enregistrées.")
             return redirect('formulaire:financement_equipement')
-        else:
-            for form in formset.forms:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f"❌ Infrastructure - {field}: {error}")
+
+        for form in formset.forms:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ Infrastructure - {field} : {error}")
     else:
-        formset = InfrastructureFormSet(instance=sous_projet, prefix='infra')
-    
+        formset = DynamicInfrastructureFormSet(instance=sous_projet, prefix='infra')
+
     return render(request, 'formulaire/financement_infrastructure.html', {
         'infrastructure_formset': formset,
-        'sous_projet': sous_projet
+        'sous_projet': sous_projet,
     })
 
 
 @login_required
 def save_infrastructure(request):
-    """Sauvegarde de l'étape 2"""
     return financement_infrastructure(request)
 
-def nv_sous_projet(request):
-    """Étape 1: Formulaire des informations générales"""
-    if request.method == 'POST':
-        form = SousProjetForm(request.POST)
-        activite_formset = ActiviteFormSet(request.POST, prefix='activite')
-        
-        if form.is_valid() and activite_formset.is_valid():
-            sous_projet = form.save()
-            activite_formset.instance = sous_projet
-            activite_formset.save()
-            request.session['current_sous_projet_id'] = sous_projet.id
-            messages.success(request, '✅ Informations générales enregistrées')
-            return redirect('formulaire:financement_infrastructure')
-        else:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"❌ {field}: {error}")
-    else:
-        sous_projet = get_current_sous_projet(request)
-        if sous_projet:
-            form = SousProjetForm(instance=sous_projet)
-            # Important: instance ET prefix
-            activite_formset = ActiviteFormSet(instance=sous_projet, prefix='activite')
-        else:
-            form = SousProjetForm()
-            # Important: prefix seulement
-            activite_formset = ActiviteFormSet(prefix='activite')
-    
-      # DEBUG
-    print("=" * 50)
-    print("🔍 VUE nv_sous_projet - AVANT RENDER")
-    print(f"activite_formset: {activite_formset}")
-    print(f"Nombre de forms: {len(activite_formset.forms)}")
-    print("=" * 50)
-    
-    return render(request, 'formulaire/nv_sous_projet.html', {
-        'form': form,
-        'activite_formset_data': activite_formset,
-        'sous_projet': sous_projet,
-        'test_nombre': len(activite_formset.forms),
 
-    })
-
-
-# ============================================
-# ÉTAPE 3: ÉQUIPEMENTS
-# ============================================
+# =========================================================
+# ÉTAPE 3 : ÉQUIPEMENTS
+# =========================================================
 
 @login_required
 def financement_equipement(request):
-    """Étape 3: Gestion des équipements"""
+    """
+    Étape 3 :
+    - premier affichage : 3 lignes vides
+    - refresh / données existantes : 0 ligne vide supplémentaire
+    """
     sous_projet = get_current_sous_projet(request)
     if not sous_projet:
         return redirect('formulaire:nouveau_sous_projet')
-    
+
+    DynamicEquipementFormSet = clone_formset_with_extra(
+        EquipementFormSet,
+        0 if sous_projet.equipements.exists() else 3
+    )
+
     if request.method == 'POST':
-        formset = EquipementFormSet(request.POST, instance=sous_projet, prefix='equip')
+        formset = DynamicEquipementFormSet(request.POST, instance=sous_projet, prefix='equip')
         if formset.is_valid():
             formset.save()
-            messages.success(request, '✅ Équipements enregistrés')
+            messages.success(request, "✅ Équipements enregistrés.")
             return redirect('formulaire:financement_intrant')
-        else:
-            for form in formset.forms:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f"❌ Équipement - {field}: {error}")
+
+        for form in formset.forms:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ Équipement - {field} : {error}")
     else:
-        formset = EquipementFormSet(instance=sous_projet, prefix='equip')
-    
+        formset = DynamicEquipementFormSet(instance=sous_projet, prefix='equip')
+
     return render(request, 'formulaire/financement_equipement.html', {
         'equipement_formset': formset,
-        'sous_projet': sous_projet
+        'sous_projet': sous_projet,
     })
 
 
 @login_required
 def save_equipement(request):
-    """Sauvegarde de l'étape 3"""
     return financement_equipement(request)
 
 
-# ============================================
-# ÉTAPE 4: INTRANTS
-# ============================================
+# =========================================================
+# ÉTAPE 4 : INTRANTS
+# =========================================================
 
 @login_required
 def financement_intrant(request):
-    """Étape 4: Gestion des intrants"""
+    """
+    Étape 4 :
+    - premier affichage : 3 lignes vides
+    - refresh / données existantes : 0 ligne vide supplémentaire
+    """
     sous_projet = get_current_sous_projet(request)
     if not sous_projet:
         return redirect('formulaire:nouveau_sous_projet')
-    
+
+    DynamicIntrantFormSet = clone_formset_with_extra(
+        IntrantFormSet,
+        0 if sous_projet.intrants.exists() else 3
+    )
+
     if request.method == 'POST':
-        formset = IntrantFormSet(request.POST, instance=sous_projet, prefix='intrant')
+        formset = DynamicIntrantFormSet(request.POST, instance=sous_projet, prefix='intrant')
         if formset.is_valid():
             formset.save()
-            messages.success(request, '✅ Intrants enregistrés')
+            messages.success(request, "✅ Intrants enregistrés.")
             return redirect('formulaire:financement_fonctionnement')
-        else:
-            for form in formset.forms:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f"❌ Intrant - {field}: {error}")
+
+        for form in formset.forms:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ Intrant - {field} : {error}")
     else:
-        formset = IntrantFormSet(instance=sous_projet, prefix='intrant')
-    
+        formset = DynamicIntrantFormSet(instance=sous_projet, prefix='intrant')
+
     return render(request, 'formulaire/financement_intrant.html', {
         'intrant_formset': formset,
-        'sous_projet': sous_projet
+        'sous_projet': sous_projet,
     })
 
 
 @login_required
 def save_intrant(request):
-    """Sauvegarde de l'étape 4"""
     return financement_intrant(request)
 
 
-# ============================================
-# ÉTAPE 5: FONCTIONNEMENT
-# ============================================
+# =========================================================
+# ÉTAPE 5 : FONCTIONNEMENT
+# =========================================================
 
 @login_required
 def financement_fonctionnement(request):
-    """Étape 5: Gestion du fonctionnement"""
+    """
+    Étape 5 :
+    - premier affichage : 1 ligne vide
+    - refresh / données existantes : 0 ligne vide supplémentaire
+    """
     sous_projet = get_current_sous_projet(request)
     if not sous_projet:
         return redirect('formulaire:nouveau_sous_projet')
-    
+
+    DynamicFonctionnementFormSet = clone_formset_with_extra(
+        FonctionnementFormSet,
+        0 if sous_projet.fonctionnements.exists() else 1
+    )
+
     if request.method == 'POST':
-        formset = FonctionnementFormSet(request.POST, instance=sous_projet, prefix='fonc')
+        formset = DynamicFonctionnementFormSet(request.POST, instance=sous_projet, prefix='fonc')
         if formset.is_valid():
             formset.save()
-            messages.success(request, '✅ Fonctionnement enregistré')
+            messages.success(request, "✅ Fonctionnement enregistré.")
             return redirect('formulaire:financement_services')
-        else:
-            for form in formset.forms:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f"❌ Fonctionnement - {field}: {error}")
+
+        for form in formset.forms:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ Fonctionnement - {field} : {error}")
     else:
-        formset = FonctionnementFormSet(instance=sous_projet, prefix='fonc')
-    
+        formset = DynamicFonctionnementFormSet(instance=sous_projet, prefix='fonc')
+
     return render(request, 'formulaire/financement_fonctionnement.html', {
         'fonctionnement_formset': formset,
-        'sous_projet': sous_projet
+        'sous_projet': sous_projet,
     })
 
 
 @login_required
 def save_fonctionnement(request):
-    """Sauvegarde de l'étape 5"""
     return financement_fonctionnement(request)
 
 
-# ============================================
-# ÉTAPE 6: SERVICES
-# ============================================
+# =========================================================
+# ÉTAPE 6 : SERVICES
+# =========================================================
 
 @login_required
 def financement_services(request):
-    """Étape 6: Gestion des services"""
+    """
+    Étape 6 :
+    - premier affichage : 1 ligne vide
+    - refresh / données existantes : 0 ligne vide supplémentaire
+    """
     sous_projet = get_current_sous_projet(request)
     if not sous_projet:
         return redirect('formulaire:nouveau_sous_projet')
-    
+
+    DynamicServiceFormSet = clone_formset_with_extra(
+        ServiceFormSet,
+        0 if sous_projet.services.exists() else 1
+    )
+
     if request.method == 'POST':
-        formset = ServiceFormSet(request.POST, instance=sous_projet, prefix='serv')
+        formset = DynamicServiceFormSet(request.POST, instance=sous_projet, prefix='serv')
         if formset.is_valid():
             formset.save()
-            messages.success(request, '✅ Services enregistrés')
+            messages.success(request, "✅ Services enregistrés.")
             return redirect('formulaire:realisation_passif')
-        else:
-            for form in formset.forms:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f"❌ Service - {field}: {error}")
+
+        for form in formset.forms:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ Service - {field} : {error}")
     else:
-        formset = ServiceFormSet(instance=sous_projet, prefix='serv')
-    
+        formset = DynamicServiceFormSet(instance=sous_projet, prefix='serv')
+
     return render(request, 'formulaire/financement_services.html', {
         'service_formset': formset,
-        'sous_projet': sous_projet
+        'sous_projet': sous_projet,
     })
 
 
 @login_required
 def save_service(request):
-    """Sauvegarde de l'étape 6"""
     return financement_services(request)
 
 
-# ============================================
-# ÉTAPE 7: RÉALISATIONS ET EMPRUNTS
-# ============================================
+# =========================================================
+# ÉTAPE 7 : RÉALISATIONS PASSÉES ET EMPRUNTS
+# =========================================================
 
 @login_required
 def realisation_passif(request):
-    """Étape 7: Gestion des réalisations et emprunts"""
+    """Étape 7 : réalisations passées et emprunts."""
     sous_projet = get_current_sous_projet(request)
     if not sous_projet:
         return redirect('formulaire:nouveau_sous_projet')
-    
+
     if request.method == 'POST':
         realisation_formset = RealisationFormSet(request.POST, prefix='real')
         emprunt_formset = EmpruntFormSet(request.POST, prefix='emprunt')
-        
+
         if realisation_formset.is_valid() and emprunt_formset.is_valid():
-            # Sauvegarde des réalisations
             for real_form in realisation_formset.forms:
                 if real_form.cleaned_data and real_form.cleaned_data.get('annee'):
                     realisation = real_form.save(commit=False)
                     realisation.sous_projet = sous_projet
                     realisation.save()
-            
-            # Sauvegarde des emprunts
+
             for emp_form in emprunt_formset.forms:
                 if emp_form.cleaned_data and emp_form.cleaned_data.get('annee'):
                     emprunt = emp_form.save(commit=False)
                     emprunt.sous_projet = sous_projet
                     emprunt.save()
-            
-            # Nettoyer la session
-            del request.session['current_sous_projet_id']
-            
-            messages.success(request, '✅ Sous-projet créé avec succès!')
+
+            request.session.pop('current_sous_projet_id', None)
+            messages.success(request, "✅ Sous-projet créé avec succès !")
             return redirect('formulaire:liste_sous_projets')
-        else:
-            for form in realisation_formset.forms:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f"❌ Réalisation - {field}: {error}")
-            for form in emprunt_formset.forms:
-                for field, errors in form.errors.items():
-                    for error in errors:
-                        messages.error(request, f"❌ Emprunt - {field}: {error}")
+
+        for form in realisation_formset.forms:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ Réalisation - {field} : {error}")
+
+        for form in emprunt_formset.forms:
+            for field, errors in form.errors.items():
+                for error in errors:
+                    messages.error(request, f"❌ Emprunt - {field} : {error}")
     else:
         realisation_formset = RealisationFormSet(prefix='real')
         emprunt_formset = EmpruntFormSet(prefix='emprunt')
-    
+
     return render(request, 'formulaire/realisation_passif.html', {
         'realisation_formset': realisation_formset,
         'emprunt_formset': emprunt_formset,
-        'sous_projet': sous_projet
+        'sous_projet': sous_projet,
     })
 
 
 @login_required
 def save_realisation_passif(request):
-    """Sauvegarde de l'étape 7"""
     return realisation_passif(request)
 
 
-# ============================================
-# LISTE ET DÉTAIL
-# ============================================
+# =========================================================
+# LISTE / DÉTAIL / SUPPRESSION
+# =========================================================
 
 @login_required
 def liste_sous_projets(request):
-    """Affiche la liste des sous-projets accessibles à l'utilisateur"""
+    """Liste des sous-projets accessibles."""
     utilisateur = get_current_user(request)
     sous_projets = get_accessible_sous_projets(utilisateur).order_by('-date_creation')
+
     return render(request, 'formulaire/liste_sous_projets.html', {
         'sous_projets': sous_projets,
         'user_name': request.session.get('user_name'),
@@ -693,36 +598,86 @@ def liste_sous_projets(request):
 
 @login_required
 def detail_sous_projet(request, pk):
-    """Affiche le détail d'un sous-projet accessible à l'utilisateur"""
+    """Détail d'un sous-projet."""
     utilisateur = get_current_user(request)
     sous_projet = get_object_or_404(get_accessible_sous_projets(utilisateur), pk=pk)
-    return render(request, 'formulaire/detail_sous_projet.html', {
+
+    infrastructures = list(sous_projet.infrastructures.all())
+    equipements = list(sous_projet.equipements.all())
+    intrants = list(sous_projet.intrants.all())
+    fonctionnements = list(sous_projet.fonctionnements.all())
+    services = list(sous_projet.services.all())
+
+    total_infrastructures = sous_projet.infrastructures.aggregate(total=Sum('montant_total'))['total'] or 0
+    total_equipements = sous_projet.equipements.aggregate(total=Sum('montant_total'))['total'] or 0
+    total_intrants = sous_projet.intrants.aggregate(total=Sum('montant_total'))['total'] or 0
+    total_fonctionnements = sous_projet.fonctionnements.aggregate(total=Sum('montant_total'))['total'] or 0
+    total_services = sous_projet.services.aggregate(total=Sum('montant_total'))['total'] or 0
+
+    grand_total = (
+        total_infrastructures +
+        total_equipements +
+        total_intrants +
+        total_fonctionnements +
+        total_services
+    )
+
+    total_ventes = 0
+    for real in sous_projet.realisations.all():
+        total_ventes += (real.ventes_usd_annee_1 or 0)
+        total_ventes += (real.ventes_usd_annee_2 or 0)
+        total_ventes += (real.ventes_usd_annee_3 or 0)
+
+    total_emprunte = sum(emp.montant_emprunte or 0 for emp in sous_projet.emprunts.all())
+    total_rembourse = sum(emp.montant_rembourse or 0 for emp in sous_projet.emprunts.all())
+
+    context = {
         'sous_projet': sous_projet,
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
-    })
+
+        'infrastructures': infrastructures,
+        'equipements': equipements,
+        'intrants': intrants,
+        'fonctionnements': fonctionnements,
+        'services': services,
+
+        'total_infrastructures': total_infrastructures,
+        'total_equipements': total_equipements,
+        'total_intrants': total_intrants,
+        'total_fonctionnements': total_fonctionnements,
+        'total_services': total_services,
+
+        'grand_total': grand_total,
+        'total_ventes': total_ventes,
+        'total_emprunte': total_emprunte,
+        'total_rembourse': total_rembourse,
+    }
+
+    return render(request, 'formulaire/detail_sous_projet.html', context)
 
 @login_required
 def supprimer_sous_projet(request, pk):
-    """Supprime un sous-projet accessible à l'utilisateur"""
+    """Supprime un sous-projet accessible."""
     utilisateur = get_current_user(request)
     sous_projet = get_object_or_404(get_accessible_sous_projets(utilisateur), pk=pk)
-    
+
     if request.method == 'POST':
         intitule = sous_projet.intitule_sous_projet
         sous_projet.delete()
-        messages.success(request, f'✅ Sous-projet "{intitule}" supprimé avec succès!')
+        messages.success(request, f'✅ Sous-projet "{intitule}" supprimé avec succès !')
         return redirect('formulaire:liste_sous_projets')
-    
+
     return redirect('formulaire:liste_sous_projets')
 
-# ============================================
-# API NON PROTÉGÉES
-# ============================================
+
+# =========================================================
+# API AJAX
+# =========================================================
 
 def get_moughataas(request):
-    """API: Récupère les moughataas d'une wilaya donnée"""
+    """Retourne les moughataas d'une wilaya."""
     wilaya_id = request.GET.get('wilaya_id')
     user_role = request.session.get('user_role')
     user_wilaya_id = request.session.get('user_wilaya_id')
@@ -734,11 +689,12 @@ def get_moughataas(request):
         moughataas = Moughataa.objects.filter(wilaya_id=wilaya_id).order_by('nom')
         data = [{'id': m.id, 'nom': m.nom} for m in moughataas]
         return JsonResponse(data, safe=False)
+
     return JsonResponse([], safe=False)
 
 
 def get_communes(request):
-    """API: Récupère les communes d'une moughataa donnée"""
+    """Retourne les communes d'une moughataa."""
     moughataa_id = request.GET.get('moughataa_id')
     user_role = request.session.get('user_role')
     user_wilaya_id = request.session.get('user_wilaya_id')
@@ -746,17 +702,20 @@ def get_communes(request):
     if moughataa_id and moughataa_id.isdigit():
         try:
             communes = Commune.objects.filter(moughataa_id=moughataa_id)
+
             if user_role == 'agent' and user_wilaya_id:
                 communes = communes.filter(moughataa__wilaya_id=user_wilaya_id)
+
             data = [{'id': c.id, 'nom': c.nom} for c in communes.order_by('nom')]
             return JsonResponse(data, safe=False)
         except Exception:
             return JsonResponse([], safe=False)
+
     return JsonResponse([], safe=False)
 
 
 def get_paysages(request):
-    """API: Récupère les paysages d'une commune donnée"""
+    """Retourne les paysages d'une commune."""
     commune_id = request.GET.get('commune_id')
     user_role = request.session.get('user_role')
     user_wilaya_id = request.session.get('user_wilaya_id')
@@ -764,18 +723,22 @@ def get_paysages(request):
     if commune_id and commune_id.isdigit():
         try:
             paysages = Paysage.objects.filter(commune_id=commune_id)
+
             if user_role == 'agent' and user_wilaya_id:
                 paysages = paysages.filter(commune__moughataa__wilaya_id=user_wilaya_id)
+
             data = [{'id': p.id, 'nom': p.nom} for p in paysages.order_by('nom')]
             return JsonResponse(data, safe=False)
         except Exception:
             return JsonResponse([], safe=False)
+
     return JsonResponse([], safe=False)
 
 
 def get_villages(request):
-    """API: Récupère les villages d'un paysage donné"""
+    """Retourne les villages d'un paysage."""
     paysage_id = request.GET.get('paysage_id')
+
     if paysage_id and paysage_id.isdigit():
         try:
             villages = Village.objects.filter(paysage_id=paysage_id).order_by('nom')
@@ -783,4 +746,5 @@ def get_villages(request):
             return JsonResponse(data, safe=False)
         except Exception:
             return JsonResponse([], safe=False)
+
     return JsonResponse([], safe=False)

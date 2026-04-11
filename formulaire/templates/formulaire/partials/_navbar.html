@@ -1,0 +1,64 @@
+<nav class="navbar navbar-expand-lg custom-navbar">
+    <div class="container">
+        <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
+            <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
+        </a>
+
+        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPadisam" aria-controls="navbarPadisam" aria-expanded="false" aria-label="Toggle navigation">
+            <span class="navbar-toggler-icon"></span>
+        </button>
+
+        <div class="collapse navbar-collapse" id="navbarPadisam">
+            <ul class="navbar-nav ms-auto align-items-lg-center">
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="dossiersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Gestion des demandes</a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="dossiersDropdown">
+                        <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">Dépôt de dossier</a></li>
+                        <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:liste_sous_projets' %}">List des dossier</a></li>
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="examenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Présélection</a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="examenDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Présélection Automatique</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Présélection Comité de présélection régional</span></li>
+                        
+                    </ul>
+                </li>
+                <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Plans d’affaires</a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Screening environnemental et social</span></li>
+                        <li><span class="dropdown-item disabled-submenu"> Élaboration des plans d’affaires</span></li>
+
+                    </ul>
+                </li>
+                 <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Validation</a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Approbation (Comité technique de sélection)</span></li>
+                        
+
+                    </ul>
+                </li>
+                 <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Suivi des sous-projets</a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Financement</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Mise en œuvre/Suivi & contrôle</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Évaluation</span></li>
+
+
+                    </ul>
+                </li>
+                
+             <li class="nav-item ms-lg-3">
+                    <a class="nav-link main-nav-link" href="#">Reporting</a>
+                </li>
+                <li class="nav-item ms-lg-3">
+                    <a class="nav-link main-nav-link" href="{% url 'formulaire:logout' %}">Déconnexion</a>
+                </li>
+            </ul>
+        </div>
+    </div>
+</nav>

@@ -7,93 +7,133 @@
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="/static/formulaire/css/style.css" rel="stylesheet">
     <style>
+        :root {
+            --primary-green: #2c6e2f;
+            --primary-green-light: #3d8a3f;
+            --secondary-orange: #e67e22;
+            --secondary-orange-light: #f39c12;
+            --cream: #fef5e7;
+            --dark-green: #1e4a22;
+            --menu-green: #5DBB63;
+            --menu-muted: #a8bda9;
+        }
 
-           :root {
-        --primary-green: #2c6e2f;
-        --primary-green-light: #3d8a3f;
-        --secondary-orange: #e67e22;
-        --secondary-orange-light: #f39c12;
-        --cream: #fef5e7;
-        --dark-green: #1e4a22;
-        --menu-green: #5DBB63;
-        --menu-muted: #a8bda9;
-    }
         body {
             background-color: #f8f9fa;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
         }
-             .custom-navbar {
-        background: #f8f9fa;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        padding: 10px 0;
-    }
 
-    .navbar-brand {
-        display: flex;
-        align-items: center;
-        padding: 0;
-        margin: 0;
-    }
+       .custom-navbar {
+    background: #f8f9fa;
+    box-shadow: 0 4px 15px rgba(0, 0, 0, 0.08);
+    padding: 6px 0;
+    position: relative;
+    z-index: 1000;
+}
 
-    .navbar-brand img {
-        height: 40px;
-        width: auto;
-        display: block;
-    }
+.custom-navbar .container {
+    max-width: 100%;
+    padding-left: 14px;
+    padding-right: 14px;
+    display: flex;
+    align-items: center;
+    gap: 8px;
+}
 
-    .main-nav-link {
-        color: var(--menu-green) !important;
-        font-size: 0.88rem;
-        font-weight: 600;
-        margin: 0 6px;
-        white-space: nowrap;
-    }
+.navbar-brand {
+    display: flex;
+    align-items: center;
+    padding: 0;
+    margin: 0 10px 0 0;
+    flex-shrink: 0;
+    min-width: 0;
+}
 
-    .main-nav-link:hover,
-    .main-nav-link:focus {
-        color: var(--primary-green-light) !important;
-    }
+.navbar-brand img {
+    height: 34px;
+    width: auto;
+    max-width: 340px;
+    display: block;
+}
 
-    .custom-dropdown {
-        border: none;
-        border-radius: 14px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-        padding: 8px 0;
-        min-width: 250px;
-        margin-top: 10px;
-    }
+.navbar-collapse {
+    min-width: 0;
+    flex-grow: 1;
+}
 
-    .custom-dropdown .dropdown-item {
-        padding: 10px 16px;
-        font-size: 0.95rem;
-        background: transparent;
-    }
+.navbar-nav {
+    flex-wrap: wrap;
+    row-gap: 3px;
+    column-gap: 2px;
+    align-items: center;
+}
 
-    .active-submenu {
-        color: var(--menu-green);
-        text-decoration: none;
-        transition: all 0.2s ease;
-    }
+.nav-item {
+    min-width: 0;
+}
 
-    .active-submenu:hover {
-        color: var(--primary-green-light);
-        background-color: #f3f8f3;
-    }
+.main-nav-link {
+    color: var(--menu-green) !important;
+    font-size: 0.78rem;
+    font-weight: 600;
+    margin: 0 1px;
+    padding: 7px 8px !important;
+    white-space: normal;
+    line-height: 1.1;
+    text-align: center;
+    word-break: keep-all;
+}
 
-    .disabled-submenu {
-        color: var(--menu-muted) !important;
-        cursor: not-allowed;
-        pointer-events: none;
-    }
+.main-nav-link:hover,
+.main-nav-link:focus {
+    color: var(--primary-green-light) !important;
+}
 
-    .navbar-toggler {
-        border: none;
-    }
+.custom-dropdown {
+    border: none;
+    border-radius: 14px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.12);
+    padding: 8px 0;
+    min-width: 230px;
+    max-width: 320px;
+    margin-top: 10px;
+}
 
-    .navbar-toggler:focus {
-        box-shadow: none;
-    }
-     .footer {
+.custom-dropdown .dropdown-item {
+    padding: 10px 16px;
+    font-size: 0.9rem;
+    background: transparent;
+    white-space: normal;
+    line-height: 1.2;
+}
+
+.active-submenu {
+    color: var(--menu-green);
+    text-decoration: none;
+    transition: all 0.2s ease;
+}
+
+.active-submenu:hover {
+    color: var(--primary-green-light);
+    background-color: #f3f8f3;
+}
+
+.disabled-submenu {
+    color: var(--menu-muted) !important;
+    cursor: not-allowed;
+    pointer-events: none;
+}
+
+.navbar-toggler {
+    border: none;
+    flex-shrink: 0;
+}
+
+.navbar-toggler:focus {
+    box-shadow: none;
+}
+
+        .footer {
             text-align: center;
             margin-top: 30px;
             padding-top: 20px;
@@ -105,33 +145,36 @@
             font-size: 0.75rem;
         }
 
-    @media (max-width: 991.98px) {
-        .navbar-brand img {
-            height: 52px;
+        @media (max-width: 991.98px) {
+            .navbar-brand img {
+                height: 52px;
+            }
+
+            .main-nav-link {
+                margin: 6px 0;
+            }
+
+            .custom-dropdown {
+                box-shadow: none;
+                border: 1px solid #e9ecef;
+                margin-top: 0;
+            }
         }
 
-        .main-nav-link {
-            margin: 6px 0;
-        }
-
-        .custom-dropdown {
-            box-shadow: none;
-            border: 1px solid #e9ecef;
-            margin-top: 0;
-        }
-    }
         .progress-bar-custom {
             height: 8px;
             background: #e0e0e0;
             border-radius: 4px;
             margin-bottom: 30px;
         }
+
         .progress-fill {
             width: 14%;
             height: 100%;
             background: #5DBB63;
             border-radius: 4px;
         }
+
         .step-indicator {
             display: flex;
             justify-content: space-between;
@@ -139,6 +182,7 @@
             flex-wrap: wrap;
             gap: 5px;
         }
+
         .step-badge {
             background: #e0e0e0;
             color: #666;
@@ -146,14 +190,17 @@
             border-radius: 20px;
             font-size: 0.8rem;
         }
+
         .step-badge.active {
             background: #5DBB63;
             color: white;
         }
+
         .step-badge.completed {
             background: #28a745;
             color: white;
         }
+
         .btn-next {
             background: #5DBB63;
             color: white;
@@ -161,9 +208,11 @@
             padding: 12px 30px;
             border-radius: 8px;
         }
+
         .btn-next:hover {
             background: #4a9e4e;
         }
+
         .formset-row {
             background: #f8f9fa;
             padding: 20px;
@@ -171,6 +220,7 @@
             border-radius: 10px;
             border: 2px solid #e0e0e0;
         }
+
         .btn-add-row {
             background: #28a745;
             color: white;
@@ -180,14 +230,36 @@
             margin-top: 10px;
             cursor: pointer;
         }
+
         .btn-add-row:hover {
             background: #218838;
+        }
+
+        .field-error {
+            color: #dc3545;
+            font-size: 0.875rem;
+            margin-top: 6px;
+        }
+
+        .field-error ul {
+            margin: 0;
+            padding-left: 18px;
+        }
+
+        .field-error li {
+            margin: 0;
+        }
+
+        .error-input,
+        input.is-invalid,
+        select.is-invalid,
+        textarea.is-invalid {
+            border-color: #dc3545 !important;
         }
     </style>
 </head>
 <body>
-    <!-- Navigation -->
-  <nav class="navbar navbar-expand-lg custom-navbar">
+   <nav class="navbar navbar-expand-lg custom-navbar">
     <div class="container">
         <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
             <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
@@ -199,55 +271,53 @@
 
         <div class="collapse navbar-collapse" id="navbarPadisam">
             <ul class="navbar-nav ms-auto align-items-lg-center">
-
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="dossiersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Dossiers
-                    </a>
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="dossiersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Gestion des demandes</a>
                     <ul class="dropdown-menu custom-dropdown" aria-labelledby="dossiersDropdown">
-                        <li>
-                            <a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">
-                                Nouveau dossier
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item active-submenu" href="{% url 'formulaire:liste_sous_projets' %}">
-                                Liste des dossiers
-                            </a>
-                        </li>
-                        <li>
-                            <span class="dropdown-item disabled-submenu">Archivage numérique</span>
-                        </li>
+                        <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">Dépôt de dossier</a></li>
+                        <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:liste_sous_projets' %}">List des dossier</a></li>
                     </ul>
                 </li>
-
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="examenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Examen des dossiers
-                    </a>
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="examenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Présélection</a>
                     <ul class="dropdown-menu custom-dropdown" aria-labelledby="examenDropdown">
-                        <li><span class="dropdown-item disabled-submenu">Présélection</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Dossiers rejetés</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Procès-verbal</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Présélection Automatique</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Présélection Comité de présélection régional</span></li>
+                        
                     </ul>
                 </li>
-
                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Transmission &amp; suite
-                    </a>
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Plans d’affaires</a>
                     <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
-                        <li><span class="dropdown-item disabled-submenu">Dossiers transmis</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Screening E&amp;S</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Plans d’affaires</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Évaluation technique et financière</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Screening environnemental et social</span></li>
+                        <li><span class="dropdown-item disabled-submenu"> Élaboration des plans d’affaires</span></li>
+
                     </ul>
                 </li>
+                 <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Validation</a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Approbation (Comité technique de sélection)</span></li>
+                        
 
+                    </ul>
+                </li>
+                 <li class="nav-item dropdown">
+                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Suivi des sous-projets</a>
+                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
+                        <li><span class="dropdown-item disabled-submenu">Financement</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Mise en œuvre/Suivi & contrôle</span></li>
+                        <li><span class="dropdown-item disabled-submenu">Évaluation</span></li>
+
+
+                    </ul>
+                </li>
+                
+             <li class="nav-item ms-lg-3">
+                    <a class="nav-link main-nav-link" href="#">Reporting</a>
+                </li>
                 <li class="nav-item ms-lg-3">
-                    <a class="nav-link main-nav-link" href="{% url 'formulaire:logout' %}">
-                        Déconnexion
-                    </a>
+                    <a class="nav-link main-nav-link" href="{% url 'formulaire:logout' %}">Déconnexion</a>
                 </li>
             </ul>
         </div>
@@ -264,12 +334,16 @@
             {% endfor %}
         {% endif %}
 
-        <!-- Barre de progression -->
+        {% if form.non_field_errors %}
+            <div class="alert alert-danger">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
         <div class="progress-bar-custom">
             <div class="progress-fill"></div>
         </div>
 
-        <!-- Indicateur d'étapes -->
         <div class="step-indicator">
             <span class="step-badge active">📋 1. Infos générales</span>
             <span class="step-badge">🏗️ 2. Infrastructures</span>
@@ -280,252 +354,340 @@
             <span class="step-badge">📊 7. Réalisations/Passifs</span>
         </div>
 
-        <!-- En-tête -->
         <div class="welcome-section">
-            <h1>📋 Nouveau sous-projet</h1>
+            <h1>📋 Nouveau dossier</h1>
             <p class="mb-0">Étape 1/7 : Remplissez les informations générales</p>
         </div>
 
         <form method="post" action="{% url 'formulaire:save_sous_projet' %}">
             {% csrf_token %}
 
-            <!-- SECTION 1 : Informations générales -->
             <div class="section-title">1. Informations générales</div>
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label">Date du formulaire</label>
+                                <label class="form-label">Date du formulaire*</label>
                                 {{ form.date_formulaire }}
+                                {% if form.date_formulaire.errors %}
+                                    <div class="field-error">{{ form.date_formulaire.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label">Intitulé du sous-projet</label>
                                 {{ form.intitule_sous_projet }}
+                                {% if form.intitule_sous_projet.errors %}
+                                    <div class="field-error">{{ form.intitule_sous_projet.errors }}</div>
+                                {% endif %}
                             </div>
+                        </div>
+
+                        <div class="col-md-6">
+                            <label for="{{ form.numero_reception_formulaire.id_for_label }}" class="form-label">
+                                Numéro réception formulaire*
+                            </label>
+                            {{ form.numero_reception_formulaire }}
+                            {% if form.numero_reception_formulaire.errors %}
+                                <div class="field-error">{{ form.numero_reception_formulaire.errors }}</div>
+                            {% endif %}
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- SECTION 2 : Type de sous-projet -->
             <div class="section-title">2. Type de sous-projet</div>
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label class="form-label">Guichet</label>
+                                <label class="form-label">Guichet*</label>
                                 {{ form.guichet }}
+                                {% if form.guichet.errors %}
+                                    <div class="field-error">{{ form.guichet.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label class="form-label">Type projet</label>
+                                <label class="form-label">Type projet*</label>
                                 {{ form.type_projet }}
+                                {% if form.type_projet.errors %}
+                                    <div class="field-error">{{ form.type_projet.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
+                        <div class="col-md-6" id="nombre-hectare-wrapper">
+                            <label for="{{ form.nombre_hectare.id_for_label }}" class="form-label">
+                                Nombre hectare*
+                            </label>
+                            {{ form.nombre_hectare }}
+                            {% if form.nombre_hectare.errors %}
+                                <div class="field-error">{{ form.nombre_hectare.errors }}</div>
+                            {% endif %}
+                        </div>
+
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label">Chaîne d'approvisionnement</label>
                                 {{ form.chaine_approvisionnement }}
+                                {% if form.chaine_approvisionnement.errors %}
+                                    <div class="field-error">{{ form.chaine_approvisionnement.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label">Marchés visés</label>
                                 {{ form.marches_vises }}
+                                {% if form.marches_vises.errors %}
+                                    <div class="field-error">{{ form.marches_vises.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label">Segment de la CA</label>
                                 {{ form.segment_ca }}
+                                {% if form.segment_ca.errors %}
+                                    <div class="field-error">{{ form.segment_ca.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- SECTION 3 : Identification du demandeur -->
             <div class="section-title">3. Identification du demandeur</div>
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label">Nom et statut juridique</label>
+                                <label class="form-label">Nom et statut juridique*</label>
                                 {{ form.nom_statut_juridique }}
+                                {% if form.nom_statut_juridique.errors %}
+                                    <div class="field-error">{{ form.nom_statut_juridique.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label">Principal domaine d'activités</label>
                                 {{ form.principal_domaine_activites }}
+                                {% if form.principal_domaine_activites.errors %}
+                                    <div class="field-error">{{ form.principal_domaine_activites.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
+
                     <div class="form-group">
                         <label class="form-label">Adresse</label>
                         {{ form.adresse }}
+                        {% if form.adresse.errors %}
+                            <div class="field-error">{{ form.adresse.errors }}</div>
+                        {% endif %}
                     </div>
+
                     <div class="row">
                         <div class="col-md-6">
                             <div class="form-group">
-                                <label class="form-label">Personne contact (nom)</label>
+                                <label class="form-label">Personne contact (nom)*</label>
                                 {{ form.personne_contact_nom }}
+                                {% if form.personne_contact_nom.errors %}
+                                    <div class="field-error">{{ form.personne_contact_nom.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-6">
                             <div class="form-group">
                                 <label class="form-label">Personne contact (fonction)</label>
                                 {{ form.personne_contact_fonction }}
+                                {% if form.personne_contact_fonction.errors %}
+                                    <div class="field-error">{{ form.personne_contact_fonction.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
+
                     <div class="row">
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label class="form-label">Téléphone</label>
+                                <label class="form-label">Téléphone*</label>
                                 {{ form.telephone }}
                                 <small class="form-text">8 chiffres</small>
+                                {% if form.telephone.errors %}
+                                    <div class="field-error">{{ form.telephone.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-3">
                             <div class="form-group">
                                 <label class="form-label">Fax</label>
                                 {{ form.fax }}
                                 <small class="form-text">4 chiffres</small>
+                                {% if form.fax.errors %}
+                                    <div class="field-error">{{ form.fax.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-3">
                             <div class="form-group">
                                 <label class="form-label">Email</label>
                                 {{ form.email }}
+                                {% if form.email.errors %}
+                                    <div class="field-error">{{ form.email.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-3">
                             <div class="form-group">
                                 <label class="form-label">Femmes/jeunes?</label>
                                 {{ form.presente_par_femmes_jeunes }}
+                                {% if form.presente_par_femmes_jeunes.errors %}
+                                    <div class="field-error">{{ form.presente_par_femmes_jeunes.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- SECTION 4 : Objectif du sous-projet -->
             <div class="section-title">4. Objectif du sous-projet</div>
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="form-group mb-3">
                         <label class="form-label">Objectif du sous-projet</label>
                         {{ form.objectif_sous_projet }}
+                        {% if form.objectif_sous_projet.errors %}
+                            <div class="field-error">{{ form.objectif_sous_projet.errors }}</div>
+                        {% endif %}
                     </div>
                 </div>
             </div>
 
-<!-- SECTION 5 : Liste des principales activités -->
-<div class="section-title">5. Liste des principales activités</div>
-<div class="card mb-4">
-    <div class="card-header">
-        <h5 class="mb-0">📋 Activités et Objectifs quantitatifs</h5>
-    </div>
-    <div class="card-body">
-      
-        
-        <div class="alert alert-info">
-            <small>💡 Renseignez chaque activité avec ses objectifs quantitatifs</small>
-        </div>
-        
-        {{ activite_formset_data.management_form }}
-        <div id="activite-forms">
-            {% for activite_form in activite_formset_data %}
-            <div class="formset-row">
-                <div class="row">
-                    <div class="col-md-5">
-                        <div class="form-group">
-                            <label class="form-label">Nom de l'activité</label>
-                            {{ activite_form.nom_activite }}
-                            {% if activite_form.nom_activite.errors %}
-                                <div class="text-danger small mt-1">
-                                    {% for error in activite_form.nom_activite.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
-                    <div class="col-md-5">
-                        <div class="form-group">
-                            <label class="form-label">Objectifs quantitatifs</label>
-                            {{ activite_form.realisations }}
-                            {% if activite_form.realisations.errors %}
-                                <div class="text-danger small mt-1">
-                                    {% for error in activite_form.realisations.errors %}
-                                        {{ error }}
-                                    {% endfor %}
-                                </div>
-                            {% endif %}
-                        </div>
-                    </div>
+            <div class="section-title">5. Liste des principales activités</div>
+            <div class="card mb-4">
+                <div class="card-header">
+                    <h5 class="mb-0">📋 Activités et Objectifs quantitatifs</h5>
                 </div>
-                <div class="text-end mt-2">
-                    <small>{{ activite_form.DELETE }} Supprimer cette activité</small>
+                <div class="card-body">
+                    <div class="alert alert-info">
+                        <small>💡 Renseignez chaque activité avec ses objectifs quantitatifs</small>
+                    </div>
+
+                    {{ activite_formset_data.management_form }}
+
+                    <div id="activite-forms">
+                        {% for activite_form in activite_formset_data %}
+                        <div class="formset-row">
+                            <div class="row">
+                                <div class="col-md-5">
+                                    <div class="form-group">
+                                        <label class="form-label">Nom de l'activité</label>
+                                        {{ activite_form.nom_activite }}
+                                        {% if activite_form.nom_activite.errors %}
+                                            <div class="field-error">{{ activite_form.nom_activite.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+
+                                <div class="col-md-5">
+                                    <div class="form-group">
+                                        <label class="form-label">Objectifs quantitatifs</label>
+                                        {{ activite_form.realisations }}
+                                        {% if activite_form.realisations.errors %}
+                                            <div class="field-error">{{ activite_form.realisations.errors }}</div>
+                                        {% endif %}
+                                    </div>
+                                </div>
+                            </div>
+
+                            <div class="text-end mt-2">
+                                <small>{{ activite_form.DELETE }} Supprimer cette activité</small>
+                            </div>
+                        </div>
+                        {% endfor %}
+                    </div>
+
+                    <button type="button" class="btn-add-row" id="add-activite-btn">+ Ajouter une activité</button>
                 </div>
             </div>
-            {% endfor %}
-        </div>
-        
-        <button type="button" class="btn-add-row" id="add-activite-btn">+ Ajouter une activité</button>
-    </div>
-</div>
 
-            <!-- SECTION 6 : Localisation -->
             <div class="section-title">6. Localisation</div>
             <div class="card mb-4">
                 <div class="card-body">
                     <div class="row g-3">
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label class="form-label">Wilaya</label>
+                                <label class="form-label">Wilaya*</label>
                                 {{ form.wilaya }}
+                                {% if form.wilaya.errors %}
+                                    <div class="field-error">{{ form.wilaya.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label class="form-label">Moughataa</label>
+                                <label class="form-label">Moughataa*</label>
                                 {{ form.moughataa }}
+                                {% if form.moughataa.errors %}
+                                    <div class="field-error">{{ form.moughataa.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label class="form-label">Commune</label>
+                                <label class="form-label">Commune*</label>
                                 {{ form.commune }}
+                                {% if form.commune.errors %}
+                                    <div class="field-error">{{ form.commune.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label class="form-label">Paysage/ZOCA</label>
+                                <label class="form-label">Paysage/ZOCA*</label>
                                 {{ form.paysage }}
+                                {% if form.paysage.errors %}
+                                    <div class="field-error">{{ form.paysage.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-3">
                             <div class="form-group">
-                                <label class="form-label">Village</label>
+                                <label class="form-label">Village*</label>
                                 {{ form.village }}
                                 <datalist id="village-list"></datalist>
+                                {% if form.village.errors %}
+                                    <div class="field-error">{{ form.village.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- SECTION 7 : Renseignement sur le promoteur -->
             <div class="section-title">7. Renseignement sur le promoteur</div>
             <div class="card mb-4">
                 <div class="card-body">
@@ -534,173 +696,193 @@
                             <div class="form-group">
                                 <label class="form-label">Année début activités</label>
                                 {{ form.annee_debut_activites }}
+                                {% if form.annee_debut_activites.errors %}
+                                    <div class="field-error">{{ form.annee_debut_activites.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
+
                         <div class="col-md-8">
                             <div class="form-group">
                                 <label class="form-label">Historique</label>
                                 {{ form.historique_promoteur }}
+                                {% if form.historique_promoteur.errors %}
+                                    <div class="field-error">{{ form.historique_promoteur.errors }}</div>
+                                {% endif %}
                             </div>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Bouton suivant -->
             <div class="d-flex justify-content-end mt-4">
                 <button type="submit" class="btn-next">Suivant : Infrastructures →</button>
             </div>
         </form>
     </div>
 
-    <!-- Scripts -->
-   <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-<script>
-$(document).ready(function() {
-    // ============================================
-    // FONCTION POUR AJOUTER UNE LIGNE D'ACTIVITÉ
-    // ============================================
-    function addActiviteRow() {
-        var totalForms = $('#id_activite-TOTAL_FORMS');
-        var formIndex = parseInt(totalForms.val());
-        
-        // Récupérer le premier formulaire comme template
-        var templateRow = $('#activite-forms .formset-row:first');
-        
-        if (templateRow.length === 0) {
-            console.error("Aucune ligne template trouvée");
-            return;
-        }
-        
-        // Cloner la ligne template
-        var newRow = templateRow.clone(true);
-        
-        // Nettoyer les valeurs des champs dans la nouvelle ligne
-        newRow.find(':input').each(function() {
-            var name = $(this).attr('name');
-            var id = $(this).attr('id');
-            
-            if (name) {
-                // Remplacer l'index dans le nom
-                var newName = name.replace(/activite-\d+-/, 'activite-' + formIndex + '-');
-                $(this).attr('name', newName);
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        document.addEventListener('DOMContentLoaded', function () {
+            const typeProjetField = document.getElementById('{{ form.type_projet.id_for_label }}');
+            const hectareWrapper = document.getElementById('nombre-hectare-wrapper');
+
+            function toggleNombreHectare() {
+                if (!typeProjetField || !hectareWrapper) return;
+                hectareWrapper.style.display = typeProjetField.value === 'AG' ? 'block' : 'none';
             }
-            
-            if (id) {
-                // Remplacer l'index dans l'id
-                var newId = id.replace(/activite-\d+-/, 'activite-' + formIndex + '-');
-                $(this).attr('id', newId);
+
+            toggleNombreHectare();
+
+            if (typeProjetField) {
+                typeProjetField.addEventListener('change', toggleNombreHectare);
             }
-            
-            // Vider la valeur du champ
-            $(this).val('');
-            
-            // Enlever l'attribut checked pour les checkboxes
-            $(this).removeAttr('checked');
+
+            const invalidFields = document.querySelectorAll('.field-error');
+            invalidFields.forEach(function(errorBlock) {
+                const group = errorBlock.closest('.form-group') || errorBlock.parentElement;
+                if (!group) return;
+
+                const input = group.querySelector('input, select, textarea');
+                if (input) {
+                    input.classList.add('is-invalid');
+                }
+            });
         });
-        
-        // Mettre à jour les labels
-        newRow.find('label').each(function() {
-            var forAttr = $(this).attr('for');
-            if (forAttr) {
-                var newFor = forAttr.replace(/activite-\d+-/, 'activite-' + formIndex + '-');
-                $(this).attr('for', newFor);
+
+        $(document).ready(function() {
+            function addActiviteRow() {
+                var totalForms = $('#id_activite-TOTAL_FORMS');
+                var formIndex = parseInt(totalForms.val());
+
+                var templateRow = $('#activite-forms .formset-row:first');
+
+                if (templateRow.length === 0) {
+                    console.error("Aucune ligne template trouvée");
+                    return;
+                }
+
+                var newRow = templateRow.clone(true);
+
+                newRow.find(':input').each(function() {
+                    var name = $(this).attr('name');
+                    var id = $(this).attr('id');
+
+                    if (name) {
+                        var newName = name.replace(/activite-\d+-/, 'activite-' + formIndex + '-');
+                        $(this).attr('name', newName);
+                    }
+
+                    if (id) {
+                        var newId = id.replace(/activite-\d+-/, 'activite-' + formIndex + '-');
+                        $(this).attr('id', newId);
+                    }
+
+                    if ($(this).is(':checkbox')) {
+                        $(this).prop('checked', false);
+                    } else {
+                        $(this).val('');
+                    }
+
+                    $(this).removeClass('is-invalid');
+                });
+
+                newRow.find('.field-error').remove();
+
+                newRow.find('label').each(function() {
+                    var forAttr = $(this).attr('for');
+                    if (forAttr) {
+                        var newFor = forAttr.replace(/activite-\d+-/, 'activite-' + formIndex + '-');
+                        $(this).attr('for', newFor);
+                    }
+                });
+
+                $('#activite-forms').append(newRow);
+                totalForms.val(formIndex + 1);
             }
+
+            $('#add-activite-btn').click(function() {
+                addActiviteRow();
+            });
+
+            $('#id_wilaya').change(function() {
+                var wilayaId = $(this).val();
+                if (wilayaId) {
+                    $.ajax({
+                        url: '/formulaire/api/get-moughataas/',
+                        data: { 'wilaya_id': wilayaId },
+                        success: function(data) {
+                            var select = $('#id_moughataa');
+                            select.empty().append('<option value="">Sélectionnez une moughataa</option>');
+                            $.each(data, function(index, moughataa) {
+                                select.append('<option value="' + moughataa.id + '">' + moughataa.nom + '</option>');
+                            });
+                            $('#id_commune').empty().append('<option value="">Sélectionnez d\'abord une moughataa</option>');
+                            $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
+                            $('#village-list').empty();
+                            $('#id_village').val('');
+                        }
+                    });
+                }
+            });
+
+            $('#id_moughataa').change(function() {
+                var moughataaId = $(this).val();
+                if (moughataaId) {
+                    $.ajax({
+                        url: '/formulaire/api/get-communes/',
+                        data: { 'moughataa_id': moughataaId },
+                        success: function(data) {
+                            var select = $('#id_commune');
+                            select.empty().append('<option value="">Sélectionnez une commune</option>');
+                            $.each(data, function(index, commune) {
+                                select.append('<option value="' + commune.id + '">' + commune.nom + '</option>');
+                            });
+                            $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
+                            $('#village-list').empty();
+                            $('#id_village').val('');
+                        }
+                    });
+                }
+            });
+
+            $('#id_commune').change(function() {
+                var communeId = $(this).val();
+                if (communeId) {
+                    $.ajax({
+                        url: '/formulaire/api/get-paysages/',
+                        data: { 'commune_id': communeId },
+                        success: function(data) {
+                            var select = $('#id_paysage');
+                            select.empty().append('<option value="">Sélectionnez un paysage</option>');
+                            $.each(data, function(index, paysage) {
+                                select.append('<option value="' + paysage.id + '">' + paysage.nom + '</option>');
+                            });
+                            $('#village-list').empty();
+                            $('#id_village').val('');
+                        }
+                    });
+                }
+            });
+
+            $('#id_paysage').change(function() {
+                var paysageId = $(this).val();
+                if (paysageId) {
+                    $.ajax({
+                        url: '/formulaire/api/get-villages/',
+                        data: { 'paysage_id': paysageId },
+                        success: function(data) {
+                            var datalist = $('#village-list');
+                            datalist.empty();
+                            $.each(data, function(index, village) {
+                                datalist.append('<option value="' + village.nom + '">');
+                            });
+                        }
+                    });
+                }
+            });
         });
-        
-        // Ajouter la nouvelle ligne au conteneur
-        $('#activite-forms').append(newRow);
-        
-        // Incrémenter le compteur TOTAL_FORMS
-        totalForms.val(formIndex + 1);
-    }
-    
-    // Attacher l'événement au bouton
-    $('#add-activite-btn').click(function() {
-        addActiviteRow();
-    });
-    
-    // ============================================
-    // CHARGEMENT DYNAMIQUE DES LOCALISATIONS
-    // ============================================
-    
-    $('#id_wilaya').change(function() {
-        var wilayaId = $(this).val();
-        if (wilayaId) {
-            $.ajax({
-                url: '/formulaire/api/get-moughataas/',
-                data: { 'wilaya_id': wilayaId },
-                success: function(data) {
-                    var select = $('#id_moughataa');
-                    select.empty().append('<option value="">Sélectionnez une moughataa</option>');
-                    $.each(data, function(index, moughataa) {
-                        select.append('<option value="' + moughataa.id + '">' + moughataa.nom + '</option>');
-                    });
-                    $('#id_commune').empty().append('<option value="">Sélectionnez d\'abord une moughataa</option>');
-                    $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
-                    $('#village-list').empty();
-                    $('#id_village').val('');
-                }
-            });
-        }
-    });
-
-    $('#id_moughataa').change(function() {
-        var moughataaId = $(this).val();
-        if (moughataaId) {
-            $.ajax({
-                url: '/formulaire/api/get-communes/',
-                data: { 'moughataa_id': moughataaId },
-                success: function(data) {
-                    var select = $('#id_commune');
-                    select.empty().append('<option value="">Sélectionnez une commune</option>');
-                    $.each(data, function(index, commune) {
-                        select.append('<option value="' + commune.id + '">' + commune.nom + '</option>');
-                    });
-                    $('#id_paysage').empty().append('<option value="">Sélectionnez d\'abord une commune</option>');
-                    $('#village-list').empty();
-                    $('#id_village').val('');
-                }
-            });
-        }
-    });
-
-    $('#id_commune').change(function() {
-        var communeId = $(this).val();
-        if (communeId) {
-            $.ajax({
-                url: '/formulaire/api/get-paysages/',
-                data: { 'commune_id': communeId },
-                success: function(data) {
-                    var select = $('#id_paysage');
-                    select.empty().append('<option value="">Sélectionnez un paysage</option>');
-                    $.each(data, function(index, paysage) {
-                        select.append('<option value="' + paysage.id + '">' + paysage.nom + '</option>');
-                    });
-                    $('#village-list').empty();
-                    $('#id_village').val('');
-                }
-            });
-        }
-    });
-
-    $('#id_paysage').change(function() {
-        var paysageId = $(this).val();
-        if (paysageId) {
-            $.ajax({
-                url: '/formulaire/api/get-villages/',
-                data: { 'paysage_id': paysageId },
-                success: function(data) {
-                    var datalist = $('#village-list');
-                    datalist.empty();
-                    $.each(data, function(index, village) {
-                        datalist.append('<option value="' + village.nom + '">');
-                    });
-                }
-            });
-        }
-    });
-});
-</script>
+    </script>
 </body>
 </html>

@@ -1,193 +1,107 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Financement - Infrastructures - PADISAM</title>
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <link href="/static/formulaire/css/style.css" rel="stylesheet">
-    <style>
-        .progress-bar-custom {
-            height: 8px;
-            background: #e0e0e0;
-            border-radius: 4px;
-            margin-bottom: 30px;
-        }
-        .progress-fill {
-            width: 28%;
-            height: 100%;
-            background: #5DBB63;
-            border-radius: 4px;
-        }
-        .step-indicator {
-            display: flex;
-            justify-content: space-between;
-            margin-bottom: 30px;
-            flex-wrap: wrap;
-            gap: 5px;
-        }
-        .step-badge {
-            background: #e0e0e0;
-            color: #666;
-            padding: 8px 15px;
-            border-radius: 20px;
-            font-size: 0.8rem;
-        }
-        .step-badge.active {
-            background: #5DBB63;
-            color: white;
-        }
-        .step-badge.completed {
-            background: #28a745;
-            color: white;
-        }
-        .formset-row {
-            background: #f8f9fa;
-            padding: 20px;
-            margin-bottom: 15px;
-            border-radius: 10px;
-            border: 2px solid #e0e0e0;
-        }
-        .btn-add-row {
-            background: #28a745;
-            color: white;
-            border: none;
-            padding: 8px 15px;
-            border-radius: 5px;
-            margin-top: 10px;
-        }
-        .btn-next {
-            background: #5DBB63;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-        }
-        .btn-prev {
-            background: #6c757d;
-            color: white;
-            border: none;
-            padding: 12px 30px;
-            border-radius: 8px;
-        }
-        .montant-info {
-            font-size: 0.8rem;
-            color: #6c757d;
-            margin-top: 5px;
-        }
-    </style>
-</head>
-<body>
-    <nav class="navbar navbar-expand-lg navbar-dark">
-        <div class="container">
-            <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
-                <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
-                PADISAM
-            </a>
-            <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarNav">
-                <span class="navbar-toggler-icon"></span>
-            </button>
-            <div class="collapse navbar-collapse" id="navbarNav">
-                <ul class="navbar-nav ms-auto">
-                    <li class="nav-item"><a class="nav-link" href="{% url 'formulaire:liste_sous_projets' %}">📋 Liste</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'formulaire:nouveau_sous_projet' %}">➕ Nouveau</a></li>
-                    <li class="nav-item"><a class="nav-link" href="{% url 'formulaire:logout' %}">🚪 Déconnexion</a></li>
-                </ul>
-            </div>
-        </div>
-    </nav>
+{% extends 'formulaire/base.html' %}
+{% block title %}Financement - Infrastructures - PADISAM{% endblock %}
+{% block extra_css %}<link href="/static/formulaire/css/formulaire.css" rel="stylesheet">{% endblock %}
+{% block content %}
+<div class="progress-bar-custom"><div class="progress-fill" style="width:28%"></div></div>
+<div class="step-indicator"><span class="step-badge completed">📋 1. Infos générales</span>
+<span class="step-badge active">🏗️ 2. Infrastructures</span>
+<span class="step-badge ">🔧 3. Équipements</span>
+<span class="step-badge ">🌾 4. Intrants</span>
+<span class="step-badge ">⚙️ 5. Fonctionnement</span>
+<span class="step-badge ">🛠️ 6. Services</span>
+<span class="step-badge ">📊 7. Réalisations/Passifs</span></div>
+<div class="welcome-section">
+    <h1>🏗️ Financement - Infrastructures</h1>
+    <p class="mb-0">Étape 2/7 : Renseignez les infrastructures du projet</p>
+</div>
+<form method="post" action="{% url 'formulaire:save_infrastructure' %}">
+    {% csrf_token %}
+    <div class="card mb-4">
+        <div class="card-header"><h5 class="mb-0">A. INFRASTRUCTURES</h5></div>
+        <div class="card-body">
+            {{infrastructure_formset.management_form}}
+            {% if infrastructure_formset.non_form_errors %}
+                <div class="alert alert-danger mt-3">{{ infrastructure_formset.non_form_errors }}</div>
+            {% endif %}
+            <div id="infra-forms">
+                {% for row in infrastructure_formset %}
+                <div class="formset-row">
+                    {% for hidden in row.hidden_fields %}{{ hidden }}{% endfor %}
+                    <div class="row g-3 align-items-start">
 
-    <div class="container mt-4 mb-5">
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
+                            <div class="col-md-4 field-col">{% with field=row.description %}<label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}{% endwith %}</div>
+                            <div class="col-md-2 field-col">{% with field=row.quantite %}<label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}{% endwith %}</div>
+                            <div class="col-md-2 field-col">{% with field=row.prix_unit %}<label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}{% endwith %}</div>
+                            <div class="col-md-2 field-col">{% with field=row.subvention_padisam %}<label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}{% endwith %}</div>
+                            <div class="col-md-2 field-col">{% with field=row.contribution_promoteur %}<label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}{% endwith %}</div>
+                            <div class="col-md-2 field-col">{% with field=row.autre_financement %}<label class="form-label">{{ field.label }}</label>{{ field }}{% if field.errors %}<div class="field-error">{{ field.errors }}</div>{% endif %}{% endwith %}</div>
 
-        <div class="progress-bar-custom">
-            <div class="progress-fill"></div>
-        </div>
-
-        <div class="step-indicator">
-            <span class="step-badge completed">📋 1. Infos générales</span>
-            <span class="step-badge active">🏗️ 2. Infrastructures</span>
-            <span class="step-badge">🔧 3. Équipements</span>
-            <span class="step-badge">🌾 4. Intrants</span>
-            <span class="step-badge">⚙️ 5. Fonctionnement</span>
-            <span class="step-badge">🛠️ 6. Services</span>
-            <span class="step-badge">📊 7. Réalisations/Passifs</span>
-        </div>
-
-        <div class="welcome-section">
-            <h1>🏗️ Financement - Infrastructures</h1>
-            <p class="mb-0">Étape 2/7 : Renseignez les infrastructures du projet</p>
-        </div>
-
-        <form method="post" action="{% url 'formulaire:save_infrastructure' %}">
-            {% csrf_token %}
-            
-           
-
-            <div class="card mb-4">
-                <div class="card-header">
-                    <h5 class="mb-0">A. INFRASTRUCTURES</h5>
-                </div>
-                <div class="card-body">
-                    {{ infrastructure_formset.management_form }}
-                    <div id="infra-forms">
-                        {% for infra_form in infrastructure_formset %}
-                        <div class="formset-row">
-                            <div class="row">
-                                <div class="col-md-3">{{ infra_form.description.label_tag }}{{ infra_form.description }}</div>
-                                <div class="col-md-1">{{ infra_form.quantite.label_tag }}{{ infra_form.quantite }}</div>
-                                <div class="col-md-2">{{ infra_form.prix_unit.label_tag }}{{ infra_form.prix_unit }}</div>
-                                <div class="col-md-2">{{ infra_form.subvention_padisam.label_tag }}{{ infra_form.subvention_padisam }}</div>
-                                <div class="col-md-2">{{ infra_form.contribution_promoteur.label_tag }}{{ infra_form.contribution_promoteur }}</div>
-                                <div class="col-md-2">{{ infra_form.autre_financement.label_tag }}{{ infra_form.autre_financement }}</div>
-                            </div>
-                            <div class="text-end mt-2">
-                                <small>{{ infra_form.DELETE }} Supprimer</small>
-                            </div>
-                        </div>
-                        {% endfor %}
                     </div>
-                    <button type="button" class="btn-add-row" onclick="addForm('infra')">+ Ajouter une infrastructure</button>
+                    <div class="text-end mt-3"><small>{{ row.DELETE }} Supprimer</small></div>
                 </div>
+                {% endfor %}
             </div>
-
-            <div class="d-flex justify-content-between mt-4">
-                <a href="{% url 'formulaire:nouveau_sous_projet' %}" class="btn-prev">← Précédent</a>
-                <button type="submit" class="btn-next">Suivant : Équipements →</button>
-            </div>
-        </form>
+            <button type="button" class="btn-add-row" onclick="addForm('infra')">+ Ajouter une infrastructure</button>
+        </div>
     </div>
-
-    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
-   <script>
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'formulaire:nouveau_sous_projet' %}" class="btn-prev">← Précédent</a>
+        <button type="submit" class="btn-next">Suivant : Équipements →</button>
+    </div>
+</form>
+{% endblock %}
+{% block extra_js %}
+<script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+<script>
+function clearDefaultNumericValues(scope) {
+    const container = scope || document;
+    container.querySelectorAll('input[type="number"]').forEach(function(input) {
+        const name = input.name || '';
+        if (name.endsWith('-TOTAL_FORMS') || name.endsWith('-INITIAL_FORMS') || name.endsWith('-MIN_NUM_FORMS') || name.endsWith('-MAX_NUM_FORMS')) return;
+        if (input.value === '0' || input.value === '0.0' || input.value === '0.00') input.value = '';
+    });
+}
 function addForm(formsetPrefix) {
-            var totalForms = $('#id_' + formsetPrefix + '-TOTAL_FORMS');
-            var formIndex = parseInt(totalForms.val());
-            var newForm = $('#' + formsetPrefix + '-forms .formset-row:first').clone(true);
-            
-            newForm.find(':input').each(function() {
-                var name = $(this).attr('name').replace('-' + (formIndex-1) + '-', '-' + formIndex + '-');
-                var id = 'id_' + name;
-                $(this).attr({'name': name, 'id': id}).val('').removeAttr('checked');
-            });
-            
-            newForm.find('label').each(function() {
-                var newFor = $(this).attr('for').replace('-' + (formIndex-1) + '-', '-' + formIndex + '-');
-                $(this).attr('for', newFor);
-            });
-            
-            $('#id_' + formsetPrefix + '-TOTAL_FORMS').val(formIndex + 1);
-            $('#' + formsetPrefix + '-forms').append(newForm);
-        };
-    
-    // Pas de calcul JavaScript - le montant_total sera calculé dans le modèle
+    const totalForms = $('#id_' + formsetPrefix + '-TOTAL_FORMS');
+    const formIndex = parseInt(totalForms.val(), 10);
+    const firstRow = $('#' + formsetPrefix + '-forms .formset-row:first');
+    if (!firstRow.length) return;
+    const newForm = firstRow.clone(true);
+    newForm.find(':input').each(function() {
+        const currentName = $(this).attr('name');
+        const currentId = $(this).attr('id');
+        if (currentName) {
+            const newName = currentName.replace(/-\d+-/, '-' + formIndex + '-');
+            $(this).attr('name', newName);
+            $(this).attr('id', 'id_' + newName);
+        } else if (currentId) {
+            $(this).attr('id', currentId.replace(/-\d+-/, '-' + formIndex + '-'));
+        }
+        if ($(this).is(':checkbox')) {
+            $(this).prop('checked', false);
+        } else {
+            $(this).val('');
+        }
+        $(this).removeClass('is-invalid');
+    });
+    newForm.find('label').each(function() {
+        const currentFor = $(this).attr('for');
+        if (currentFor) $(this).attr('for', currentFor.replace(/-\d+-/, '-' + formIndex + '-'));
+    });
+    newForm.find('.field-error').remove();
+    $('#' + formsetPrefix + '-forms').append(newForm);
+    totalForms.val(formIndex + 1);
+    clearDefaultNumericValues(newForm.get(0));
+}
+document.addEventListener('DOMContentLoaded', function() {
+    const isBoundForm = {{infrastructure_formset.is_bound|yesno:"true,false"}};
+    if (!isBoundForm) clearDefaultNumericValues(document);
+    document.querySelectorAll('.field-error').forEach(function(errorBlock) {
+        const wrapper = errorBlock.closest('.field-col') || errorBlock.parentElement;
+        if (!wrapper) return;
+        const input = wrapper.querySelector('input, select, textarea');
+        if (input) input.classList.add('is-invalid');
+    });
+});
 </script>
-</body>
-</html>
+{% endblock %}

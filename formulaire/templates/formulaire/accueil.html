@@ -1,465 +1,72 @@
-<!DOCTYPE html>
-<html lang="fr">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Accueil - PADISAM</title>
-    <!-- Bootstrap CSS -->
-    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
-    <style>
-    :root {
-        --primary-green: #2c6e2f;
-        --primary-green-light: #3d8a3f;
-        --secondary-orange: #e67e22;
-        --secondary-orange-light: #f39c12;
-        --cream: #fef5e7;
-        --dark-green: #1e4a22;
-        --menu-green: #5DBB63;
-        --menu-muted: #a8bda9;
-    }
-
-    body {
-        background-color: #f8f9fa;
-        font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
-    }
-
-    /* ============================================
-       NAVBAR
-    ============================================ */
-    .custom-navbar {
-        background: #f8f9fa;
-        box-shadow: 0 4px 15px rgba(0,0,0,0.08);
-        padding: 10px 0;
-    }
-
-    .navbar-brand {
-        display: flex;
-        align-items: center;
-        padding: 0;
-        margin: 0;
-    }
-
-    .navbar-brand img {
-        height: 40px;
-        width: auto;
-        display: block;
-    }
-
-    .main-nav-link {
-        color: var(--menu-green) !important;
-        font-size: 0.88rem;
-        font-weight: 600;
-        margin: 0 6px;
-        white-space: nowrap;
-    }
-
-    .main-nav-link:hover,
-    .main-nav-link:focus {
-        color: var(--primary-green-light) !important;
-    }
-
-    .custom-dropdown {
-        border: none;
-        border-radius: 14px;
-        box-shadow: 0 10px 30px rgba(0,0,0,0.12);
-        padding: 8px 0;
-        min-width: 250px;
-        margin-top: 10px;
-    }
-
-    .custom-dropdown .dropdown-item {
-        padding: 10px 16px;
-        font-size: 0.95rem;
-        background: transparent;
-    }
-
-    .active-submenu {
-        color: var(--menu-green);
-        text-decoration: none;
-        transition: all 0.2s ease;
-    }
-
-    .active-submenu:hover {
-        color: var(--primary-green-light);
-        background-color: #f3f8f3;
-    }
-
-    .disabled-submenu {
-        color: var(--menu-muted) !important;
-        cursor: not-allowed;
-        pointer-events: none;
-    }
-
-    .navbar-toggler {
-        border: none;
-    }
-
-    .navbar-toggler:focus {
-        box-shadow: none;
-    }
-     .footer {
-            text-align: center;
-            margin-top: 30px;
-            padding-top: 20px;
-            border-top: 1px solid #f0f0f0;
-        }
-
-        .footer small {
-            color: #aaa;
-            font-size: 0.75rem;
-        }
-
-    @media (max-width: 991.98px) {
-        .navbar-brand img {
-            height: 52px;
-        }
-
-        .main-nav-link {
-            margin: 6px 0;
-        }
-
-        .custom-dropdown {
-            box-shadow: none;
-            border: 1px solid #e9ecef;
-            margin-top: 0;
-        }
-    }
-
-    /* ============================================
-       SECTION DE BIENVENUE
-    ============================================ */
-    .welcome-section {
-        background: white;
-        border-radius: 20px;
-        padding: 30px;
-        margin-bottom: 30px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-        border-left: 10px solid var(--menu-green);
-    }
-
-    .welcome-logo {
-        text-align: center;
-        margin-bottom: 20px;
-    }
-
-    .welcome-logo img {
-        max-width: 100px;
-        height: auto;
-    }
-
-    .welcome-title {
-        font-size: 1.8rem;
-        color: var(--dark-green);
-        font-weight: 600;
-    }
-
-    .welcome-subtitle {
-        color: #666;
-        font-size: 0.9rem;
-        margin-bottom: 0;
-    }
-
-    /* ============================================
-       CARTES
-    ============================================ */
-    .stat-card {
-        background: white;
-        border-radius: 20px;
-        padding: 30px 20px;
-        text-align: center;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.08);
-        transition: all 0.3s;
-        cursor: pointer;
-        border: 1px solid #f0f0f0;
-    }
-
-    .stat-card:hover {
-        transform: translateY(-8px);
-        box-shadow: 0 15px 30px rgba(0,0,0,0.12);
-        border-color: var(--secondary-orange);
-    }
-
-    .stat-number {
-        font-size: 3.5rem;
-        font-weight: normal;
-        color: var(--primary-green);
-        margin-bottom: 10px;
-        line-height: 1;
-    }
-
-    .stat-label {
-        color: var(--dark-green);
-        font-weight: 600;
-        margin-top: 10px;
-        font-size: 1.1rem;
-    }
-
-    .stat-card small {
-        color: #888;
-        font-size: 0.85rem;
-    }
-
-    /* ============================================
-       TABLEAU
-    ============================================ */
-    .card {
-        border: none;
-        border-radius: 20px;
-        box-shadow: 0 5px 20px rgba(0,0,0,0.05);
-        overflow: hidden;
-    }
-
-    .card-header {
-        background: var(--menu-green);
-        color: white;
-        padding: 15px 20px;
-        font-weight: 600;
-    }
-
-    .table th {
-        background-color: var(--cream);
-        color: var(--dark-green);
-        font-weight: 600;
-        border: none;
-    }
-
-    .badge-agr {
-        background-color: var(--primary-green);
-        color: white;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-    }
-
-    .badge-aci {
-        background-color: var(--secondary-orange);
-        color: white;
-        padding: 5px 12px;
-        border-radius: 20px;
-        font-size: 0.8rem;
-    }
-
-    .btn-outline-primary {
-        border-color: var(--primary-green);
-        color: var(--primary-green);
-    }
-
-    .btn-outline-primary:hover {
-        background-color: var(--primary-green);
-        border-color: var(--primary-green);
-    }
-
-    /* ============================================
-       RESPONSIVE
-    ============================================ */
-    @media (max-width: 1200px) {
-        .nav-sections {
-            gap: 24px;
-        }
-
-        .nav-group {
-            min-width: 200px;
-        }
-    }
-
-    @media (max-width: 992px) {
-        .navbar-brand img {
-            height: 56px;
-        }
-
-        .nav-sections {
-            width: 100%;
-            margin-top: 15px;
-            gap: 20px;
-        }
-
-        .nav-group {
-            min-width: 100%;
-        }
-    }
-</style>
-</head>
-<body>
-    <!-- ============================================
-         BARRE DE NAVIGATION AVEC LOGO ET BRAND
-    ============================================ -->
-  <nav class="navbar navbar-expand-lg custom-navbar">
-    <div class="container">
-        <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
-            <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
-        </a>
-
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPadisam" aria-controls="navbarPadisam" aria-expanded="false" aria-label="Toggle navigation">
-            <span class="navbar-toggler-icon"></span>
-        </button>
-
-        <div class="collapse navbar-collapse" id="navbarPadisam">
-            <ul class="navbar-nav ms-auto align-items-lg-center">
-
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="dossiersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Dossiers
-                    </a>
-                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="dossiersDropdown">
-                        <li>
-                            <a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">
-                                Nouveau dossier
-                            </a>
-                        </li>
-                        <li>
-                            <a class="dropdown-item active-submenu" href="{% url 'formulaire:liste_sous_projets' %}">
-                                Liste des dossiers
-                            </a>
-                        </li>
-                        <li>
-                            <span class="dropdown-item disabled-submenu">Archivage numérique</span>
-                        </li>
-                    </ul>
-                </li>
-
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="examenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Examen des dossiers
-                    </a>
-                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="examenDropdown">
-                        <li><span class="dropdown-item disabled-submenu">Présélection</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Dossiers rejetés</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Procès-verbal</span></li>
-                    </ul>
-                </li>
-
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-                        Transmission &amp; suite
-                    </a>
-                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
-                        <li><span class="dropdown-item disabled-submenu">Dossiers transmis</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Screening E&amp;S</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Plans d’affaires</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Évaluation technique et financière</span></li>
-                    </ul>
-                </li>
-
-                <li class="nav-item ms-lg-3">
-                    <a class="nav-link main-nav-link" href="{% url 'formulaire:logout' %}">
-                        Déconnexion
-                    </a>
-                </li>
-            </ul>
+{% extends 'formulaire/base.html' %}
+{% block title %}Accueil - PADISAM{% endblock %}
+{% block extra_css %}<link href="/static/formulaire/css/accueil.css" rel="stylesheet">{% endblock %}
+{% block page_container_start %}<div class="container mt-5">{% endblock %}
+{% block content %}
+<div class="welcome-section">
+    <div class="row align-items-center">
+        <div class="col-md-8 text-center">
+            <h1 class="welcome-title">Bonjour, {{ user_name }} !</h1>
+        </div>
+        <div class="col-md-2 text-center">
+            <span class="badge bg-light text-dark p-2">Rôle: {{ user_role }}</span>
         </div>
     </div>
-</nav>
+</div>
 
-    <div class="container mt-5">
-        <!-- Affichage des messages flash -->
-        {% if messages %}
-            {% for message in messages %}
-                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-                    {{ message }}
-                    <button type="button" class="btn-close" data-bs-dismiss="alert"></button>
-                </div>
-            {% endfor %}
-        {% endif %}
-        
-        <!-- ============================================
-             SECTION DE BIENVENUE AVEC LOGO, TITRE ET RÔLE
-        ============================================ -->
-        <div class="welcome-section">
-            <div class="row align-items-center">
-               
-                <div class="col-md-8 text-center">
-                    <h1 class="welcome-title">Bonjour, {{ user_name }} !</h1>
-                    
-                </div>
-                <div class="col-md-2 text-center">
-                    <span class="badge bg-light text-dark p-2">Rôle: {{ user_role }}</span>
-                </div>
-            </div>
-        </div>
-        
-        <!-- ============================================
-             CARTES D'ACCÈS RAPIDE
-        ============================================ -->
-        <div class="row g-4 mb-5">
-            <div class="col-md-4">
-                <div class="stat-card" onclick="window.location.href='{% url 'formulaire:nouveau_sous_projet' %}'">
-                    <div class="stat-number">📝</div>
-                    <div class="stat-label">Nouveau sous-projet</div>
-                    <small class="text-muted">Créer un nouveau dossier</small>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card" onclick="window.location.href='{% url 'formulaire:liste_sous_projets' %}'">
-                    <div class="stat-number">📋</div>
-                    <div class="stat-label">Liste des projets</div>
-                    <small class="text-muted">Consulter tous les projets</small>
-                </div>
-            </div>
-            <div class="col-md-4">
-                <div class="stat-card">
-                    <div class="stat-number">📊</div>
-                    <div class="stat-label">Statistiques</div>
-                    <small class="text-muted">Tableaux de bord</small>
-                </div>
-            </div>
-        </div>
-        
-        <!-- ============================================
-             TABLEAU DES DERNIERS SOUS-PROJETS
-        ============================================ -->
-        <div class="card">
-            <div class="card-header">
-                📌 Derniers sous-projets
-            </div>
-            <div class="card-body">
-                <div class="table-responsive">
-                    <table class="table table-hover">
-                        <thead>
-                            <tr>
-                                <th>ID</th>
-                                <th>Intitulé</th>
-                                <th>Date</th>
-                                <th>Guichet</th>
-                                <th>Action</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                            {% for projet in derniers_projets|slice:":5" %}
-                            <tr>
-                                <td>#{{ projet.id }}</td>
-                                <td>{{ projet.intitule_sous_projet|truncatechars:50 }}</td>
-                                <td>{{ projet.date_formulaire|date:"d/m/Y" }}</td>
-                                <td>
-                                    {% if projet.guichet == 'AGR' %}
-                                        <span class="badge-agr">{{ projet.guichet }}</span>
-                                    {% else %}
-                                        <span class="badge-aci">{{ projet.guichet }}</span>
-                                    {% endif %}
-                                </td>
-                                <td>
-                                    <a href="{% url 'formulaire:detail_sous_projet' projet.id %}" class="btn btn-sm btn-outline-primary">Voir</a>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="5" class="text-center">Aucun sous-projet enregistré</td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
-                </div>
-            </div>
-        </div>
-        
-        <!-- Pied de page -->
-        <div class="footer">
-            <small>
-                &copy; {% now "Y" %} Binor & Associés / I&D - Tous droits réservés<br>
-            </small>
+<div class="row g-4 mb-5">
+    <div class="col-md-4">
+        <div class="stat-card" onclick="window.location.href='{% url 'formulaire:nouveau_sous_projet' %}'">
+            <div class="stat-number">📝</div>
+            <div class="stat-label">Nouveau dossier</div>
+            <small class="text-muted">Créer un nouveau dossier</small>
         </div>
     </div>
+    <div class="col-md-4">
+        <div class="stat-card" onclick="window.location.href='{% url 'formulaire:liste_sous_projets' %}'">
+            <div class="stat-number">📋</div>
+            <div class="stat-label">Liste des dossiers</div>
+            <small class="text-muted">Consulter tous les dossiers</small>
+        </div>
+    </div>
+    <div class="col-md-4">
+        <div class="stat-card">
+            <div class="stat-number">📊</div>
+            <div class="stat-label">Statistiques</div>
+            <small class="text-muted">Tableaux de bord</small>
+        </div>
+    </div>
+</div>
 
-    <!-- Bootstrap JS -->
-    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
-</body>
-</html>
+<div class="card">
+    <div class="card-header">📌 Derniers dossiers</div>
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table table-hover">
+                <thead>
+                    <tr><th>Num réception formulaire</th><th>Intitulé</th><th>Date</th><th>Guichet</th><th>Action</th></tr>
+                </thead>
+                <tbody>
+                    {% for projet in derniers_projets|slice:":5" %}
+                    <tr>
+                        <td>#{{ projet.numero_reception_formulaire }}</td>
+                        <td>{{ projet.intitule_sous_projet|truncatechars:50 }}</td>
+                        <td>{{ projet.date_formulaire|date:"d/m/Y" }}</td>
+                        <td>
+                            {% if projet.guichet == 'AGR' %}
+                                <span class="badge-agr">{{ projet.guichet }}</span>
+                            {% else %}
+                                <span class="badge-aci">{{ projet.guichet }}</span>
+                            {% endif %}
+                        </td>
+                        <td><a href="{% url 'formulaire:detail_sous_projet' projet.id %}" class="btn btn-sm btn-outline-primary">Voir</a></td>
+                    </tr>
+                    {% empty %}
+                    <tr><td colspan="5" class="text-center">Aucun sous-projet enregistré</td></tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
+{% endblock %}

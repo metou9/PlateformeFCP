@@ -1,14 +1,18 @@
+from decimal import Decimal
+
 from django import forms
-from django.core.validators import RegexValidator, MinValueValidator, MaxValueValidator
+from django.core.validators import RegexValidator
 from django.forms import inlineformset_factory, formset_factory, BaseFormSet
 from django.forms import BaseInlineFormSet
+from django.utils import timezone
 
 from .models import (
     SousProjet, Infrastructure, Equipement, Intrant,
     Fonctionnement, Service, Activite,
     RealisationPassee, PassifEmprunt,
-    Wilaya, Moughataa, Commune, Paysage, Village
+    Wilaya, Moughataa, Commune, Paysage
 )
+
 
 # ============================================
 # FORMULAIRE PRINCIPAL SOUS-PROJET
@@ -16,109 +20,111 @@ from .models import (
 
 class SousProjetForm(forms.ModelForm):
     """Formulaire principal pour la création d'un sous-projet"""
-    
-    # ============================================
-    # CHAMPS AVEC VALIDATIONS SPÉCIFIQUES
-    # ============================================
-    
-    # Date du formulaire - OBLIGATOIRE
+
     date_formulaire = forms.DateField(
         widget=forms.DateInput(attrs={'type': 'date', 'class': 'form-control'}),
         required=True,
         error_messages={'required': 'La date du formulaire est obligatoire.'}
     )
-    
-    # Intitulé du sous-projet - OBLIGATOIRE
+
     intitule_sous_projet = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control'}),
-        required=True,
-        max_length=500,
-        error_messages={'required': "L'intitulé du sous-projet est obligatoire."}
+        required=False,
+        max_length=500
     )
-    
-    # Guichet - OBLIGATOIRE
+
     guichet = forms.ChoiceField(
         choices=SousProjet.GUICHET_CHOICES,
         widget=forms.Select(attrs={'class': 'form-control'}),
         required=True,
         error_messages={'required': 'Le guichet est obligatoire.'}
     )
-    
-    # Type projet - OBLIGATOIRE
+
     type_projet = forms.ChoiceField(
         choices=SousProjet.TYPE_PROJET_CHOICES,
-        widget=forms.Select(attrs={'class': 'form-control'}),
+        widget=forms.Select(attrs={'class': 'form-control', 'id': 'id_type_projet'}),
         required=True,
         error_messages={'required': 'Le type de projet est obligatoire.'}
     )
-    
-    # Chaîne d'approvisionnement - NON OBLIGATOIRE
+
+    numero_reception_formulaire = forms.CharField(
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
+        required=True,
+        max_length=100,
+        error_messages={'required': 'Le numéro réception formulaire est obligatoire.'}
+    )
+
+    nombre_hectare = forms.DecimalField(
+        widget=forms.NumberInput(attrs={
+            'class': 'form-control',
+            'step': '0.01',
+            'min': '0'
+        }),
+        required=False,
+        min_value=0,
+        max_digits=10,
+        decimal_places=2
+    )
+
     chaine_approvisionnement = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control'}),
         required=False,
         max_length=500
     )
-    
-    # Marchés visés - OBLIGATOIRE
+
     marches_vises = forms.CharField(
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
-        required=True,
-        error_messages={'required': 'Les marchés visés sont obligatoires.'}
+        required=False
     )
-    
-    # Segment de la CA - NON OBLIGATOIRE
+
     segment_ca = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control'}),
         required=False,
         max_length=500
     )
-    
-    # Nom et statut juridique - NON OBLIGATOIRE
+
     nom_statut_juridique = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control'}),
-        required=False,
-        max_length=500
+        required=True,
+        max_length=500,
+        error_messages={'required': 'Le nom et statut juridique est obligatoire.'}
     )
-    
-    # Principal domaine d'activités - NON OBLIGATOIRE
+
     principal_domaine_activites = forms.CharField(
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         required=False
     )
-    
-    # Adresse - NON OBLIGATOIRE
+
     adresse = forms.CharField(
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 3}),
         required=False
     )
-    
-    # Personne contact (nom) - NON OBLIGATOIRE
+
     personne_contact_nom = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control'}),
-        required=False,
-        max_length=200
+        required=True,
+        max_length=200,
+        error_messages={'required': 'Le nom de la personne contact est obligatoire.'}
     )
-    
-    # Personne contact (fonction) - NON OBLIGATOIRE
+
     personne_contact_fonction = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control'}),
         required=False,
         max_length=200
     )
-    
-    # Téléphone - NON OBLIGATOIRE mais validation si rempli (8 chiffres)
+
     telephone = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ex: 12345678'}),
-        required=False,
+        required=True,
         validators=[
             RegexValidator(
                 regex=r'^\d{8}$',
                 message='Le numéro de téléphone doit contenir exactement 8 chiffres.'
             )
-        ]
+        ],
+        error_messages={'required': 'Le téléphone est obligatoire.'}
     )
-    
-    # Fax - NON OBLIGATOIRE mais validation si rempli (4 chiffres)
+
     fax = forms.CharField(
         widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ex: 1234'}),
         required=False,
@@ -129,22 +135,24 @@ class SousProjetForm(forms.ModelForm):
             )
         ]
     )
-    
-    # Email - NON OBLIGATOIRE
+
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={'class': 'form-control'}),
         required=False,
         error_messages={'invalid': 'Veuillez entrer une adresse email valide.'}
     )
-    
-    # Femmes/jeunes? - NON OBLIGATOIRE
+
     presente_par_femmes_jeunes = forms.ChoiceField(
         choices=SousProjet.OUI_NON_CHOICES,
         widget=forms.Select(attrs={'class': 'form-control'}),
         required=False
     )
-    
-    # Wilaya - OBLIGATOIRE
+
+    objectif_sous_projet = forms.CharField(
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        required=False
+    )
+
     wilaya = forms.ModelChoiceField(
         queryset=Wilaya.objects.all(),
         empty_label="Sélectionnez une wilaya",
@@ -152,8 +160,7 @@ class SousProjetForm(forms.ModelForm):
         required=True,
         error_messages={'required': 'La wilaya est obligatoire.'}
     )
-    
-    # Moughataa - OBLIGATOIRE
+
     moughataa = forms.ModelChoiceField(
         queryset=Moughataa.objects.none(),
         empty_label="Sélectionnez d'abord une wilaya",
@@ -161,8 +168,7 @@ class SousProjetForm(forms.ModelForm):
         required=True,
         error_messages={'required': 'La moughataa est obligatoire.'}
     )
-    
-    # Commune - OBLIGATOIRE
+
     commune = forms.ModelChoiceField(
         queryset=Commune.objects.none(),
         empty_label="Sélectionnez d'abord une moughataa",
@@ -170,8 +176,7 @@ class SousProjetForm(forms.ModelForm):
         required=True,
         error_messages={'required': 'La commune est obligatoire.'}
     )
-    
-    # Paysage/ZOCA - OBLIGATOIRE
+
     paysage = forms.ModelChoiceField(
         queryset=Paysage.objects.none(),
         empty_label="Sélectionnez un paysage",
@@ -179,8 +184,7 @@ class SousProjetForm(forms.ModelForm):
         required=True,
         error_messages={'required': 'Le paysage/ZOCA est obligatoire.'}
     )
-    
-    # Village - OBLIGATOIRE
+
     village = forms.CharField(
         widget=forms.TextInput(attrs={
             'class': 'form-control',
@@ -192,34 +196,32 @@ class SousProjetForm(forms.ModelForm):
         max_length=200,
         error_messages={'required': 'Le village est obligatoire.'}
     )
-    
-    # Année début activités - NON OBLIGATOIRE
+
     annee_debut_activites = forms.IntegerField(
         widget=forms.NumberInput(attrs={'class': 'form-control'}),
         required=False,
         min_value=1900,
         max_value=2100
     )
-    
-    # Historique - NON OBLIGATOIRE
+
     historique_promoteur = forms.CharField(
         widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         required=False
     )
-    
+
     class Meta:
         model = SousProjet
         exclude = ['date_saisie', 'date_creation', 'date_modification']
         widgets = {
             'objectif_sous_projet': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         }
-    
+
     def __init__(self, *args, **kwargs):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
-        # Wilaya accessible selon le rôle
         chosen_wilaya_id = None
+
         if self.user and getattr(self.user, 'role', None) == 'agent':
             if getattr(self.user, 'wilaya_id', None):
                 self.fields['wilaya'].queryset = Wilaya.objects.filter(pk=self.user.wilaya_id)
@@ -229,15 +231,16 @@ class SousProjetForm(forms.ModelForm):
                 chosen_wilaya_id = self.user.wilaya_id
             else:
                 self.fields['wilaya'].queryset = Wilaya.objects.none()
+
         elif 'wilaya' in self.data:
             try:
                 chosen_wilaya_id = int(self.data.get('wilaya'))
             except (ValueError, TypeError):
                 chosen_wilaya_id = None
+
         elif self.instance.pk and self.instance.wilaya_id:
             chosen_wilaya_id = self.instance.wilaya_id
 
-        # Initialiser les querysets pour les champs dynamiques
         if chosen_wilaya_id:
             self.fields['moughataa'].queryset = Moughataa.objects.filter(wilaya_id=chosen_wilaya_id).order_by('nom')
         else:
@@ -271,19 +274,51 @@ class SousProjetForm(forms.ModelForm):
         else:
             self.fields['paysage'].queryset = Paysage.objects.none()
 
-        # Ajouter les classes CSS pour les champs obligatoires
-        for field_name, field in self.fields.items():
+        for _, field in self.fields.items():
             if field.required:
                 field.widget.attrs['class'] = field.widget.attrs.get('class', '') + ' required-field'
 
+    def clean(self):
+        cleaned_data = super().clean()
+        type_projet = cleaned_data.get('type_projet')
+        nombre_hectare = cleaned_data.get('nombre_hectare')
+
+        if type_projet == 'AG' and not nombre_hectare:
+            self.add_error('nombre_hectare', "Le nombre hectare est obligatoire pour un projet de type AG.")
+
+        if type_projet != 'AG':
+            cleaned_data['nombre_hectare'] = None
+
+        return cleaned_data
+
+    def clean_date_formulaire(self):
+        date_formulaire = self.cleaned_data.get('date_formulaire')
+
+        if not date_formulaire:
+            return date_formulaire
+
+        if self.instance and self.instance.pk and self.instance.date_saisie:
+            date_limite = self.instance.date_saisie.date()
+        else:
+            date_limite = timezone.localdate()
+
+        if date_formulaire > date_limite:
+            raise forms.ValidationError(
+                "La date du formulaire doit être antérieure ou égale à la date de saisie."
+            )
+
+        return date_formulaire
+
     def clean_wilaya(self):
         wilaya = self.cleaned_data.get('wilaya')
+
         if self.user and getattr(self.user, 'role', None) == 'agent':
             if not getattr(self.user, 'wilaya_id', None):
                 raise forms.ValidationError("Cet agent n'a pas de wilaya affectée.")
             if not wilaya or wilaya.id != self.user.wilaya_id:
                 raise forms.ValidationError("Vous ne pouvez saisir que des sous-projets de votre wilaya.")
             return self.user.wilaya
+
         return wilaya
 
     def clean_telephone(self):
@@ -293,7 +328,7 @@ class SousProjetForm(forms.ModelForm):
         if telephone and len(telephone) != 8:
             raise forms.ValidationError('Le numéro de téléphone doit contenir exactement 8 chiffres.')
         return telephone
-    
+
     def clean_fax(self):
         fax = self.cleaned_data.get('fax')
         if fax and not fax.isdigit():
@@ -304,7 +339,7 @@ class SousProjetForm(forms.ModelForm):
 
 
 # ============================================
-# FORMULAIRE POUR LES ACTIVITÉS
+# FORMULAIRE DES ACTIVITÉS
 # ============================================
 
 class ActiviteForm(forms.ModelForm):
@@ -312,8 +347,15 @@ class ActiviteForm(forms.ModelForm):
         model = Activite
         fields = ['nom_activite', 'realisations']
         widgets = {
-            'nom_activite': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Nom de l\'activité'}),
-            'realisations': forms.Textarea(attrs={'class': 'form-control', 'rows': 3, 'placeholder': 'Objectifs quantitatifs'}),
+            'nom_activite': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': "Nom de l'activité"
+            }),
+            'realisations': forms.Textarea(attrs={
+                'class': 'form-control',
+                'rows': 3,
+                'placeholder': 'Objectifs quantitatifs'
+            }),
         }
 
 
@@ -321,141 +363,370 @@ class BaseActiviteFormSet(BaseInlineFormSet):
     pass
 
 
-# Version CORRECTE - sans fields dans inlineformset_factory
 ActiviteFormSet = inlineformset_factory(
     SousProjet,
     Activite,
-    form=ActiviteForm,           # Utilise le formulaire personnalisé
-    extra=1,
+    form=ActiviteForm,
+    extra=0,
     can_delete=True,
     formset=BaseActiviteFormSet
 )
 
 
 # ============================================
-# FORMSETS POUR LES TABLES DE FINANCEMENT
+# FORMULAIRES DES TABLES DE FINANCEMENT
 # ============================================
 
-# A. INFRASTRUCTURES
+class BaseOptionalInlineFormSet(BaseInlineFormSet):
+    """
+    Ignore les lignes totalement vides pour éviter les insertions NULL en base.
+    """
+    def save_new(self, form, commit=True):
+        cleaned_data = getattr(form, 'cleaned_data', None)
+        if cleaned_data:
+            description = cleaned_data.get('description')
+            quantite = cleaned_data.get('quantite')
+            prix_unit = cleaned_data.get('prix_unit')
+
+            source_fields = getattr(form, 'source_fields', ())
+            has_sources = any(
+                cleaned_data.get(field) not in (None, '', 0, 0.0, Decimal('0'), Decimal('0.0'), Decimal('0.00'))
+                for field in source_fields
+            )
+
+            if description in (None, '') and quantite in (None, '') and prix_unit in (None, '') and not has_sources:
+                return None
+
+        return super().save_new(form, commit=commit)
+
+
+class BaseFinancementForm(forms.ModelForm):
+    """
+    Base commune pour les validations métier des lignes de financement.
+    """
+    source_fields = ()
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field_name, field in self.fields.items():
+            field.required = False
+
+        if 'id' in self.fields:
+            self.fields['id'].required = False
+
+        if 'DELETE' in self.fields:
+            self.fields['DELETE'].required = False
+
+    def _is_zero_like(self, value):
+        return value in (None, '', 0, 0.0, Decimal('0'), Decimal('0.0'), Decimal('0.00'))
+
+    def _has_any_value(self, cleaned_data):
+        description = cleaned_data.get('description')
+        quantite = cleaned_data.get('quantite')
+        prix_unit = cleaned_data.get('prix_unit')
+
+        if description not in (None, ''):
+            return True
+        if not self._is_zero_like(quantite):
+            return True
+        if not self._is_zero_like(prix_unit):
+            return True
+
+        for field in self.source_fields:
+            value = cleaned_data.get(field)
+            if not self._is_zero_like(value):
+                return True
+
+        return False
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        if cleaned_data.get('DELETE'):
+            return cleaned_data
+
+        description = cleaned_data.get('description')
+        quantite = cleaned_data.get('quantite')
+        prix_unit = cleaned_data.get('prix_unit')
+
+        if not self._has_any_value(cleaned_data):
+            cleaned_data['description'] = ''
+            cleaned_data['quantite'] = None
+            cleaned_data['prix_unit'] = None
+            for field in self.source_fields:
+                cleaned_data[field] = None
+            return cleaned_data
+
+        if not description:
+            self.add_error('description', "La description est obligatoire si une ligne de financement est renseignée.")
+
+        if description:
+            if quantite in (None, ''):
+                self.add_error('quantite', "La quantité est obligatoire si la description est renseignée.")
+            if prix_unit in (None, ''):
+                self.add_error('prix_unit', "Le prix unitaire est obligatoire si la description est renseignée.")
+
+        for field in self.source_fields:
+            if cleaned_data.get(field) in (None, ''):
+                cleaned_data[field] = Decimal('0')
+
+        if self.errors:
+            return cleaned_data
+
+        montant_total = Decimal(quantite) * Decimal(prix_unit)
+        total_sources = sum(Decimal(cleaned_data.get(field) or 0) for field in self.source_fields)
+
+        if total_sources != montant_total:
+            raise forms.ValidationError(
+                f"Incohérence de financement : le montant total calculé ({montant_total}) doit être égal à la somme des sources ({total_sources})."
+            )
+
+        return cleaned_data
+
+
+class InfrastructureForm(BaseFinancementForm):
+    source_fields = ('subvention_padisam', 'contribution_promoteur', 'autre_financement')
+
+    class Meta:
+        model = Infrastructure
+        fields = [
+            'description', 'quantite', 'prix_unit',
+            'subvention_padisam', 'contribution_promoteur', 'autre_financement'
+        ]
+        widgets = {
+            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
+            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
+            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
+            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
+            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
+        }
+
+
+class EquipementForm(BaseFinancementForm):
+    source_fields = ('subvention_padisam', 'contribution_promoteur', 'autre_financement')
+
+    class Meta:
+        model = Equipement
+        fields = [
+            'description', 'quantite', 'prix_unit',
+            'subvention_padisam', 'contribution_promoteur', 'autre_financement'
+        ]
+        widgets = {
+            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
+            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
+            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
+            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
+            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
+        }
+
+
+class IntrantForm(BaseFinancementForm):
+    source_fields = ('subvention_padisam', 'contribution_promoteur', 'autre_financement')
+
+    class Meta:
+        model = Intrant
+        fields = [
+            'description', 'quantite', 'prix_unit',
+            'subvention_padisam', 'contribution_promoteur', 'autre_financement'
+        ]
+        widgets = {
+            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
+            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
+            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
+            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
+            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
+        }
+
+
+class FonctionnementForm(BaseFinancementForm):
+    source_fields = ('contribution_promoteur', 'autre_financement')
+
+    class Meta:
+        model = Fonctionnement
+        fields = [
+            'description', 'quantite', 'prix_unit',
+            'contribution_promoteur', 'autre_financement'
+        ]
+        widgets = {
+            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
+            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
+            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
+            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
+        }
+
+
+class ServiceForm(BaseFinancementForm):
+    source_fields = ('subvention_padisam', 'contribution_promoteur', 'autre_financement')
+
+    class Meta:
+        model = Service
+        fields = [
+            'description', 'quantite', 'prix_unit',
+            'subvention_padisam', 'contribution_promoteur', 'autre_financement'
+        ]
+        widgets = {
+            'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
+            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
+            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
+            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
+            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
+        }
+
+
+# ============================================
+# FORMSETS DES TABLES DE FINANCEMENT
+# ============================================
+
 InfrastructureFormSet = inlineformset_factory(
     SousProjet, Infrastructure,
-    fields=['description', 'quantite', 'prix_unit',  
-            'subvention_padisam', 'contribution_promoteur', 'autre_financement'],
+    form=InfrastructureForm,
     extra=3,
     can_delete=True,
-    widgets={
-        'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
-        'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
-        'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
-        'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
-        'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
-        'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
-    }
+    formset=BaseOptionalInlineFormSet
 )
 
-# B. EQUIPEMENTS
 EquipementFormSet = inlineformset_factory(
     SousProjet, Equipement,
-    fields=['description', 'quantite', 'prix_unit',
-            'subvention_padisam', 'contribution_promoteur', 'autre_financement'],
+    form=EquipementForm,
     extra=3,
     can_delete=True,
-    widgets={
-        'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
-        'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
-        'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
-        'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
-        'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
-        'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
-    }
+    formset=BaseOptionalInlineFormSet
 )
 
-# C. INTRANTS
 IntrantFormSet = inlineformset_factory(
     SousProjet, Intrant,
-    fields=['description', 'quantite', 'prix_unit', 
-            'subvention_padisam', 'contribution_promoteur', 'autre_financement'],
+    form=IntrantForm,
     extra=3,
     can_delete=True,
-    widgets={
-        'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
-        'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
-        'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
-        'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
-        'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
-        'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
-    }
+    formset=BaseOptionalInlineFormSet
 )
 
-# D. FONCTIONNEMENT
 FonctionnementFormSet = inlineformset_factory(
     SousProjet, Fonctionnement,
-    fields=['description', 'quantite', 'prix_unit', 
-            'contribution_promoteur', 'autre_financement'],
+    form=FonctionnementForm,
     extra=1,
     can_delete=True,
-    widgets={
-        'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
-        'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
-        'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
-        'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
-        'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
-    }
+    formset=BaseOptionalInlineFormSet
 )
 
-# E. SERVICES
 ServiceFormSet = inlineformset_factory(
     SousProjet, Service,
-    fields=['description', 'quantite', 'prix_unit',  
-            'subvention_padisam', 'contribution_promoteur', 'autre_financement'],
+    form=ServiceForm,
     extra=1,
     can_delete=True,
-    widgets={
-        'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
-        'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
-        'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
-        'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
-        'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
-        'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
-    }
+    formset=BaseOptionalInlineFormSet
 )
 
 
 # ============================================
-# FORMULAIRES POUR LES RÉALISATIONS (3 lignes fixes)
+# FORMULAIRE DES RÉALISATIONS PASSÉES
 # ============================================
 
 class RealisationPasseeForm(forms.ModelForm):
     class Meta:
         model = RealisationPassee
-        fields = ['annee', 'produit', 'volume', 'ventes_usd']
+        fields = [
+            'produit',
+            'volume_annee_1', 'ventes_usd_annee_1', 'prix_vente_mru_annee_1',
+            'volume_annee_2', 'ventes_usd_annee_2', 'prix_vente_mru_annee_2',
+            'volume_annee_3', 'ventes_usd_annee_3', 'prix_vente_mru_annee_3',
+        ]
         widgets = {
-            'annee': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Année'}),
-            'produit': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Produit'}),
-            'volume': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Volume', 'step': '1'}),
-            'ventes_usd': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Ventes USD', 'step': '1'}),
+            'produit': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Produit'
+            }),
+
+            'volume_annee_1': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'ventes_usd_annee_1': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'prix_vente_mru_annee_1': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+
+            'volume_annee_2': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'ventes_usd_annee_2': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'prix_vente_mru_annee_2': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+
+            'volume_annee_3': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'ventes_usd_annee_3': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
+            'prix_vente_mru_annee_3': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        produit = cleaned_data.get('produit')
+
+        data_fields = [
+            'volume_annee_1', 'ventes_usd_annee_1', 'prix_vente_mru_annee_1',
+            'volume_annee_2', 'ventes_usd_annee_2', 'prix_vente_mru_annee_2',
+            'volume_annee_3', 'ventes_usd_annee_3', 'prix_vente_mru_annee_3',
+        ]
+
+        has_data = (
+            produit not in (None, '')
+            or any(cleaned_data.get(field) not in (None, '') for field in data_fields)
+        )
+
+        if not has_data:
+            return cleaned_data
+
+        if not produit:
+            self.add_error('produit', "Le produit est obligatoire.")
+
+        return cleaned_data
 
 
 class BaseRealisationFormSet(BaseFormSet):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.extra = 3
-        self.max_num = 3
-        self.min_num = 3
-        self.validate_min = True
-        self.validate_max = True
-    
     def clean(self):
         if any(self.errors):
             return
-        if len(self.forms) != 3:
-            raise forms.ValidationError("❌ Vous devez fournir exactement 3 années de réalisations.")
-        return self.forms
+
+        lignes_remplies = 0
+
+        for form in self.forms:
+            if not hasattr(form, 'cleaned_data'):
+                continue
+
+            produit = form.cleaned_data.get('produit')
+            volume_1 = form.cleaned_data.get('volume_annee_1')
+            ventes_1 = form.cleaned_data.get('ventes_usd_annee_1')
+            prix_1 = form.cleaned_data.get('prix_vente_mru_annee_1')
+            volume_2 = form.cleaned_data.get('volume_annee_2')
+            ventes_2 = form.cleaned_data.get('ventes_usd_annee_2')
+            prix_2 = form.cleaned_data.get('prix_vente_mru_annee_2')
+            volume_3 = form.cleaned_data.get('volume_annee_3')
+            ventes_3 = form.cleaned_data.get('ventes_usd_annee_3')
+            prix_3 = form.cleaned_data.get('prix_vente_mru_annee_3')
+
+            has_data = (
+                produit not in (None, '')
+                or volume_1 not in (None, '')
+                or ventes_1 not in (None, '')
+                or prix_1 not in (None, '')
+                or volume_2 not in (None, '')
+                or ventes_2 not in (None, '')
+                or prix_2 not in (None, '')
+                or volume_3 not in (None, '')
+                or ventes_3 not in (None, '')
+                or prix_3 not in (None, '')
+            )
+
+            if has_data:
+                lignes_remplies += 1
+
+        if lignes_remplies == 0:
+            raise forms.ValidationError(
+                "Veuillez renseigner au moins un produit dans les réalisations passées."
+            )
 
 
 # ============================================
-# FORMULAIRES POUR LES EMPRUNTS (3 lignes fixes)
+# FORMULAIRE DES EMPRUNTS
 # ============================================
 
 class PassifEmpruntForm(forms.ModelForm):
@@ -463,42 +734,107 @@ class PassifEmpruntForm(forms.ModelForm):
         model = PassifEmprunt
         fields = ['annee', 'institution_financiere', 'montant_emprunte', 'montant_rembourse']
         widgets = {
-            'annee': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Année'}),
-            'institution_financiere': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Institution'}),
-            'montant_emprunte': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Montant emprunté', 'step': '1'}),
-            'montant_rembourse': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Montant remboursé', 'step': '1'}),
+            'annee': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Année'
+            }),
+            'institution_financiere': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Institution financière'
+            }),
+            'montant_emprunte': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': 'Montant emprunté'
+            }),
+            'montant_rembourse': forms.NumberInput(attrs={
+                'class': 'form-control',
+                'step': '0.01',
+                'placeholder': 'Montant remboursé'
+            }),
         }
+
+    def clean(self):
+        cleaned_data = super().clean()
+
+        annee = cleaned_data.get('annee')
+        institution = cleaned_data.get('institution_financiere')
+        montant_emprunte = cleaned_data.get('montant_emprunte')
+        montant_rembourse = cleaned_data.get('montant_rembourse')
+
+        has_data = (
+            annee not in (None, '')
+            or institution not in (None, '')
+            or montant_emprunte not in (None, '')
+            or montant_rembourse not in (None, '')
+        )
+
+        if not has_data:
+            return cleaned_data
+
+        if not annee:
+            self.add_error('annee', "L'année est obligatoire.")
+        if not institution:
+            self.add_error('institution_financiere', "L'institution financière est obligatoire.")
+        if montant_emprunte in (None, ''):
+            self.add_error('montant_emprunte', "Le montant emprunté est obligatoire.")
+        if montant_rembourse in (None, ''):
+            self.add_error('montant_rembourse', "Le montant remboursé est obligatoire.")
+
+        if self.errors:
+            return cleaned_data
+
+        if montant_rembourse > montant_emprunte:
+            self.add_error(
+                'montant_rembourse',
+                "Le montant remboursé doit être inférieur ou égal au montant emprunté."
+            )
+
+        return cleaned_data
 
 
 class BaseEmpruntFormSet(BaseFormSet):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.extra = 3
-        self.max_num = 3
-        self.min_num = 3
-        self.validate_min = True
-        self.validate_max = True
-    
     def clean(self):
         if any(self.errors):
             return
-        if len(self.forms) != 3:
-            raise forms.ValidationError("❌ Vous devez fournir exactement 3 années d'emprunts.")
-        return self.forms
+
+        lignes_remplies = 0
+
+        for form in self.forms:
+            if not hasattr(form, 'cleaned_data'):
+                continue
+
+            annee = form.cleaned_data.get('annee')
+            institution = form.cleaned_data.get('institution_financiere')
+            emprunte = form.cleaned_data.get('montant_emprunte')
+            rembourse = form.cleaned_data.get('montant_rembourse')
+
+            has_data = (
+                annee not in (None, '')
+                or institution not in (None, '')
+                or emprunte not in (None, '')
+                or rembourse not in (None, '')
+            )
+
+            if has_data:
+                lignes_remplies += 1
+
+        if lignes_remplies == 0:
+            raise forms.ValidationError(
+                "Veuillez renseigner au moins une ligne d'emprunt."
+            )
 
 
 # ============================================
-# CRÉATION DES FORMSETS FINAUX
+# FORMSETS FINAUX : RÉALISATIONS / EMPRUNTS
 # ============================================
 
 RealisationFormSet = formset_factory(
     RealisationPasseeForm,
     formset=BaseRealisationFormSet,
-    extra=3,
-    max_num=3,
-    min_num=3,
-    validate_min=True,
-    validate_max=True,
+    extra=7,
+    max_num=20,
+    validate_max=False,
     can_delete=False,
     can_order=False
 )
@@ -507,10 +843,8 @@ EmpruntFormSet = formset_factory(
     PassifEmpruntForm,
     formset=BaseEmpruntFormSet,
     extra=3,
-    max_num=3,
-    min_num=3,
-    validate_min=True,
-    validate_max=True,
+    max_num=10,
+    validate_max=False,
     can_delete=False,
     can_order=False
 )

@@ -1,0 +1,46 @@
+.section-title { background: #5DBB63; color: white; padding: 15px 20px; margin: 30px 0 20px 0; border-radius: 10px; font-weight: bold; }
+.info-card { border: none; border-radius: 15px; box-shadow: 0 5px 20px rgba(0,0,0,0.05); margin-bottom: 25px; overflow: hidden; background: white; }
+.info-card .card-header { background: white; border-bottom: 2px solid var(--line-strong); font-weight: 600; color: #333; padding: 15px 20px; }
+.info-card .card-body { padding: 20px; }
+.info-row { display: flex; margin-bottom: 15px; border-bottom: 1.5px solid var(--line-strong); padding-bottom: 10px; }
+.info-label { font-weight: 600; color: #555; width: 240px; flex-shrink: 0; }
+.info-value { color: #333; flex: 1; }
+.non-renseigne { color: #dc3545; font-weight: bold; font-style: italic; }
+.badge-agr, .badge-aci, .badge-ag, .badge-el, .badge-env { color: white; padding: 5px 10px; border-radius: 5px; font-size: 0.85em; }
+.badge-agr { background-color: #28a745; }
+.badge-aci { background-color: #5DBB63; }
+.badge-ag { background-color: #fd7e14; }
+.badge-el { background-color: #5DBB63; }
+.badge-env { background-color: #20c997; }
+.table-detail { width: 100%; background: white; border-radius: 10px; overflow: hidden; border-collapse: collapse; }
+.table-detail th { background: #f8f9fa; padding: 12px; font-weight: 600; color: #555; text-align: center; vertical-align: middle; border: 1.5px solid var(--table-line); }
+.table-detail td { padding: 12px; border: 1.5px solid var(--table-line); vertical-align: middle; }
+.amount { font-weight: 600; color: #28a745; }
+.stat-card { background: white; border-radius: 10px; padding: 20px; text-align: center; box-shadow: 0 5px 15px rgba(0,0,0,0.05); height: 100%; }
+.stat-number { font-size: 1.4em; font-weight: bold; color: #5DBB63; }
+.stat-label { color: #666; font-size: 0.9em; margin-top: 6px; }
+.total-row { background-color: #e8f5e9; font-weight: bold; }
+.total-amount { font-size: 1.05em; color: #2c6e2f; font-weight: 700; }
+.year-group { background: #eef7ef !important; }
+@media (max-width: 991.98px) { .info-row { flex-direction: column; } .info-label { width: 100%; margin-bottom: 4px; } }
+@media print {
+ @page { size: A4; margin: 12mm; }
+ body { background: white !important; color: #222 !important; font-size: 11pt; line-height: 1.35; }
+ .custom-navbar, .footer, .btn-action, .btn-secondary-custom { display: none !important; }
+ .container { max-width: 100% !important; width: 100% !important; margin: 0 !important; padding: 0 !important; }
+ .welcome-section, .info-card, .stat-card { background: white !important; box-shadow: none !important; border: 1px solid #bfc7cd !important; border-radius: 0 !important; }
+ .welcome-section { border-left: 4px solid #5DBB63 !important; padding: 14px !important; margin-bottom: 14px !important; }
+ .section-title { background: #e9f6ea !important; color: #1f3d22 !important; border: 1px solid #bfc7cd !important; border-radius: 0 !important; padding: 8px 12px !important; margin: 16px 0 8px 0 !important; font-size: 12pt !important; font-weight: 700 !important; break-after: avoid; }
+ .info-card { margin-bottom: 10px !important; break-inside: avoid; }
+ .info-card .card-body { padding: 12px !important; }
+ .info-row { border-bottom: 1px solid #c7cfd6 !important; margin-bottom: 8px !important; padding-bottom: 6px !important; }
+ .info-label { width: 230px !important; font-weight: 700 !important; color: #222 !important; }
+ .info-value, .amount, .total-amount { color: #222 !important; }
+ .table-responsive { overflow: visible !important; }
+ .table-detail { border-collapse: collapse !important; width: 100% !important; font-size: 9.5pt !important; }
+ .table-detail th, .table-detail td { border: 1px solid #bfc7cd !important; padding: 6px 8px !important; color: #222 !important; background: white !important; }
+ .table-detail th, .year-group { background: #f2f5f7 !important; font-weight: 700 !important; }
+ .total-row td { background: #edf6ee !important; font-weight: 700 !important; }
+ .badge-agr, .badge-aci, .badge-ag, .badge-el, .badge-env { background: #e9f6ea !important; color: #1f3d22 !important; border: 1px solid #bfc7cd !important; }
+ .non-renseigne { color: #b02a37 !important; font-weight: 700 !important; font-style: italic !important; }
+}
