@@ -642,7 +642,6 @@ class RealisationPasseeForm(forms.ModelForm):
                 'class': 'form-control',
                 'placeholder': 'Produit'
             }),
-
             'volume_annee_1': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'ventes_usd_annee_1': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'prix_vente_mru_annee_1': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -656,27 +655,43 @@ class RealisationPasseeForm(forms.ModelForm):
             'prix_vente_mru_annee_3': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field_name in self.fields:
+            self.fields[field_name].required = False
+
     def clean(self):
         cleaned_data = super().clean()
 
         produit = cleaned_data.get('produit')
 
-        data_fields = [
-            'volume_annee_1', 'ventes_usd_annee_1', 'prix_vente_mru_annee_1',
-            'volume_annee_2', 'ventes_usd_annee_2', 'prix_vente_mru_annee_2',
-            'volume_annee_3', 'ventes_usd_annee_3', 'prix_vente_mru_annee_3',
-        ]
+        volume_1 = cleaned_data.get('volume_annee_1')
+        ventes_1 = cleaned_data.get('ventes_usd_annee_1')
+        prix_1 = cleaned_data.get('prix_vente_mru_annee_1')
 
-        has_data = (
-            produit not in (None, '')
-            or any(cleaned_data.get(field) not in (None, '') for field in data_fields)
-        )
+        volume_2 = cleaned_data.get('volume_annee_2')
+        ventes_2 = cleaned_data.get('ventes_usd_annee_2')
+        prix_2 = cleaned_data.get('prix_vente_mru_annee_2')
 
+        volume_3 = cleaned_data.get('volume_annee_3')
+        ventes_3 = cleaned_data.get('ventes_usd_annee_3')
+        prix_3 = cleaned_data.get('prix_vente_mru_annee_3')
+
+        has_data = any([
+            produit,
+            volume_1, ventes_1, prix_1,
+            volume_2, ventes_2, prix_2,
+            volume_3, ventes_3, prix_3,
+        ])
+
+        # ligne totalement vide = autorisée
         if not has_data:
             return cleaned_data
 
+        # si l'utilisateur commence une ligne, on exige seulement le produit
         if not produit:
-            self.add_error('produit', "Le produit est obligatoire.")
+            self.add_error('produit', "Le produit est obligatoire si vous saisissez une réalisation.")
 
         return cleaned_data
 
@@ -685,44 +700,8 @@ class BaseRealisationFormSet(BaseFormSet):
     def clean(self):
         if any(self.errors):
             return
-
-        lignes_remplies = 0
-
-        for form in self.forms:
-            if not hasattr(form, 'cleaned_data'):
-                continue
-
-            produit = form.cleaned_data.get('produit')
-            volume_1 = form.cleaned_data.get('volume_annee_1')
-            ventes_1 = form.cleaned_data.get('ventes_usd_annee_1')
-            prix_1 = form.cleaned_data.get('prix_vente_mru_annee_1')
-            volume_2 = form.cleaned_data.get('volume_annee_2')
-            ventes_2 = form.cleaned_data.get('ventes_usd_annee_2')
-            prix_2 = form.cleaned_data.get('prix_vente_mru_annee_2')
-            volume_3 = form.cleaned_data.get('volume_annee_3')
-            ventes_3 = form.cleaned_data.get('ventes_usd_annee_3')
-            prix_3 = form.cleaned_data.get('prix_vente_mru_annee_3')
-
-            has_data = (
-                produit not in (None, '')
-                or volume_1 not in (None, '')
-                or ventes_1 not in (None, '')
-                or prix_1 not in (None, '')
-                or volume_2 not in (None, '')
-                or ventes_2 not in (None, '')
-                or prix_2 not in (None, '')
-                or volume_3 not in (None, '')
-                or ventes_3 not in (None, '')
-                or prix_3 not in (None, '')
-            )
-
-            if has_data:
-                lignes_remplies += 1
-
-        if lignes_remplies == 0:
-            raise forms.ValidationError(
-                "Veuillez renseigner au moins un produit dans les réalisations passées."
-            )
+        # Les réalisations passées ne sont pas obligatoires.
+        return
 
 
 # ============================================
@@ -754,6 +733,12 @@ class PassifEmpruntForm(forms.ModelForm):
             }),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        for field_name in self.fields:
+            self.fields[field_name].required = False
+
     def clean(self):
         cleaned_data = super().clean()
 
@@ -769,17 +754,19 @@ class PassifEmpruntForm(forms.ModelForm):
             or montant_rembourse not in (None, '')
         )
 
+        # ligne totalement vide = autorisée
         if not has_data:
             return cleaned_data
 
+        # si une ligne est commencée, on exige les champs principaux
         if not annee:
-            self.add_error('annee', "L'année est obligatoire.")
+            self.add_error('annee', "L'année est obligatoire si vous saisissez un emprunt.")
         if not institution:
-            self.add_error('institution_financiere', "L'institution financière est obligatoire.")
+            self.add_error('institution_financiere', "L'institution financière est obligatoire si vous saisissez un emprunt.")
         if montant_emprunte in (None, ''):
-            self.add_error('montant_emprunte', "Le montant emprunté est obligatoire.")
+            self.add_error('montant_emprunte', "Le montant emprunté est obligatoire si vous saisissez un emprunt.")
         if montant_rembourse in (None, ''):
-            self.add_error('montant_rembourse', "Le montant remboursé est obligatoire.")
+            self.add_error('montant_rembourse', "Le montant remboursé est obligatoire si vous saisissez un emprunt.")
 
         if self.errors:
             return cleaned_data
@@ -797,32 +784,8 @@ class BaseEmpruntFormSet(BaseFormSet):
     def clean(self):
         if any(self.errors):
             return
-
-        lignes_remplies = 0
-
-        for form in self.forms:
-            if not hasattr(form, 'cleaned_data'):
-                continue
-
-            annee = form.cleaned_data.get('annee')
-            institution = form.cleaned_data.get('institution_financiere')
-            emprunte = form.cleaned_data.get('montant_emprunte')
-            rembourse = form.cleaned_data.get('montant_rembourse')
-
-            has_data = (
-                annee not in (None, '')
-                or institution not in (None, '')
-                or emprunte not in (None, '')
-                or rembourse not in (None, '')
-            )
-
-            if has_data:
-                lignes_remplies += 1
-
-        if lignes_remplies == 0:
-            raise forms.ValidationError(
-                "Veuillez renseigner au moins une ligne d'emprunt."
-            )
+        # Les emprunts ne sont pas obligatoires.
+        return
 
 
 # ============================================
