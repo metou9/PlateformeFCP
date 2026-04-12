@@ -425,7 +425,7 @@
 
                         <div class="col-md-6" id="nombre-hectare-wrapper">
                             <label for="{{ form.nombre_hectare.id_for_label }}" class="form-label">
-                                Nombre hectare*
+                                Nombre hectare
                             </label>
                             {{ form.nombre_hectare }}
                             {% if form.nombre_hectare.errors %}
@@ -714,6 +714,18 @@
                     </div>
                 </div>
             </div>
+            <div class="section-title">8. Ressources du promoteur</div>
+<div class="card mb-4">
+    <div class="card-body">
+        <div class="form-group mb-3">
+            <label class="form-label">Ressources du promoteur (inclure la source d’eau disponible)</label>
+            {{ form.ressources_promoteur }}
+            {% if form.ressources_promoteur.errors %}
+                <div class="field-error">{{ form.ressources_promoteur.errors }}</div>
+            {% endif %}
+        </div>
+    </div>
+</div>
 
             <div class="d-flex justify-content-end mt-4">
                 <button type="submit" class="btn-next">Suivant : Infrastructures →</button>

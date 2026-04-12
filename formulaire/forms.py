@@ -209,6 +209,11 @@ class SousProjetForm(forms.ModelForm):
         required=False
     )
 
+    ressources_promoteur = forms.CharField(
+    widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+    required=False
+    )
+
     class Meta:
         model = SousProjet
         exclude = ['date_saisie', 'date_creation', 'date_modification']
@@ -281,13 +286,10 @@ class SousProjetForm(forms.ModelForm):
     def clean(self):
         cleaned_data = super().clean()
         type_projet = cleaned_data.get('type_projet')
-        nombre_hectare = cleaned_data.get('nombre_hectare')
 
-        if type_projet == 'AG' and not nombre_hectare:
-            self.add_error('nombre_hectare', "Le nombre hectare est obligatoire pour un projet de type AG.")
-
+    # Si ce n'est pas un projet AG, on vide la valeur
         if type_projet != 'AG':
-            cleaned_data['nombre_hectare'] = None
+           cleaned_data['nombre_hectare'] = None
 
         return cleaned_data
 

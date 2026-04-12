@@ -229,7 +229,12 @@ class SousProjet(models.Model):
         verbose_name="Année de début des activités"
     )
     historique_promoteur = models.TextField(blank=True, null=True, verbose_name="Brève historique")
-
+    ressources_promoteur = models.TextField(
+    null=True,
+    blank=True,
+    default=None,
+    verbose_name="Ressources du promoteur (inclure la source d’eau disponible)"
+    )
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
     date_modification = models.DateTimeField(auto_now=True, verbose_name="Date de modification")

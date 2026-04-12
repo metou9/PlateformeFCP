@@ -1,4 +1,5 @@
 {% extends 'formulaire/base.html' %}
+{% load humanize %}
 {% block title %}Détail du sous-projet #{{ sous_projet.id }} - PADISAM{% endblock %}
 {% block extra_css %}<link href="/static/formulaire/css/detail_sous_projet.css" rel="stylesheet">{% endblock %}
 {% block page_container_start %}<div class="container mt-5 mb-5">{% endblock %}
@@ -55,7 +56,7 @@
             <div class="stat-label">Type projet</div>
             {% if sous_projet.type_projet == 'AG' %}
                 <div class="mt-2">
-                    <small><strong>Nb ha :</strong> {{ sous_projet.nombre_hectare|default:"-" }}</small>
+                    <small><strong>Nb ha :</strong> {{ sous_projet.nombre_hectare|floatformat:2|intcomma|default:"-" }}</small>
                 </div>
             {% endif %}
         </div>
@@ -130,11 +131,72 @@
 <div class="section-title">5. Localisation</div>
 <div class="info-card">
     <div class="card-body">
-        <div class="info-row"><div class="info-label">Wilaya :</div><div class="info-value">{% if sous_projet.wilaya %}{{ sous_projet.wilaya.nom }}{% else %}<span class="non-renseigne">Non renseigné</span>{% endif %}</div></div>
-        <div class="info-row"><div class="info-label">Moughataa :</div><div class="info-value">{% if sous_projet.moughataa %}{{ sous_projet.moughataa.nom }}{% else %}<span class="non-renseigne">Non renseigné</span>{% endif %}</div></div>
-        <div class="info-row"><div class="info-label">Commune :</div><div class="info-value">{% if sous_projet.commune %}{{ sous_projet.commune.nom }}{% else %}<span class="non-renseigne">Non renseigné</span>{% endif %}</div></div>
-        <div class="info-row"><div class="info-label">Paysage / ZOCA :</div><div class="info-value">{% if sous_projet.paysage %}{{ sous_projet.paysage.nom }}{% else %}<span class="non-renseigne">Non renseigné</span>{% endif %}</div></div>
-        <div class="info-row"><div class="info-label">Village :</div><div class="info-value">{% if sous_projet.village %}{{ sous_projet.village }}{% else %}<span class="non-renseigne">Non renseigné</span>{% endif %}</div></div>
+        <div class="row g-3">
+            <div class="col-md-6 col-lg-4">
+                <div class="info-row">
+                    <div class="info-label">Wilaya :</div>
+                    <div class="info-value">
+                        {% if sous_projet.wilaya %}
+                            {{ sous_projet.wilaya.nom }}
+                        {% else %}
+                            <span class="non-renseigne">Non renseigné</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="info-row">
+                    <div class="info-label">Moughataa :</div>
+                    <div class="info-value">
+                        {% if sous_projet.moughataa %}
+                            {{ sous_projet.moughataa.nom }}
+                        {% else %}
+                            <span class="non-renseigne">Non renseigné</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="info-row">
+                    <div class="info-label">Commune :</div>
+                    <div class="info-value">
+                        {% if sous_projet.commune %}
+                            {{ sous_projet.commune.nom }}
+                        {% else %}
+                            <span class="non-renseigne">Non renseigné</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="info-row">
+                    <div class="info-label">Paysage / ZOCA :</div>
+                    <div class="info-value">
+                        {% if sous_projet.paysage %}
+                            {{ sous_projet.paysage.nom }}
+                        {% else %}
+                            <span class="non-renseigne">Non renseigné</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <div class="col-md-6 col-lg-4">
+                <div class="info-row">
+                    <div class="info-label">Village :</div>
+                    <div class="info-value">
+                        {% if sous_projet.village %}
+                            {{ sous_projet.village }}
+                        {% else %}
+                            <span class="non-renseigne">Non renseigné</span>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
     </div>
 </div>
 
@@ -147,7 +209,7 @@
             <table class="table-detail">
                 <thead>
                     <tr>
-                        <th>Description</th><th>Quantité</th><th>Prix unitaire</th><th>Montant total</th><th>Subvention</th><th>Contribution</th><th>Autre</th>
+                        <th>Description</th><th>Quantité</th><th>Prix unitaire (MRU)</th><th>Montant total (MRU)</th><th>Subvention (MRU)</th><th>Contribution (MRU)</th><th>Autre (MRU)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -155,17 +217,17 @@
                         {% for item in sous_projet.infrastructures.all %}
                             <tr>
                                 <td>{{ item.description|default:"-" }}</td>
-                                <td>{{ item.quantite|default:"-" }}</td>
-                                <td>{{ item.prix_unit|floatformat:2 }} MRU</td>
-                                <td class="amount">{{ item.montant_total|floatformat:2 }} MRU</td>
-                                <td>{{ item.subvention_padisam|floatformat:2 }}</td>
-                                <td>{{ item.contribution_promoteur|floatformat:2 }}</td>
-                                <td>{{ item.autre_financement|floatformat:2 }}</td>
+                                <td>{{ item.quantite|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ item.prix_unit|floatformat:2|intcomma }}</td>
+                                <td class="amount">{{ item.montant_total|floatformat:2|intcomma }}</td>
+                                <td>{{ item.subvention_padisam|floatformat:2|intcomma }}</td>
+                                <td>{{ item.contribution_promoteur|floatformat:2|intcomma }}</td>
+                                <td>{{ item.autre_financement|floatformat:2|intcomma }}</td>
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-                            <td colspan="3">Somme infrastructures</td>
-                            <td class="total-amount">{{ total_infrastructures|floatformat:2 }} MRU</td>
+                            <td colspan="3">Somme infrastructures (MRU)</td>
+                            <td class="total-amount">{{ total_infrastructures|floatformat:2|intcomma }}</td>
                             <td colspan="3"></td>
                         </tr>
                     {% else %}
@@ -184,7 +246,7 @@
             <table class="table-detail">
                 <thead>
                     <tr>
-                        <th>Description</th><th>Quantité</th><th>Prix unitaire</th><th>Montant total</th><th>Subvention</th><th>Contribution</th><th>Autre</th>
+                        <th>Description</th><th>Quantité</th><th>Prix unitaire (MRU)</th><th>Montant total (MRU)</th><th>Subvention (MRU)</th><th>Contribution (MRU)</th><th>Autre (MRU)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -192,17 +254,17 @@
                         {% for item in sous_projet.equipements.all %}
                             <tr>
                                 <td>{{ item.description|default:"-" }}</td>
-                                <td>{{ item.quantite|default:"-" }}</td>
-                                <td>{{ item.prix_unit|floatformat:2 }} MRU</td>
-                                <td class="amount">{{ item.montant_total|floatformat:2 }} MRU</td>
-                                <td>{{ item.subvention_padisam|floatformat:2 }}</td>
-                                <td>{{ item.contribution_promoteur|floatformat:2 }}</td>
-                                <td>{{ item.autre_financement|floatformat:2 }}</td>
+                                <td>{{ item.quantite|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ item.prix_unit|floatformat:2|intcomma }}</td>
+                                <td class="amount">{{ item.montant_total|floatformat:2|intcomma }}</td>
+                                <td>{{ item.subvention_padisam|floatformat:2|intcomma }}</td>
+                                <td>{{ item.contribution_promoteur|floatformat:2|intcomma }}</td>
+                                <td>{{ item.autre_financement|floatformat:2|intcomma }}</td>
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-                            <td colspan="3">Somme équipements</td>
-                            <td class="total-amount">{{ total_equipements|floatformat:2 }} MRU</td>
+                            <td colspan="3">Somme équipements (MRU)</td>
+                            <td class="total-amount">{{ total_equipements|floatformat:2|intcomma }}</td>
                             <td colspan="3"></td>
                         </tr>
                     {% else %}
@@ -221,7 +283,7 @@
             <table class="table-detail">
                 <thead>
                     <tr>
-                        <th>Description</th><th>Quantité</th><th>Prix unitaire</th><th>Montant total</th><th>Subvention</th><th>Contribution</th><th>Autre</th>
+                        <th>Description</th><th>Quantité</th><th>Prix unitaire (MRU)</th><th>Montant total (MRU)</th><th>Subvention (MRU)</th><th>Contribution (MRU)</th><th>Autre (MRU)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -229,17 +291,17 @@
                         {% for item in sous_projet.intrants.all %}
                             <tr>
                                 <td>{{ item.description|default:"-" }}</td>
-                                <td>{{ item.quantite|default:"-" }}</td>
-                                <td>{{ item.prix_unit|floatformat:2 }} MRU</td>
-                                <td class="amount">{{ item.montant_total|floatformat:2 }} MRU</td>
-                                <td>{{ item.subvention_padisam|floatformat:2 }}</td>
-                                <td>{{ item.contribution_promoteur|floatformat:2 }}</td>
-                                <td>{{ item.autre_financement|floatformat:2 }}</td>
+                                <td>{{ item.quantite|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ item.prix_unit|floatformat:2|intcomma }}</td>
+                                <td class="amount">{{ item.montant_total|floatformat:2|intcomma }}</td>
+                                <td>{{ item.subvention_padisam|floatformat:2|intcomma }}</td>
+                                <td>{{ item.contribution_promoteur|floatformat:2|intcomma }}</td>
+                                <td>{{ item.autre_financement|floatformat:2|intcomma }}</td>
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-                            <td colspan="3">Somme intrants</td>
-                            <td class="total-amount">{{ total_intrants|floatformat:2 }} MRU</td>
+                            <td colspan="3">Somme intrants (MRU)</td>
+                            <td class="total-amount">{{ total_intrants|floatformat:2|intcomma }}</td>
                             <td colspan="3"></td>
                         </tr>
                     {% else %}
@@ -258,7 +320,7 @@
             <table class="table-detail">
                 <thead>
                     <tr>
-                        <th>Description</th><th>Quantité</th><th>Prix unitaire</th><th>Montant total</th><th>Contribution</th><th>Autre</th>
+                        <th>Description</th><th>Quantité</th><th>Prix unitaire (MRU)</th><th>Montant total (MRU)</th><th>Contribution (MRU)</th><th>Autre (MRU)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -266,16 +328,16 @@
                         {% for item in sous_projet.fonctionnements.all %}
                             <tr>
                                 <td>{{ item.description|default:"-" }}</td>
-                                <td>{{ item.quantite|default:"-" }}</td>
-                                <td>{{ item.prix_unit|floatformat:2 }} MRU</td>
-                                <td class="amount">{{ item.montant_total|floatformat:2 }} MRU</td>
-                                <td>{{ item.contribution_promoteur|floatformat:2 }}</td>
-                                <td>{{ item.autre_financement|floatformat:2 }}</td>
+                                <td>{{ item.quantite|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ item.prix_unit|floatformat:2|intcomma }}</td>
+                                <td class="amount">{{ item.montant_total|floatformat:2|intcomma }}</td>
+                                <td>{{ item.contribution_promoteur|floatformat:2|intcomma }}</td>
+                                <td>{{ item.autre_financement|floatformat:2|intcomma }}</td>
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-                            <td colspan="3">Somme fonctionnement</td>
-                            <td class="total-amount">{{ total_fonctionnements|floatformat:2 }} MRU</td>
+                            <td colspan="3">Somme fonctionnement (MRU)</td>
+                            <td class="total-amount">{{ total_fonctionnements|floatformat:2|intcomma }}</td>
                             <td colspan="2"></td>
                         </tr>
                     {% else %}
@@ -294,7 +356,7 @@
             <table class="table-detail">
                 <thead>
                     <tr>
-                        <th>Description</th><th>Quantité</th><th>Prix unitaire</th><th>Montant total</th><th>Subvention</th><th>Contribution</th><th>Autre</th>
+                        <th>Description</th><th>Quantité</th><th>Prix unitaire (MRU)</th><th>Montant total (MRU)</th><th>Subvention (MRU)</th><th>Contribution (MRU)</th><th>Autre (MRU)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -302,17 +364,17 @@
                         {% for item in sous_projet.services.all %}
                             <tr>
                                 <td>{{ item.description|default:"-" }}</td>
-                                <td>{{ item.quantite|default:"-" }}</td>
-                                <td>{{ item.prix_unit|floatformat:2 }} MRU</td>
-                                <td class="amount">{{ item.montant_total|floatformat:2 }} MRU</td>
-                                <td>{{ item.subvention_padisam|floatformat:2 }}</td>
-                                <td>{{ item.contribution_promoteur|floatformat:2 }}</td>
-                                <td>{{ item.autre_financement|floatformat:2 }}</td>
+                                <td>{{ item.quantite|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ item.prix_unit|floatformat:2|intcomma }}</td>
+                                <td class="amount">{{ item.montant_total|floatformat:2|intcomma }}</td>
+                                <td>{{ item.subvention_padisam|floatformat:2|intcomma }}</td>
+                                <td>{{ item.contribution_promoteur|floatformat:2|intcomma }}</td>
+                                <td>{{ item.autre_financement|floatformat:2|intcomma }}</td>
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-                            <td colspan="3">Somme services</td>
-                            <td class="total-amount">{{ total_services|floatformat:2 }} MRU</td>
+                            <td colspan="3">Somme services (MRU)</td>
+                            <td class="total-amount">{{ total_services|floatformat:2|intcomma }}</td>
                             <td colspan="3"></td>
                         </tr>
                     {% else %}
@@ -355,15 +417,15 @@
                         {% for real in sous_projet.realisations.all %}
                             <tr>
                                 <td>{% if real.produit %}{{ real.produit }}{% else %}<span class="non-renseigne">Non renseigné</span>{% endif %}</td>
-                                <td>{{ real.volume_annee_1|default:"-" }}</td>
-                                <td>{{ real.ventes_usd_annee_1|default:"-" }}</td>
-                                <td>{{ real.prix_vente_mru_annee_1|default:"-" }}</td>
-                                <td>{{ real.volume_annee_2|default:"-" }}</td>
-                                <td>{{ real.ventes_usd_annee_2|default:"-" }}</td>
-                                <td>{{ real.prix_vente_mru_annee_2|default:"-" }}</td>
-                                <td>{{ real.volume_annee_3|default:"-" }}</td>
-                                <td>{{ real.ventes_usd_annee_3|default:"-" }}</td>
-                                <td>{{ real.prix_vente_mru_annee_3|default:"-" }}</td>
+                                <td>{{ real.volume_annee_1|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ real.ventes_usd_annee_1|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ real.prix_vente_mru_annee_1|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ real.volume_annee_2|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ real.ventes_usd_annee_2|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ real.prix_vente_mru_annee_2|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ real.volume_annee_3|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ real.ventes_usd_annee_3|floatformat:2|intcomma|default:"-" }}</td>
+                                <td>{{ real.prix_vente_mru_annee_3|floatformat:2|intcomma|default:"-" }}</td>
                             </tr>
                         {% endfor %}
                     {% else %}
@@ -375,14 +437,30 @@
     </div>
 </div>
 
-<div class="section-title">9. Emprunts </div>
+<div class="section-title">9. Ressources du promoteur</div>
+<div class="info-card">
+    <div class="card-body">
+        <div class="info-row">
+            <div class="info-label">Ressources du promoteur (inclure la source d’eau disponible) :</div>
+            <div class="info-value">
+                {% if sous_projet.ressources_promoteur %}
+                    {{ sous_projet.ressources_promoteur }}
+                {% else %}
+                    <span class="non-renseigne">Non renseigné</span>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+</div>
+
+<div class="section-title">10. Passifs (emprunts)</div>
 <div class="info-card">
     <div class="card-body">
         <div class="table-responsive">
             <table class="table-detail">
                 <thead>
                     <tr>
-                        <th>Année</th><th>Institution</th><th>Montant emprunté</th><th>Montant remboursé</th>
+                        <th>Année</th><th>Institution</th><th>Montant emprunté (MRU)</th><th>Montant remboursé (MRU)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -391,8 +469,8 @@
                             <tr>
                                 <td>{{ emp.annee|default:"-" }}</td>
                                 <td>{% if emp.institution_financiere %}{{ emp.institution_financiere }}{% else %}<span class="non-renseigne">Non renseigné</span>{% endif %}</td>
-                                <td class="amount">{{ emp.montant_emprunte|floatformat:2 }} MRU</td>
-                                <td class="amount">{{ emp.montant_rembourse|floatformat:2 }} MRU</td>
+                                <td class="amount">{{ emp.montant_emprunte|floatformat:2|intcomma }}</td>
+                                <td class="amount">{{ emp.montant_rembourse|floatformat:2|intcomma }}</td>
                             </tr>
                         {% endfor %}
                     {% else %}
