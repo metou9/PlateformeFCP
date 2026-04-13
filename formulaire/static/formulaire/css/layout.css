@@ -22,6 +22,41 @@ body {
     font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
 }
 
+.login-page {
+    min-height: 100vh;
+    background-image: url("/static/formulaire/images/login-bg.jpg");
+    background-size: cover;
+    background-position: center;
+    background-repeat: no-repeat;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 20px;
+}
+
+.login-page::before {
+    content: "";
+    position: absolute;
+    inset: 0;
+    background: rgba(255, 255, 255, 0.35);
+    z-index: 0;
+}
+
+.login-wrapper,
+.login-card {
+    background: rgba(255, 255, 255, 0.92);
+    backdrop-filter: blur(4px);
+    border-radius: 18px;
+    box-shadow: 0 10px 30px rgba(0, 0, 0, 0.18);
+    padding: 30px;
+    width: 100%;
+    max-width: 420px;
+}
+.login-container {
+    position: relative;
+    z-index: 1;
+}
+
 /* ============================================
    NAVBAR
 ============================================ */

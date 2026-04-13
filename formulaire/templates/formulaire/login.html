@@ -1,3 +1,4 @@
+{% load static %}
 <!DOCTYPE html>
 <html lang="fr">
 
@@ -9,29 +10,39 @@
     <style>
         :root {
             --flag-green: #00A859;
-            /* Vert du drapeau */
             --flag-gold: #FFD700;
-            /* Jaune / Or du croissant et de l'étoile */
             --flag-red: #E50012;
-            /* Rouge des bandes */
             --light-beige: #FDF8E7;
-            /* Fond clair (sable) */
             --dark-green: #00623B;
-            /* Vert plus foncé pour contraste */
+            --primary-green: #2c6e2f;
+            --secondary-orange: #e67e22;
         }
 
-        body {
-            background: linear-gradient(135deg, var(--flag-green) 0%, var(--flag-gold) 100%);
+        body.login-page {
             min-height: 100vh;
+            margin: 0;
             display: flex;
             align-items: center;
             justify-content: center;
             font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
             padding: 20px;
+            position: relative;
+            background: url("{% static 'formulaire/images/login-bg.jpg' %}") center center / cover no-repeat fixed;
+            overflow: hidden;
+        }
+
+        body.login-page::before {
+            content: "";
+            position: absolute;
+            inset: 0;
+            background: rgba(255, 255, 255, 0.35);
+            z-index: 0;
         }
 
         .login-card {
-            background: white;
+            position: relative;
+            z-index: 1;
+            background: rgba(255, 255, 255, 0.94);
             border-radius: 30px;
             box-shadow: 0 25px 50px rgba(0, 0, 0, 0.25);
             padding: 30px;
@@ -39,6 +50,8 @@
             max-width: 500px;
             transition: transform 0.3s, box-shadow 0.3s;
             border: 5px solid #5DBB63;
+            backdrop-filter: blur(4px);
+            animation: fadeInUp 0.6s ease-out;
         }
 
         .login-card:hover {
@@ -98,6 +111,7 @@
 
         .form-group {
             margin-bottom: 20px;
+            transition: transform 0.2s ease;
         }
 
         .form-label {
@@ -125,7 +139,7 @@
         }
 
         .btn-login {
-            background:linear-gradient(135deg, var(--flag-green) 0%, var(--flag-gold) 100%);
+            background: linear-gradient(135deg, var(--flag-green) 0%, var(--flag-gold) 100%);
             color: white;
             border: none;
             border-radius: 12px;
@@ -143,6 +157,7 @@
         .btn-login:hover {
             transform: translateY(-2px);
             box-shadow: 0 8px 20px rgba(44, 110, 47, 0.3);
+            color: white;
         }
 
         .btn-login:active {
@@ -162,7 +177,8 @@
             border-left: 4px solid var(--primary-green);
         }
 
-        .alert-error {
+        .alert-error,
+        .alert-danger {
             background: linear-gradient(135deg, #f8d7da, #f5c6cb);
             color: #721c24;
             border-left: 4px solid #dc3545;
@@ -182,11 +198,10 @@
         }
 
         .footer small {
-            color: #aaa;
+            color: #777;
             font-size: 0.75rem;
         }
 
-        /* Animation d'entrée */
         @keyframes fadeInUp {
             from {
                 opacity: 0;
@@ -199,11 +214,6 @@
             }
         }
 
-        .login-card {
-            animation: fadeInUp 0.6s ease-out;
-        }
-
-        /* Responsive */
         @media (max-width: 576px) {
             .login-card {
                 padding: 30px 25px;
@@ -219,26 +229,18 @@
             }
 
             .logo {
-                max-width: 100px;
+                max-width: 220px;
             }
-        }
-
-
-
-        .login-card {
-            position: relative;
         }
     </style>
 </head>
 
-<body>
+<body class="login-page">
     <div class="login-card">
         <div class="logo-container">
-            <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" class="logo"
-                onerror="this.src='https://via.placeholder.com/120x120?text=PADISAM'">
+            <img src="{% static 'formulaire/images/logo.jpg' %}" alt="Logo PADISAM" class="logo"
+                onerror="this.src='https://via.placeholder.com/220x80?text=PADISAM'">
         </div>
-
-
 
         <div class="login-header">
             <h2>Bienvenue</h2>
@@ -246,12 +248,12 @@
         </div>
 
         {% if messages %}
-        {% for message in messages %}
-        <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
-            {{ message }}
-            <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
-        </div>
-        {% endfor %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }} alert-dismissible fade show" role="alert">
+                    {{ message }}
+                    <button type="button" class="btn-close" data-bs-dismiss="alert" aria-label="Close"></button>
+                </div>
+            {% endfor %}
         {% endif %}
 
         <form method="post">
@@ -276,14 +278,13 @@
 
         <div class="footer">
             <small>
-                &copy; {% now "Y" %} Binor & Associés / I&D - Tous droits réservés<br>
+                &copy; {% now "Y" %} Binor &amp; Associés / I&amp;D - Tous droits réservés
             </small>
         </div>
     </div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
-        // Animation pour les champs de formulaire
         document.querySelectorAll('.form-control').forEach(input => {
             input.addEventListener('focus', function () {
                 this.parentElement.style.transform = 'translateX(5px)';
