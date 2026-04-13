@@ -1,4 +1,4 @@
-from decimal import Decimal
+from decimal import Decimal, InvalidOperation
 
 from django import forms
 from django.core.validators import RegexValidator
@@ -210,8 +210,8 @@ class SousProjetForm(forms.ModelForm):
     )
 
     ressources_promoteur = forms.CharField(
-    widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
-    required=False
+        widget=forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+        required=False
     )
 
     class Meta:
@@ -287,9 +287,8 @@ class SousProjetForm(forms.ModelForm):
         cleaned_data = super().clean()
         type_projet = cleaned_data.get('type_projet')
 
-    # Si ce n'est pas un projet AG, on vide la valeur
         if type_projet != 'AG':
-           cleaned_data['nombre_hectare'] = None
+            cleaned_data['nombre_hectare'] = None
 
         return cleaned_data
 
@@ -388,7 +387,7 @@ class BaseOptionalInlineFormSet(BaseInlineFormSet):
         if cleaned_data:
             description = cleaned_data.get('description')
             quantite = cleaned_data.get('quantite')
-            prix_unit = cleaned_data.get('prix_unit')
+            montant_total = cleaned_data.get('montant_total')
 
             source_fields = getattr(form, 'source_fields', ())
             has_sources = any(
@@ -396,7 +395,12 @@ class BaseOptionalInlineFormSet(BaseInlineFormSet):
                 for field in source_fields
             )
 
-            if description in (None, '') and quantite in (None, '') and prix_unit in (None, '') and not has_sources:
+            if (
+                description in (None, '')
+                and quantite in (None, '')
+                and montant_total in (None, '')
+                and not has_sources
+            ):
                 return None
 
         return super().save_new(form, commit=commit)
@@ -404,7 +408,9 @@ class BaseOptionalInlineFormSet(BaseInlineFormSet):
 
 class BaseFinancementForm(forms.ModelForm):
     """
-    Base commune pour les validations métier des lignes de financement.
+    Logique revenue à la version stable :
+    - l'utilisateur saisit quantite + prix_unit
+    - montant_total est calculé automatiquement
     """
     source_fields = ()
 
@@ -463,11 +469,11 @@ class BaseFinancementForm(forms.ModelForm):
         if not description:
             self.add_error('description', "La description est obligatoire si une ligne de financement est renseignée.")
 
-        if description:
-            if quantite in (None, ''):
-                self.add_error('quantite', "La quantité est obligatoire si la description est renseignée.")
-            if prix_unit in (None, ''):
-                self.add_error('prix_unit', "Le prix unitaire est obligatoire si la description est renseignée.")
+        if quantite in (None, ''):
+            self.add_error('quantite', "La quantité est obligatoire si une ligne de financement est renseignée.")
+
+        if prix_unit in (None, ''):
+            self.add_error('prix_unit', "Le prix unitaire est obligatoire si une ligne de financement est renseignée.")
 
         for field in self.source_fields:
             if cleaned_data.get(field) in (None, ''):
@@ -476,7 +482,24 @@ class BaseFinancementForm(forms.ModelForm):
         if self.errors:
             return cleaned_data
 
-        montant_total = Decimal(quantite) * Decimal(prix_unit)
+        try:
+            quantite_decimal = Decimal(str(quantite))
+            prix_unit_decimal = Decimal(str(prix_unit))
+        except (InvalidOperation, ValueError, TypeError):
+            self.add_error(None, "Quantité ou prix unitaire invalide.")
+            return cleaned_data
+
+        if quantite_decimal <= 0:
+            self.add_error('quantite', "La quantité doit être supérieure à zéro.")
+            return cleaned_data
+
+        if prix_unit_decimal < 0:
+            self.add_error('prix_unit', "Le prix unitaire doit être supérieur ou égal à zéro.")
+            return cleaned_data
+
+        montant_total = quantite_decimal * prix_unit_decimal
+        cleaned_data['montant_total'] = montant_total
+
         total_sources = sum(Decimal(cleaned_data.get(field) or 0) for field in self.source_fields)
 
         if total_sources != montant_total:
@@ -486,6 +509,15 @@ class BaseFinancementForm(forms.ModelForm):
 
         return cleaned_data
 
+    def save(self, commit=True):
+        instance = super().save(commit=False)
+        instance.quantite = self.cleaned_data.get('quantite')
+        instance.prix_unit = self.cleaned_data.get('prix_unit')
+        instance.montant_total = self.cleaned_data.get('montant_total')
+
+        if commit:
+            instance.save()
+        return instance
 
 class InfrastructureForm(BaseFinancementForm):
     source_fields = ('subvention_padisam', 'contribution_promoteur', 'autre_financement')
@@ -498,13 +530,12 @@ class InfrastructureForm(BaseFinancementForm):
         ]
         widgets = {
             'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
-            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
-            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
-            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
-            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
-            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité', 'step': '0.01'}),
+            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '0.01'}),
+            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '0.01'}),
+            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '0.01'}),
+            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '0.01'}),
         }
-
 
 class EquipementForm(BaseFinancementForm):
     source_fields = ('subvention_padisam', 'contribution_promoteur', 'autre_financement')
@@ -517,11 +548,11 @@ class EquipementForm(BaseFinancementForm):
         ]
         widgets = {
             'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
-            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
-            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
-            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
-            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
-            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité', 'step': '0.01'}),
+            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '0.01'}),
+            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '0.01'}),
+            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '0.01'}),
+            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '0.01'}),
         }
 
 
@@ -536,11 +567,11 @@ class IntrantForm(BaseFinancementForm):
         ]
         widgets = {
             'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
-            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
-            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
-            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
-            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
-            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité', 'step': '0.01'}),
+            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '0.01'}),
+            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '0.01'}),
+            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '0.01'}),
+            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '0.01'}),
         }
 
 
@@ -555,10 +586,10 @@ class FonctionnementForm(BaseFinancementForm):
         ]
         widgets = {
             'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
-            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
-            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
-            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
-            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité', 'step': '0.01'}),
+            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '0.01'}),
+            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '0.01'}),
+            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '0.01'}),
         }
 
 
@@ -573,13 +604,12 @@ class ServiceForm(BaseFinancementForm):
         ]
         widgets = {
             'description': forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'Description'}),
-            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité'}),
-            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '1'}),
-            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '1'}),
-            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '1'}),
-            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '1'}),
+            'quantite': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Quantité', 'step': '0.01'}),
+            'prix_unit': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Prix unitaire', 'step': '0.01'}),
+            'subvention_padisam': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Subvention PADISAM', 'step': '0.01'}),
+            'contribution_promoteur': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Contribution promoteur', 'step': '0.01'}),
+            'autre_financement': forms.NumberInput(attrs={'class': 'form-control', 'placeholder': 'Autre financement', 'step': '0.01'}),
         }
-
 
 # ============================================
 # FORMSETS DES TABLES DE FINANCEMENT
@@ -647,11 +677,9 @@ class RealisationPasseeForm(forms.ModelForm):
             'volume_annee_1': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'ventes_usd_annee_1': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'prix_vente_mru_annee_1': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-
             'volume_annee_2': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'ventes_usd_annee_2': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'prix_vente_mru_annee_2': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
-
             'volume_annee_3': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'ventes_usd_annee_3': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
             'prix_vente_mru_annee_3': forms.NumberInput(attrs={'class': 'form-control', 'step': '0.01'}),
@@ -659,7 +687,6 @@ class RealisationPasseeForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         for field_name in self.fields:
             self.fields[field_name].required = False
 
@@ -667,15 +694,12 @@ class RealisationPasseeForm(forms.ModelForm):
         cleaned_data = super().clean()
 
         produit = cleaned_data.get('produit')
-
         volume_1 = cleaned_data.get('volume_annee_1')
         ventes_1 = cleaned_data.get('ventes_usd_annee_1')
         prix_1 = cleaned_data.get('prix_vente_mru_annee_1')
-
         volume_2 = cleaned_data.get('volume_annee_2')
         ventes_2 = cleaned_data.get('ventes_usd_annee_2')
         prix_2 = cleaned_data.get('prix_vente_mru_annee_2')
-
         volume_3 = cleaned_data.get('volume_annee_3')
         ventes_3 = cleaned_data.get('ventes_usd_annee_3')
         prix_3 = cleaned_data.get('prix_vente_mru_annee_3')
@@ -687,11 +711,9 @@ class RealisationPasseeForm(forms.ModelForm):
             volume_3, ventes_3, prix_3,
         ])
 
-        # ligne totalement vide = autorisée
         if not has_data:
             return cleaned_data
 
-        # si l'utilisateur commence une ligne, on exige seulement le produit
         if not produit:
             self.add_error('produit', "Le produit est obligatoire si vous saisissez une réalisation.")
 
@@ -702,7 +724,6 @@ class BaseRealisationFormSet(BaseFormSet):
     def clean(self):
         if any(self.errors):
             return
-        # Les réalisations passées ne sont pas obligatoires.
         return
 
 
@@ -737,7 +758,6 @@ class PassifEmpruntForm(forms.ModelForm):
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-
         for field_name in self.fields:
             self.fields[field_name].required = False
 
@@ -756,11 +776,9 @@ class PassifEmpruntForm(forms.ModelForm):
             or montant_rembourse not in (None, '')
         )
 
-        # ligne totalement vide = autorisée
         if not has_data:
             return cleaned_data
 
-        # si une ligne est commencée, on exige les champs principaux
         if not annee:
             self.add_error('annee', "L'année est obligatoire si vous saisissez un emprunt.")
         if not institution:
@@ -786,7 +804,6 @@ class BaseEmpruntFormSet(BaseFormSet):
     def clean(self):
         if any(self.errors):
             return
-        # Les emprunts ne sont pas obligatoires.
         return
 
 

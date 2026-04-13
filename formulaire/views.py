@@ -748,3 +748,87 @@ def get_villages(request):
             return JsonResponse([], safe=False)
 
     return JsonResponse([], safe=False)
+
+def evaluer_preselection(sp):
+    """
+    Présélection simple de démonstration.
+    Règles automatiques vérifiables sur les champs déjà existants.
+    """
+
+    criteres = []
+    motifs_manquants = []
+
+    # Critères vérifiables
+    if sp.numero_reception_formulaire:
+        criteres.append("Numéro de réception renseigné")
+    else:
+        motifs_manquants.append("Numéro de réception non renseigné")
+
+    if sp.intitule_sous_projet:
+        criteres.append("Intitulé du sous-projet renseigné")
+    else:
+        motifs_manquants.append("Intitulé du sous-projet non renseigné")
+
+    if sp.guichet:
+        criteres.append("Guichet renseigné")
+    else:
+        motifs_manquants.append("Guichet non renseigné")
+
+    if sp.type_projet:
+        criteres.append("Type de projet renseigné")
+    else:
+        motifs_manquants.append("Type de projet non renseigné")
+
+    if sp.wilaya:
+        criteres.append("Wilaya renseignée")
+    else:
+        motifs_manquants.append("Wilaya non renseignée")
+
+    if sp.objectif_sous_projet:
+        criteres.append("Objectif du sous-projet renseigné")
+    else:
+        motifs_manquants.append("Objectif du sous-projet non renseigné")
+
+    if sp.nom_statut_juridique:
+        criteres.append("Demandeur / bénéficiaire renseigné")
+    else:
+        motifs_manquants.append("Demandeur / bénéficiaire non renseigné")
+
+    # Décision automatique simple
+    if len(motifs_manquants) == 0:
+        decision = "Préselectionné"
+        motif = "Le dossier contient les informations minimales nécessaires pour passer à l’étape suivante."
+        badge_class = "badge-ok"
+    elif len(motifs_manquants) <= 2:
+        decision = "À examiner"
+        motif = "Le dossier est partiellement complet : " + "; ".join(motifs_manquants) + "."
+        badge_class = "badge-review"
+    else:
+        decision = "Rejet provisoire"
+        motif = "Le dossier est incomplet : " + "; ".join(motifs_manquants) + "."
+        badge_class = "badge-no"
+
+    return {
+        "numero_reception": sp.numero_reception_formulaire or "Non renseigné",
+        "intitule": sp.intitule_sous_projet or "Non renseigné",
+        "critere": " / ".join(criteres) if criteres else "Aucun critère validé",
+        "decision": decision,
+        "motif": motif,
+        "badge_class": badge_class,
+        "sous_projet": sp,
+    }
+
+
+def preselection_automatique(request):
+    """
+    Page simple de démonstration de la présélection automatique.
+    """
+    sous_projets = SousProjet.objects.all().order_by("-id")
+
+    lignes = [evaluer_preselection(sp) for sp in sous_projets]
+
+    context = {
+        "lignes": lignes,
+        "total_dossiers": sous_projets.count(),
+    }
+    return render(request, "formulaire/preselection_automatique.html", context)

@@ -1,0 +1,187 @@
+{% extends 'formulaire/base.html' %}
+
+{% block title %}Présélection automatique - PADISAM{% endblock %}
+{% block extra_css %}
+<link href="/static/formulaire/css/formulaire.css" rel="stylesheet">
+<style>
+    .preselection-page {
+        padding-top: 10px;
+        padding-bottom: 30px;
+    }
+
+    .preselection-header {
+        background: linear-gradient(135deg, #5dbb63 0%, #3f9142 100%);
+        color: white;
+        padding: 24px 28px;
+        border-radius: 18px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
+    }
+
+    .preselection-header h1 {
+        margin: 0 0 8px 0;
+        font-size: 30px;
+        font-weight: 700;
+    }
+
+    .preselection-header p {
+        margin: 0;
+        font-size: 15px;
+        opacity: 0.95;
+    }
+
+    .stats-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 18px 22px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+        margin-bottom: 22px;
+        border-left: 5px solid #5dbb63;
+    }
+
+    .stats-card strong {
+        color: #1d4f2a;
+    }
+
+    .preselection-table-card {
+        background: #fff;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    }
+
+    .preselection-table-card .card-header-custom {
+        background: #f8fafc;
+        padding: 18px 22px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .preselection-table-card .card-header-custom h5 {
+        margin: 0;
+        color: #1f2937;
+        font-weight: 700;
+    }
+
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .preselection-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .preselection-table thead {
+        background: #5dbb63;
+        color: white;
+    }
+
+    .preselection-table th,
+    .preselection-table td {
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: top;
+        font-size: 14px;
+    }
+
+    .preselection-table th {
+        white-space: nowrap;
+        font-weight: 700;
+    }
+
+    .preselection-table tbody tr:hover {
+        background: #f9fafb;
+    }
+
+    .decision-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .badge-ok {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-review {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-no {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .motif-text {
+        color: #374151;
+        line-height: 1.5;
+    }
+
+    .empty-box {
+        padding: 30px;
+        text-align: center;
+        color: #6b7280;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container preselection-page">
+    <div class="preselection-header">
+        <h1>Présélection automatique</h1>
+        <p>Analyse simplifiée des sous-projets déjà inscrits</p>
+    </div>
+
+    <div class="stats-card">
+        Nombre total de dossiers : <strong>{{ total_dossiers }}</strong>
+    </div>
+
+    <div class="preselection-table-card">
+        <div class="card-header-custom">
+            <h5>Liste des sous-projets</h5>
+        </div>
+
+        {% if lignes %}
+            <div class="table-responsive">
+                <table class="preselection-table">
+                    <thead>
+                        <tr>
+                            <th>N° réception</th>
+                            <th>Intitulé du sous-projet</th>
+                            <th>Critère</th>
+                            <th>Décision</th>
+                            <th>Motif</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for ligne in lignes %}
+                        <tr>
+                            <td>{{ ligne.numero_reception }}</td>
+                            <td>{{ ligne.intitule }}</td>
+                            <td>{{ ligne.critere }}</td>
+                            <td>
+                                <span class="decision-badge {{ ligne.badge_class }}">
+                                    {{ ligne.decision }}
+                                </span>
+                            </td>
+                            <td class="motif-text">{{ ligne.motif }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        {% else %}
+            <div class="empty-box">
+                Aucun sous-projet trouvé.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

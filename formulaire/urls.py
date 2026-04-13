@@ -57,4 +57,5 @@ urlpatterns = [
     path('api/get-communes/', views.get_communes, name='get_communes'),
     path('api/get-paysages/', views.get_paysages, name='get_paysages'),
     path('api/get-villages/', views.get_villages, name='get_villages'),
+    path('preselection-automatique/', views.preselection_automatique, name='preselection_automatique'),
 ]
