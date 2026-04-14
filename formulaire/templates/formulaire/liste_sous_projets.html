@@ -27,7 +27,9 @@
                         <th>Type</th>
                         <th>Demandeur</th>
                         <th>Localisation</th>
-                        <th>Créé par</th>
+                        {% if is_admin %}
+    <th>Créé par</th>
+{% endif %}
                         <th>Actions</th>
                     </tr>
                 </thead>
@@ -61,13 +63,15 @@
                                 -
                             {% endif %}
                         </td>
-                        <td>
-                            {% if projet.createur_username %}
-                                {{ projet.createur_username }}
-                            {% else %}
-                                -
-                            {% endif %}
-                        </td>
+                        {% if is_admin %}
+<td>
+    {% if projet.createur_username %}
+        {{ projet.createur_username }}
+    {% else %}
+        -
+    {% endif %}
+</td>
+{% endif %}
                         <td class="action-buttons">
                             <a href="{% url 'formulaire:detail_sous_projet' projet.id %}" class="btn btn-sm btn-outline-primary">👁️ Voir</a>
                             {% if is_admin %}
