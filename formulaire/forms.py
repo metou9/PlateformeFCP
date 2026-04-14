@@ -338,7 +338,23 @@ class SousProjetForm(forms.ModelForm):
             raise forms.ValidationError('Le fax doit contenir exactement 4 chiffres.')
         return fax
 
+def clean_numero_reception_formulaire(self):
+    numero = self.cleaned_data.get('numero_reception_formulaire')
 
+    if not numero:
+        return numero
+
+    queryset = SousProjet.objects.filter(numero_reception_formulaire=numero)
+
+    if self.instance and self.instance.pk:
+        queryset = queryset.exclude(pk=self.instance.pk)
+
+    if queryset.exists():
+        raise forms.ValidationError(
+            "Ce numéro de réception existe déjà. Veuillez saisir un numéro unique."
+        )
+
+    return numero
 # ============================================
 # FORMULAIRE DES ACTIVITÉS
 # ============================================
@@ -464,75 +480,95 @@ class BaseFinancementForm(forms.ModelForm):
 
         return False
 
-    def clean(self):
-        cleaned_data = super().clean()
+def clean(self):
+    cleaned_data = super().clean()
 
-        if cleaned_data.get('DELETE'):
-            return cleaned_data
-
-        description = cleaned_data.get('description')
-        quantite = cleaned_data.get('quantite')
-        montant_total = cleaned_data.get('montant_total')
-
-        # Ligne totalement vide : on l'ignore
-        if not self._has_any_value(cleaned_data):
-            cleaned_data['description'] = None
-            cleaned_data['quantite'] = None
-            cleaned_data['montant_total'] = None
-            cleaned_data['prix_unit'] = None
-            for field in self.source_fields:
-                cleaned_data[field] = None
-            return cleaned_data
-
-        # Ligne partiellement remplie : description obligatoire
-        if not description:
-            self.add_error('description', "La description est obligatoire si une ligne de financement est renseignée.")
-
-        # Si la ligne a commencé à être remplie et quantité vide -> 1
-        if quantite in (None, ''):
-            quantite = 1
-            cleaned_data['quantite'] = quantite
-
-        # Ligne partiellement remplie : montant total obligatoire
-        if montant_total in (None, ''):
-            self.add_error('montant_total', "Le montant total est obligatoire si une ligne de financement est renseignée.")
-
-        # Sources vides -> 0
-        for field in self.source_fields:
-            if cleaned_data.get(field) in (None, ''):
-                cleaned_data[field] = Decimal('0')
-
-        if self.errors:
-            return cleaned_data
-
-        try:
-            quantite_decimal = Decimal(str(cleaned_data.get('quantite')))
-            montant_total_decimal = Decimal(str(montant_total))
-        except (InvalidOperation, ValueError, TypeError):
-            self.add_error(None, "Quantité ou montant total invalide.")
-            return cleaned_data
-
-        if quantite_decimal <= 0:
-            self.add_error('quantite', "La quantité doit être supérieure à zéro.")
-            return cleaned_data
-
-        if montant_total_decimal < 0:
-            self.add_error('montant_total', "Le montant total doit être supérieur ou égal à zéro.")
-            return cleaned_data
-
-        cleaned_data['montant_total'] = montant_total_decimal
-        cleaned_data['prix_unit'] = montant_total_decimal / quantite_decimal
-
-        total_sources = sum(Decimal(cleaned_data.get(field) or 0) for field in self.source_fields)
-
-        if total_sources != montant_total_decimal:
-            raise forms.ValidationError(
-                f"Incohérence de financement : le montant total saisi ({montant_total_decimal}) doit être égal à la somme des sources ({total_sources})."
-            )
-
+    if cleaned_data.get('DELETE'):
         return cleaned_data
 
-    def save(self, commit=True):
+    description = cleaned_data.get('description')
+    quantite = cleaned_data.get('quantite')
+    montant_total = cleaned_data.get('montant_total')
+
+    # Ligne totalement vide : on l'ignore
+    if not self._has_any_value(cleaned_data):
+        cleaned_data['description'] = None
+        cleaned_data['quantite'] = None
+        cleaned_data['montant_total'] = None
+        cleaned_data['prix_unit'] = None
+        for field in self.source_fields:
+            cleaned_data[field] = None
+        return cleaned_data
+
+    # Description obligatoire si la ligne est commencée
+    if not description:
+        self.add_error('description', "La description est obligatoire si une ligne de financement est renseignée.")
+
+    # Quantité par défaut à 1 si la ligne est commencée
+    if quantite in (None, ''):
+        quantite = 1
+        cleaned_data['quantite'] = quantite
+
+    # Montant total obligatoire
+    if montant_total in (None, ''):
+        self.add_error('montant_total', "Le montant total est obligatoire si une ligne de financement est renseignée.")
+
+    if self.errors:
+        return cleaned_data
+
+    try:
+        quantite_decimal = Decimal(str(cleaned_data.get('quantite')))
+        montant_total_decimal = Decimal(str(montant_total))
+    except (InvalidOperation, ValueError, TypeError):
+        self.add_error(None, "Quantité ou montant total invalide.")
+        return cleaned_data
+
+    if quantite_decimal <= 0:
+        self.add_error('quantite', "La quantité doit être supérieure à zéro.")
+        return cleaned_data
+
+    if montant_total_decimal < 0:
+        self.add_error('montant_total', "Le montant total doit être supérieur ou égal à zéro.")
+        return cleaned_data
+
+    # Calcul du prix unitaire
+    cleaned_data['montant_total'] = montant_total_decimal
+    cleaned_data['prix_unit'] = montant_total_decimal / quantite_decimal
+
+    # ---- Nouvelle logique des sources ----
+    # Si toutes les sources sont vides -> on met 0 et on laisse passer
+    # Si au moins une source est saisie -> on impose la somme = montant_total
+    source_fields_touched = False
+    total_sources = Decimal('0')
+
+    for field in self.source_fields:
+        value = cleaned_data.get(field)
+
+        if value not in (None, ''):
+            source_fields_touched = True
+
+        if value in (None, ''):
+            cleaned_data[field] = Decimal('0')
+        else:
+            try:
+                cleaned_data[field] = Decimal(str(value))
+            except (InvalidOperation, ValueError, TypeError):
+                self.add_error(field, "Montant invalide.")
+
+        total_sources += cleaned_data.get(field) or Decimal('0')
+
+    if self.errors:
+        return cleaned_data
+
+    # On vérifie la somme seulement si au moins une source a été saisie
+    if source_fields_touched and total_sources != montant_total_decimal:
+        raise forms.ValidationError(
+            f"Incohérence de financement : le montant total saisi ({montant_total_decimal}) doit être égal à la somme des sources ({total_sources})."
+        )
+
+    return cleaned_data
+
+def save(self, commit=True):
         instance = super().save(commit=False)
 
         quantite = self.cleaned_data.get('quantite')

@@ -256,6 +256,7 @@ def accueil(request):
 # ÉTAPE 1 : INFORMATIONS GÉNÉRALES + ACTIVITÉS
 # =========================================================
 
+
 @login_required
 def nouveau_sous_projet(request):
     """
@@ -289,6 +290,10 @@ def nouveau_sous_projet(request):
 
             if is_agent_saisie(utilisateur):
                 sous_projet.wilaya = utilisateur.wilaya
+
+            # Ajouter le username du créateur
+            if utilisateur:
+                sous_projet.createur_username = utilisateur.username
 
             sous_projet.save()
 
@@ -332,8 +337,6 @@ def nouveau_sous_projet(request):
 def save_sous_projet(request):
     """Alias de sauvegarde étape 1."""
     return nouveau_sous_projet(request)
-
-
 # =========================================================
 # ÉTAPE 2 : INFRASTRUCTURES
 # =========================================================
@@ -784,8 +787,8 @@ def liste_sous_projets(request):
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
+        'is_admin': bool(utilisateur and utilisateur.role == 'admin'),
     })
-
 
 
 @login_required
@@ -891,6 +894,11 @@ def detail_sous_projet(request, pk):
 def supprimer_sous_projet(request, pk):
     """Supprime un sous-projet accessible."""
     utilisateur = get_current_user(request)
+
+    if not utilisateur or utilisateur.role != 'admin':
+        messages.error(request, "❌ Seul l'administrateur peut supprimer un sous-projet.")
+        return redirect('formulaire:liste_sous_projets')
+
     sous_projet = get_object_or_404(get_accessible_sous_projets(utilisateur), pk=pk)
 
     if request.method == 'POST':
@@ -900,7 +908,6 @@ def supprimer_sous_projet(request, pk):
         return redirect('formulaire:liste_sous_projets')
 
     return redirect('formulaire:liste_sous_projets')
-
 
 # =========================================================
 # API AJAX

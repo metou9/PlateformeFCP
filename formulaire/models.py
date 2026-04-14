@@ -190,6 +190,7 @@ class SousProjet(models.Model):
     )
     numero_reception_formulaire = models.CharField(
         max_length=100,
+        unique=True,
         blank=True,
         null=True,
         verbose_name="Numéro réception formulaire"
@@ -235,6 +236,12 @@ class SousProjet(models.Model):
     default=None,
     verbose_name="Ressources du promoteur (inclure la source d’eau disponible)"
     )
+    createur_username = models.CharField(
+    max_length=50,
+    blank=True,
+    null=True,
+    verbose_name="Nom d'utilisateur du créateur"
+)
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
     date_modification = models.DateTimeField(auto_now=True, verbose_name="Date de modification")

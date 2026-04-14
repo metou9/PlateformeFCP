@@ -9,7 +9,6 @@
             <h1>📋 Liste des dossiers</h1>
             <p class="text-muted mb-0">Gérez et consultez tous les dossiers enregistrés</p>
         </div>
-       
     </div>
 </div>
 
@@ -20,7 +19,17 @@
         <div class="table-responsive">
             <table class="table" id="projetsTable">
                 <thead>
-                    <tr><th>Numéro</th><th>Date</th><th>Intitulé</th><th>Guichet</th><th>Type</th><th>Demandeur</th><th>Localisation</th><th>Actions</th></tr>
+                    <tr>
+                        <th>Numéro</th>
+                        <th>Date</th>
+                        <th>Intitulé</th>
+                        <th>Guichet</th>
+                        <th>Type</th>
+                        <th>Demandeur</th>
+                        <th>Localisation</th>
+                        <th>Créé par</th>
+                        <th>Actions</th>
+                    </tr>
                 </thead>
                 <tbody>
                     {% for projet in sous_projets %}
@@ -28,17 +37,42 @@
                         <td><strong>#{{ projet.numero_reception_formulaire }}</strong></td>
                         <td>{{ projet.date_formulaire|date:"d/m/Y" }}</td>
                         <td>{{ projet.intitule_sous_projet|truncatechars:50 }}</td>
-                        <td>{% if projet.guichet == 'AGR' %}<span class="badge-agr">{{ projet.guichet }}</span>{% else %}<span class="badge-aci">{{ projet.guichet }}</span>{% endif %}</td>
                         <td>
-                            {% if projet.type_projet == 'AG' %}<span class="badge-ag">{{ projet.type_projet }}</span>
-                            {% elif projet.type_projet == 'EL' %}<span class="badge-el">{{ projet.type_projet }}</span>
-                            {% else %}<span class="badge-env">{{ projet.type_projet }}</span>{% endif %}
+                            {% if projet.guichet == 'AGR' %}
+                                <span class="badge-agr">{{ projet.guichet }}</span>
+                            {% else %}
+                                <span class="badge-aci">{{ projet.guichet }}</span>
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if projet.type_projet == 'AG' %}
+                                <span class="badge-ag">{{ projet.type_projet }}</span>
+                            {% elif projet.type_projet == 'EL' %}
+                                <span class="badge-el">{{ projet.type_projet }}</span>
+                            {% else %}
+                                <span class="badge-env">{{ projet.type_projet }}</span>
+                            {% endif %}
                         </td>
                         <td>{{ projet.nom_statut_juridique|truncatechars:30 }}</td>
-                        <td>{% if projet.wilaya %}{{ projet.wilaya.nom|truncatechars:15 }}{% else %}-{% endif %}</td>
+                        <td>
+                            {% if projet.wilaya %}
+                                {{ projet.wilaya.nom|truncatechars:15 }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        <td>
+                            {% if projet.createur_username %}
+                                {{ projet.createur_username }}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
                         <td class="action-buttons">
                             <a href="{% url 'formulaire:detail_sous_projet' projet.id %}" class="btn btn-sm btn-outline-primary">👁️ Voir</a>
-                            <button type="button" class="btn-delete btn-sm" onclick="confirmerSuppression({{ projet.id }}, '{{ projet.intitule_sous_projet|escapejs }}')">🗑️ Supprimer</button>
+                            {% if is_admin %}
+                                <button type="button" class="btn-delete btn-sm" onclick="confirmerSuppression({{ projet.id }}, '{{ projet.intitule_sous_projet|escapejs }}')">🗑️ Supprimer</button>
+                            {% endif %}
                         </td>
                     </tr>
                     {% endfor %}
@@ -58,6 +92,7 @@
 </div>
 {% endif %}
 
+{% if is_admin %}
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
@@ -79,7 +114,9 @@
         </div>
     </div>
 </div>
+{% endif %}
 {% endblock %}
+
 {% block extra_js %}
 <script>
 function confirmerSuppression(projetId, projetNom) {
