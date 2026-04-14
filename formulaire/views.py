@@ -787,6 +787,7 @@ def liste_sous_projets(request):
     })
 
 
+
 @login_required
 def detail_sous_projet(request, pk):
     """Détail d'un sous-projet."""
@@ -804,6 +805,26 @@ def detail_sous_projet(request, pk):
     total_intrants = sous_projet.intrants.aggregate(total=Sum('montant_total'))['total'] or 0
     total_fonctionnements = sous_projet.fonctionnements.aggregate(total=Sum('montant_total'))['total'] or 0
     total_services = sous_projet.services.aggregate(total=Sum('montant_total'))['total'] or 0
+
+    # Totaux détaillés par source de financement
+    infra_subvention = sous_projet.infrastructures.aggregate(total=Sum('subvention_padisam'))['total'] or 0
+    infra_contribution = sous_projet.infrastructures.aggregate(total=Sum('contribution_promoteur'))['total'] or 0
+    infra_autre = sous_projet.infrastructures.aggregate(total=Sum('autre_financement'))['total'] or 0
+
+    equip_subvention = sous_projet.equipements.aggregate(total=Sum('subvention_padisam'))['total'] or 0
+    equip_contribution = sous_projet.equipements.aggregate(total=Sum('contribution_promoteur'))['total'] or 0
+    equip_autre = sous_projet.equipements.aggregate(total=Sum('autre_financement'))['total'] or 0
+
+    intrant_subvention = sous_projet.intrants.aggregate(total=Sum('subvention_padisam'))['total'] or 0
+    intrant_contribution = sous_projet.intrants.aggregate(total=Sum('contribution_promoteur'))['total'] or 0
+    intrant_autre = sous_projet.intrants.aggregate(total=Sum('autre_financement'))['total'] or 0
+
+    fonct_contribution = sous_projet.fonctionnements.aggregate(total=Sum('contribution_promoteur'))['total'] or 0
+    fonct_autre = sous_projet.fonctionnements.aggregate(total=Sum('autre_financement'))['total'] or 0
+
+    service_subvention = sous_projet.services.aggregate(total=Sum('subvention_padisam'))['total'] or 0
+    service_contribution = sous_projet.services.aggregate(total=Sum('contribution_promoteur'))['total'] or 0
+    service_autre = sous_projet.services.aggregate(total=Sum('autre_financement'))['total'] or 0
 
     grand_total = (
         total_infrastructures +
@@ -840,6 +861,25 @@ def detail_sous_projet(request, pk):
         'total_fonctionnements': total_fonctionnements,
         'total_services': total_services,
 
+        'infra_subvention': infra_subvention,
+        'infra_contribution': infra_contribution,
+        'infra_autre': infra_autre,
+
+        'equip_subvention': equip_subvention,
+        'equip_contribution': equip_contribution,
+        'equip_autre': equip_autre,
+
+        'intrant_subvention': intrant_subvention,
+        'intrant_contribution': intrant_contribution,
+        'intrant_autre': intrant_autre,
+
+        'fonct_contribution': fonct_contribution,
+        'fonct_autre': fonct_autre,
+
+        'service_subvention': service_subvention,
+        'service_contribution': service_contribution,
+        'service_autre': service_autre,
+
         'grand_total': grand_total,
         'total_ventes': total_ventes,
         'total_emprunte': total_emprunte,
@@ -847,8 +887,6 @@ def detail_sous_projet(request, pk):
     }
 
     return render(request, 'formulaire/detail_sous_projet.html', context)
-
-
 @login_required
 def supprimer_sous_projet(request, pk):
     """Supprime un sous-projet accessible."""

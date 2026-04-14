@@ -226,10 +226,12 @@
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-                            <td colspan="3">Somme infrastructures (MRU)</td>
-                            <td class="total-amount">{{ total_infrastructures|floatformat:2|intcomma }}</td>
-                            <td colspan="3"></td>
-                        </tr>
+    <td colspan="3">Somme infrastructures (MRU)</td>
+    <td class="total-amount">{{ total_infrastructures|floatformat:2|intcomma }}</td>
+    <td>{{ infra_subvention|floatformat:2|intcomma }}</td>
+    <td>{{ infra_contribution|floatformat:2|intcomma }}</td>
+    <td>{{ infra_autre|floatformat:2|intcomma }}</td>
+</tr>
                     {% else %}
                         <tr><td colspan="7" class="text-center"><span class="non-renseigne">Non renseigné</span></td></tr>
                     {% endif %}
@@ -263,10 +265,12 @@
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-                            <td colspan="3">Somme équipements (MRU)</td>
-                            <td class="total-amount">{{ total_equipements|floatformat:2|intcomma }}</td>
-                            <td colspan="3"></td>
-                        </tr>
+    <td colspan="3">Somme équipements (MRU)</td>
+    <td class="total-amount">{{ total_equipements|floatformat:2|intcomma }}</td>
+    <td>{{ equip_subvention|floatformat:2|intcomma }}</td>
+    <td>{{ equip_contribution|floatformat:2|intcomma }}</td>
+    <td>{{ equip_autre|floatformat:2|intcomma }}</td>
+</tr>
                     {% else %}
                         <tr><td colspan="7" class="text-center"><span class="non-renseigne">Non renseigné</span></td></tr>
                     {% endif %}
@@ -300,10 +304,12 @@
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-                            <td colspan="3">Somme intrants (MRU)</td>
-                            <td class="total-amount">{{ total_intrants|floatformat:2|intcomma }}</td>
-                            <td colspan="3"></td>
-                        </tr>
+    <td colspan="3">Somme intrants (MRU)</td>
+    <td class="total-amount">{{ total_intrants|floatformat:2|intcomma }}</td>
+    <td>{{ intrant_subvention|floatformat:2|intcomma }}</td>
+    <td>{{ intrant_contribution|floatformat:2|intcomma }}</td>
+    <td>{{ intrant_autre|floatformat:2|intcomma }}</td>
+</tr>
                     {% else %}
                         <tr><td colspan="7" class="text-center"><span class="non-renseigne">Non renseigné</span></td></tr>
                     {% endif %}
@@ -336,10 +342,11 @@
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-                            <td colspan="3">Somme fonctionnement (MRU)</td>
-                            <td class="total-amount">{{ total_fonctionnements|floatformat:2|intcomma }}</td>
-                            <td colspan="2"></td>
-                        </tr>
+    <td colspan="3">Somme fonctionnement (MRU)</td>
+    <td class="total-amount">{{ total_fonctionnements|floatformat:2|intcomma }}</td>
+    <td>{{ fonct_contribution|floatformat:2|intcomma }}</td>
+    <td>{{ fonct_autre|floatformat:2|intcomma }}</td>
+</tr>
                     {% else %}
                         <tr><td colspan="6" class="text-center"><span class="non-renseigne">Non renseigné</span></td></tr>
                     {% endif %}
@@ -373,10 +380,12 @@
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-                            <td colspan="3">Somme services (MRU)</td>
-                            <td class="total-amount">{{ total_services|floatformat:2|intcomma }}</td>
-                            <td colspan="3"></td>
-                        </tr>
+    <td colspan="3">Somme services (MRU)</td>
+    <td class="total-amount">{{ total_services|floatformat:2|intcomma }}</td>
+    <td>{{ service_subvention|floatformat:2|intcomma }}</td>
+    <td>{{ service_contribution|floatformat:2|intcomma }}</td>
+    <td>{{ service_autre|floatformat:2|intcomma }}</td>
+</tr>
                     {% else %}
                         <tr><td colspan="7" class="text-center"><span class="non-renseigne">Non renseigné</span></td></tr>
                     {% endif %}

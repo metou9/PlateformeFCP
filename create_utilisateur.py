@@ -32,34 +32,34 @@ utilisateurs = [
         'wilaya_code': None
     },
     {
-        'nom': 'Diop',
-        'prenom': 'Aissatou',
-        'username': 'adiop',
-        'password': 'adiop123',
+        'nom': 'Nemine',
+        'prenom': 'Ahmed Louli',
+        'username': 'nemine',
+        'password': 'nemine1224',
         'role': 'agent',
-        'email': 'aissatou.diop@fcp.com',
+        'email': 'nemine@fcp.com',
         'actif': True,
         'wilaya_code': 'Gorgol'
     },
     {
-        'nom': 'Sow',
-        'prenom': 'Oumar',
-        'username': 'osow',
-        'password': 'osow123',
+        'nom': 'Cheikh',
+        'prenom': 'Maaloum',
+        'username': 'cheikhM',
+        'password': 'cheikh5643',
         'role': 'agent',
-        'email': 'oumar.sow@fcp.com',
+        'email': 'cheikhm@fcp.com',
         'actif': True,
-        'wilaya_code': 'Assaba'
+        'wilaya_code': 'Gorgol'
     },
     {
-        'nom': 'Ba',
-        'prenom': 'Fatou',
-        'username': 'fba',
-        'password': 'fba123',
+        'nom': 'Cheikh',
+        'prenom': 'Sidi Mohamed',
+        'username': 'cheikhS',
+        'password': 'cheikh7896',
         'role': 'agent',
-        'email': 'fatou.ba@fcp.com',
+        'email': 'cheikhs@fcp.com',
         'actif': True,
-        'wilaya_code': 'Brakna'
+        'wilaya_code': 'Gorgol'
     },
     {
         'nom': 'Ndiaye',
