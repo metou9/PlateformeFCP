@@ -1,8 +1,14 @@
 {% extends 'formulaire/base.html' %}
 {% block title %}Réalisations et Emprunts - PADISAM{% endblock %}
-{% block extra_css %}<link href="/static/formulaire/css/formulaire.css" rel="stylesheet">{% endblock %}
+{% block extra_css %}
+<link href="/static/formulaire/css/formulaire.css" rel="stylesheet">
+{% endblock %}
+
 {% block content %}
-<div class="progress-bar-custom"><div class="progress-fill" style="width:100%"></div></div>
+<div class="progress-bar-custom">
+    <div class="progress-fill" style="width:100%"></div>
+</div>
+
 <div class="step-indicator">
     <span class="step-badge completed">📋 1. Infos générales</span>
     <span class="step-badge completed">🏗️ 2. Infrastructures</span>
@@ -12,74 +18,257 @@
     <span class="step-badge completed">🛠️ 6. Services</span>
     <span class="step-badge active">📊 7. Réalisations/Emprunts</span>
 </div>
+
 <div class="welcome-section">
-    <h1>📊 Réalisations passées / Emprunts</h1>
-    <p class="mb-0">Étape 7/7 : Renseignez les réalisations passées du promoteur et les emprunts</p>
+    <h1>📊 Renseignement sur le promoteur / Réalisations passées / Ressources / Emprunts</h1>
+    <p class="mb-0">Étape 7/7 : Renseignez les informations finales du promoteur, les réalisations passées et les emprunts</p>
 </div>
 
 <form method="post" action="{% url 'formulaire:save_realisation_passif' %}">
-{% csrf_token %}
-<div class="section-title">6. Réalisations passées du promoteur</div>
-<div class="card mb-4">
-<div class="card-header"><h5 class="mb-0">RÉALISATIONS PASSÉES (3 années sur les derniers 5 ans)</h5></div>
-<div class="card-body">
-{{ realisation_formset.management_form }}
-{% if realisation_formset.non_form_errors %}<div class="alert alert-danger">{{ realisation_formset.non_form_errors }}</div>{% endif %}
-<div class="table-responsive">
-<table class="table table-bordered align-middle">
-<thead>
-<tr><th rowspan="2" class="product-col text-start">Produits</th><th colspan="3" class="year-group">Année 1</th><th colspan="3" class="year-group">Année 2</th><th colspan="3" class="year-group">Année 3</th></tr>
-<tr><th>Volume</th><th>Ventes US$</th><th>Prix vente MRU</th><th>Volume</th><th>Ventes US$</th><th>Prix vente MRU</th><th>Volume</th><th>Ventes US$</th><th>Prix vente MRU</th></tr>
-</thead>
-<tbody>
-{% for real_form in realisation_formset %}
-{% for hidden in real_form.hidden_fields %}{{ hidden }}{% endfor %}
-<tr>
-<td class="product-col">{{ real_form.produit }}{% if real_form.produit.errors %}<div class="field-error">{{ real_form.produit.errors }}</div>{% endif %}</td>
-<td>{{ real_form.volume_annee_1 }}{% if real_form.volume_annee_1.errors %}<div class="field-error">{{ real_form.volume_annee_1.errors }}</div>{% endif %}</td>
-<td>{{ real_form.ventes_usd_annee_1 }}{% if real_form.ventes_usd_annee_1.errors %}<div class="field-error">{{ real_form.ventes_usd_annee_1.errors }}</div>{% endif %}</td>
-<td>{{ real_form.prix_vente_mru_annee_1 }}{% if real_form.prix_vente_mru_annee_1.errors %}<div class="field-error">{{ real_form.prix_vente_mru_annee_1.errors }}</div>{% endif %}</td>
-<td>{{ real_form.volume_annee_2 }}{% if real_form.volume_annee_2.errors %}<div class="field-error">{{ real_form.volume_annee_2.errors }}</div>{% endif %}</td>
-<td>{{ real_form.ventes_usd_annee_2 }}{% if real_form.ventes_usd_annee_2.errors %}<div class="field-error">{{ real_form.ventes_usd_annee_2.errors }}</div>{% endif %}</td>
-<td>{{ real_form.prix_vente_mru_annee_2 }}{% if real_form.prix_vente_mru_annee_2.errors %}<div class="field-error">{{ real_form.prix_vente_mru_annee_2.errors }}</div>{% endif %}</td>
-<td>{{ real_form.volume_annee_3 }}{% if real_form.volume_annee_3.errors %}<div class="field-error">{{ real_form.volume_annee_3.errors }}</div>{% endif %}</td>
-<td>{{ real_form.ventes_usd_annee_3 }}{% if real_form.ventes_usd_annee_3.errors %}<div class="field-error">{{ real_form.ventes_usd_annee_3.errors }}</div>{% endif %}</td>
-<td>{{ real_form.prix_vente_mru_annee_3 }}{% if real_form.prix_vente_mru_annee_3.errors %}<div class="field-error">{{ real_form.prix_vente_mru_annee_3.errors }}</div>{% endif %}</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-</div></div>
+    {% csrf_token %}
 
-<div class="section-title">8. Passifs (emprunts)  - 3 dernières années</div>
-<div class="card mb-4">
-<div class="card-header"><h5 class="mb-0">EMPRUNTS</h5></div>
-<div class="card-body">
-{{ emprunt_formset.management_form }}
-{% if emprunt_formset.non_form_errors %}<div class="alert alert-danger">{{ emprunt_formset.non_form_errors }}</div>{% endif %}
-<div class="table-responsive">
-<table class="table table-bordered align-middle">
-<thead class="table-light"><tr><th>Année</th><th>Institution financière</th><th>Montant emprunté</th><th>Montant remboursé</th></tr></thead>
-<tbody>
-{% for emp_form in emprunt_formset %}
-{% for hidden in emp_form.hidden_fields %}{{ hidden }}{% endfor %}
-<tr>
-<td>{{ emp_form.annee }}{% if emp_form.annee.errors %}<div class="field-error">{{ emp_form.annee.errors }}</div>{% endif %}</td>
-<td>{{ emp_form.institution_financiere }}{% if emp_form.institution_financiere.errors %}<div class="field-error">{{ emp_form.institution_financiere.errors }}</div>{% endif %}</td>
-<td>{{ emp_form.montant_emprunte }}{% if emp_form.montant_emprunte.errors %}<div class="field-error">{{ emp_form.montant_emprunte.errors }}</div>{% endif %}</td>
-<td>{{ emp_form.montant_rembourse }}{% if emp_form.montant_rembourse.errors %}<div class="field-error">{{ emp_form.montant_rembourse.errors }}</div>{% endif %}</td>
-</tr>
-{% endfor %}
-</tbody>
-</table>
-</div>
-<small class="text-muted">Règle de validation : le montant remboursé doit être inférieur ou égal au montant emprunté.</small>
-</div></div>
+    <div class="section-title">6. Renseignement sur le promoteur</div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="row">
+                <div class="col-md-4">
+                    <div class="form-group">
+                        <label class="form-label">Année début activités</label>
+                        {{ promoteur_form.annee_debut_activites }}
+                        {% if promoteur_form.annee_debut_activites.errors %}
+                            <div class="field-error">{{ promoteur_form.annee_debut_activites.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
 
-<div class="d-flex justify-content-between mt-4">
-    <a href="{% url 'formulaire:financement_services' %}" class="btn-prev">← Précédent</a>
-    <button type="submit" class="btn-submit">✅ Enregistrer le sous-projet</button>
-</div>
+                <div class="col-md-8">
+                    <div class="form-group">
+                        <label class="form-label">Historique</label>
+                        {{ promoteur_form.historique_promoteur }}
+                        {% if promoteur_form.historique_promoteur.errors %}
+                            <div class="field-error">{{ promoteur_form.historique_promoteur.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title">7. Réalisations passées du promoteur</div>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">RÉALISATIONS PASSÉES (3 années sur les derniers 5 ans)</h5>
+        </div>
+        <div class="card-body">
+            {{ realisation_formset.management_form }}
+
+            {% if realisation_formset.non_form_errors %}
+                <div class="alert alert-danger">{{ realisation_formset.non_form_errors }}</div>
+            {% endif %}
+
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead>
+                        <tr>
+                            <th rowspan="2" class="product-col text-start">Produits</th>
+
+                            <th colspan="4" class="year-group">Année 1</th>
+                            <th colspan="4" class="year-group">Année 2</th>
+                            <th colspan="4" class="year-group">Année 3</th>
+                        </tr>
+                        <tr>
+                            <th>Année</th>
+                            <th>Volume</th>
+                            <th>Ventes US$</th>
+                            <th>Prix vente MRU</th>
+
+                            <th>Année</th>
+                            <th>Volume</th>
+                            <th>Ventes US$</th>
+                            <th>Prix vente MRU</th>
+
+                            <th>Année</th>
+                            <th>Volume</th>
+                            <th>Ventes US$</th>
+                            <th>Prix vente MRU</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for real_form in realisation_formset %}
+                            {% for hidden in real_form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                            <tr>
+                                <td class="product-col">
+                                    {{ real_form.produit }}
+                                    {% if real_form.produit.errors %}
+                                        <div class="field-error">{{ real_form.produit.errors }}</div>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ real_form.annee_1 }}
+                                    {% if real_form.annee_1.errors %}
+                                        <div class="field-error">{{ real_form.annee_1.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ real_form.volume_annee_1 }}
+                                    {% if real_form.volume_annee_1.errors %}
+                                        <div class="field-error">{{ real_form.volume_annee_1.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ real_form.ventes_usd_annee_1 }}
+                                    {% if real_form.ventes_usd_annee_1.errors %}
+                                        <div class="field-error">{{ real_form.ventes_usd_annee_1.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ real_form.prix_vente_mru_annee_1 }}
+                                    {% if real_form.prix_vente_mru_annee_1.errors %}
+                                        <div class="field-error">{{ real_form.prix_vente_mru_annee_1.errors }}</div>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ real_form.annee_2 }}
+                                    {% if real_form.annee_2.errors %}
+                                        <div class="field-error">{{ real_form.annee_2.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ real_form.volume_annee_2 }}
+                                    {% if real_form.volume_annee_2.errors %}
+                                        <div class="field-error">{{ real_form.volume_annee_2.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ real_form.ventes_usd_annee_2 }}
+                                    {% if real_form.ventes_usd_annee_2.errors %}
+                                        <div class="field-error">{{ real_form.ventes_usd_annee_2.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ real_form.prix_vente_mru_annee_2 }}
+                                    {% if real_form.prix_vente_mru_annee_2.errors %}
+                                        <div class="field-error">{{ real_form.prix_vente_mru_annee_2.errors }}</div>
+                                    {% endif %}
+                                </td>
+
+                                <td>
+                                    {{ real_form.annee_3 }}
+                                    {% if real_form.annee_3.errors %}
+                                        <div class="field-error">{{ real_form.annee_3.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ real_form.volume_annee_3 }}
+                                    {% if real_form.volume_annee_3.errors %}
+                                        <div class="field-error">{{ real_form.volume_annee_3.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ real_form.ventes_usd_annee_3 }}
+                                    {% if real_form.ventes_usd_annee_3.errors %}
+                                        <div class="field-error">{{ real_form.ventes_usd_annee_3.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ real_form.prix_vente_mru_annee_3 }}
+                                    {% if real_form.prix_vente_mru_annee_3.errors %}
+                                        <div class="field-error">{{ real_form.prix_vente_mru_annee_3.errors }}</div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title">8. Ressources du promoteur</div>
+    <div class="card mb-4">
+        <div class="card-body">
+            <div class="form-group mb-3">
+                <label class="form-label">Ressources du promoteur (inclure la source d’eau disponible)</label>
+                {{ promoteur_form.ressources_promoteur }}
+                {% if promoteur_form.ressources_promoteur.errors %}
+                    <div class="field-error">{{ promoteur_form.ressources_promoteur.errors }}</div>
+                {% endif %}
+            </div>
+        </div>
+    </div>
+
+    <div class="section-title">9. Passifs (emprunts) - 3 dernières années</div>
+    <div class="card mb-4">
+        <div class="card-header">
+            <h5 class="mb-0">EMPRUNTS</h5>
+        </div>
+        <div class="card-body">
+            {{ emprunt_formset.management_form }}
+
+            {% if emprunt_formset.non_form_errors %}
+                <div class="alert alert-danger">{{ emprunt_formset.non_form_errors }}</div>
+            {% endif %}
+
+            <div class="table-responsive">
+                <table class="table table-bordered align-middle">
+                    <thead class="table-light">
+                        <tr>
+                            <th>Année</th>
+                            <th>Institution financière</th>
+                            <th>Montant emprunté</th>
+                            <th>Montant remboursé</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for emp_form in emprunt_formset %}
+                            {% for hidden in emp_form.hidden_fields %}
+                                {{ hidden }}
+                            {% endfor %}
+                            <tr>
+                                <td>
+                                    {{ emp_form.annee }}
+                                    {% if emp_form.annee.errors %}
+                                        <div class="field-error">{{ emp_form.annee.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ emp_form.institution_financiere }}
+                                    {% if emp_form.institution_financiere.errors %}
+                                        <div class="field-error">{{ emp_form.institution_financiere.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ emp_form.montant_emprunte }}
+                                    {% if emp_form.montant_emprunte.errors %}
+                                        <div class="field-error">{{ emp_form.montant_emprunte.errors }}</div>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {{ emp_form.montant_rembourse }}
+                                    {% if emp_form.montant_rembourse.errors %}
+                                        <div class="field-error">{{ emp_form.montant_rembourse.errors }}</div>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            <small class="text-muted">
+                Règle de validation : le montant remboursé doit être inférieur ou égal au montant emprunté.
+            </small>
+        </div>
+    </div>
+
+    <div class="d-flex justify-content-between mt-4">
+        <a href="{% url 'formulaire:financement_services' %}" class="btn-prev">← Précédent</a>
+        <button type="submit" class="btn-submit">✅ Enregistrer le sous-projet</button>
+    </div>
 </form>
 {% endblock %}

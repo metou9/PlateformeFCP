@@ -18,6 +18,7 @@ from .forms import (
     SousProjetForm,
     InfrastructureFormSet,
     EquipementFormSet,
+    PromoteurFinalForm,
     IntrantFormSet,
     FonctionnementFormSet,
     ServiceFormSet,
@@ -38,6 +39,8 @@ from .models import (
     Fonctionnement,
     Service,
     Activite,
+    RealisationPassee,
+    PassifEmprunt,
 )
 
 
@@ -108,6 +111,40 @@ def login_required(view_func):
 
 
 # =========================================================
+# OUTILS DE TOTALS FINANCEMENT
+# =========================================================
+
+def compute_financement_totals(queryset, include_subvention=True):
+    """
+    Calcule les totaux d'une section de financement.
+    """
+    if include_subvention:
+        totals = queryset.aggregate(
+            total_montant=Sum('montant_total'),
+            total_subvention=Sum('subvention_padisam'),
+            total_contribution=Sum('contribution_promoteur'),
+            total_autre=Sum('autre_financement'),
+        )
+        return {
+            'total_montant': totals['total_montant'] or 0,
+            'total_subvention': totals['total_subvention'] or 0,
+            'total_contribution': totals['total_contribution'] or 0,
+            'total_autre': totals['total_autre'] or 0,
+        }
+
+    totals = queryset.aggregate(
+        total_montant=Sum('montant_total'),
+        total_contribution=Sum('contribution_promoteur'),
+        total_autre=Sum('autre_financement'),
+    )
+    return {
+        'total_montant': totals['total_montant'] or 0,
+        'total_contribution': totals['total_contribution'] or 0,
+        'total_autre': totals['total_autre'] or 0,
+    }
+
+
+# =========================================================
 # FABRIQUES DE FORMSETS DYNAMIQUES
 # =========================================================
 # IMPORTANT :
@@ -126,6 +163,7 @@ def clone_formset_with_extra(base_formset_class, extra_value):
         {'extra': extra_value}
     )
     return CustomFormSet
+
 
 def get_activite_formset_class(extra=0):
     """
@@ -330,9 +368,15 @@ def financement_infrastructure(request):
     else:
         formset = DynamicInfrastructureFormSet(instance=sous_projet, prefix='infra')
 
+    infrastructures_totaux = compute_financement_totals(
+        sous_projet.infrastructures.all(),
+        include_subvention=True
+    )
+
     return render(request, 'formulaire/financement_infrastructure.html', {
         'infrastructure_formset': formset,
         'sous_projet': sous_projet,
+        'infrastructures_totaux': infrastructures_totaux,
     })
 
 
@@ -375,9 +419,15 @@ def financement_equipement(request):
     else:
         formset = DynamicEquipementFormSet(instance=sous_projet, prefix='equip')
 
+    equipements_totaux = compute_financement_totals(
+        sous_projet.equipements.all(),
+        include_subvention=True
+    )
+
     return render(request, 'formulaire/financement_equipement.html', {
         'equipement_formset': formset,
         'sous_projet': sous_projet,
+        'equipements_totaux': equipements_totaux,
     })
 
 
@@ -420,9 +470,15 @@ def financement_intrant(request):
     else:
         formset = DynamicIntrantFormSet(instance=sous_projet, prefix='intrant')
 
+    intrants_totaux = compute_financement_totals(
+        sous_projet.intrants.all(),
+        include_subvention=True
+    )
+
     return render(request, 'formulaire/financement_intrant.html', {
         'intrant_formset': formset,
         'sous_projet': sous_projet,
+        'intrants_totaux': intrants_totaux,
     })
 
 
@@ -465,9 +521,15 @@ def financement_fonctionnement(request):
     else:
         formset = DynamicFonctionnementFormSet(instance=sous_projet, prefix='fonc')
 
+    fonctionnements_totaux = compute_financement_totals(
+        sous_projet.fonctionnements.all(),
+        include_subvention=False
+    )
+
     return render(request, 'formulaire/financement_fonctionnement.html', {
         'fonctionnement_formset': formset,
         'sous_projet': sous_projet,
+        'fonctionnements_totaux': fonctionnements_totaux,
     })
 
 
@@ -510,9 +572,15 @@ def financement_services(request):
     else:
         formset = DynamicServiceFormSet(instance=sous_projet, prefix='serv')
 
+    services_totaux = compute_financement_totals(
+        sous_projet.services.all(),
+        include_subvention=True
+    )
+
     return render(request, 'formulaire/financement_services.html', {
         'service_formset': formset,
         'sous_projet': sous_projet,
+        'services_totaux': services_totaux,
     })
 
 
@@ -527,31 +595,112 @@ def save_service(request):
 
 @login_required
 def realisation_passif(request):
-    """Étape 7 : réalisations passées et emprunts."""
+    """Étape 7 : informations finales, réalisations passées et emprunts."""
     sous_projet = get_current_sous_projet(request)
     if not sous_projet:
         return redirect('formulaire:nouveau_sous_projet')
 
     if request.method == 'POST':
+        promoteur_form = PromoteurFinalForm(request.POST, instance=sous_projet)
         realisation_formset = RealisationFormSet(request.POST, prefix='real')
         emprunt_formset = EmpruntFormSet(request.POST, prefix='emprunt')
 
-        if realisation_formset.is_valid() and emprunt_formset.is_valid():
-            for real_form in realisation_formset.forms:
-                if real_form.cleaned_data and real_form.cleaned_data.get('annee'):
-                    realisation = real_form.save(commit=False)
-                    realisation.sous_projet = sous_projet
-                    realisation.save()
+        if promoteur_form.is_valid() and realisation_formset.is_valid() and emprunt_formset.is_valid():
+            promoteur_form.save()
 
-            for emp_form in emprunt_formset.forms:
-                if emp_form.cleaned_data and emp_form.cleaned_data.get('annee'):
-                    emprunt = emp_form.save(commit=False)
-                    emprunt.sous_projet = sous_projet
-                    emprunt.save()
+            # On remplace complètement les anciennes réalisations
+            sous_projet.realisations.all().delete()
+
+            for real_form in realisation_formset:
+                cleaned_data = getattr(real_form, 'cleaned_data', None)
+                if not cleaned_data:
+                    continue
+
+                produit = cleaned_data.get('produit')
+
+                annee_1 = cleaned_data.get('annee_1')
+                volume_1 = cleaned_data.get('volume_annee_1')
+                ventes_1 = cleaned_data.get('ventes_usd_annee_1')
+                prix_1 = cleaned_data.get('prix_vente_mru_annee_1')
+
+                annee_2 = cleaned_data.get('annee_2')
+                volume_2 = cleaned_data.get('volume_annee_2')
+                ventes_2 = cleaned_data.get('ventes_usd_annee_2')
+                prix_2 = cleaned_data.get('prix_vente_mru_annee_2')
+
+                annee_3 = cleaned_data.get('annee_3')
+                volume_3 = cleaned_data.get('volume_annee_3')
+                ventes_3 = cleaned_data.get('ventes_usd_annee_3')
+                prix_3 = cleaned_data.get('prix_vente_mru_annee_3')
+
+                has_data = any([
+                    produit,
+                    annee_1, volume_1, ventes_1, prix_1,
+                    annee_2, volume_2, ventes_2, prix_2,
+                    annee_3, volume_3, ventes_3, prix_3,
+                ])
+
+                if not has_data:
+                    continue
+
+                RealisationPassee.objects.create(
+                    sous_projet=sous_projet,
+                    produit=produit,
+
+                    annee_1=annee_1,
+                    volume_annee_1=volume_1,
+                    ventes_usd_annee_1=ventes_1,
+                    prix_vente_mru_annee_1=prix_1,
+
+                    annee_2=annee_2,
+                    volume_annee_2=volume_2,
+                    ventes_usd_annee_2=ventes_2,
+                    prix_vente_mru_annee_2=prix_2,
+
+                    annee_3=annee_3,
+                    volume_annee_3=volume_3,
+                    ventes_usd_annee_3=ventes_3,
+                    prix_vente_mru_annee_3=prix_3,
+                )
+
+            # On remplace complètement les anciens emprunts
+            sous_projet.emprunts.all().delete()
+
+            for emp_form in emprunt_formset:
+                cleaned_data = getattr(emp_form, 'cleaned_data', None)
+                if not cleaned_data:
+                    continue
+
+                annee = cleaned_data.get('annee')
+                institution = cleaned_data.get('institution_financiere')
+                montant_emprunte = cleaned_data.get('montant_emprunte')
+                montant_rembourse = cleaned_data.get('montant_rembourse')
+
+                has_data = any([
+                    annee,
+                    institution,
+                    montant_emprunte,
+                    montant_rembourse,
+                ])
+
+                if not has_data:
+                    continue
+
+                PassifEmprunt.objects.create(
+                    sous_projet=sous_projet,
+                    annee=annee,
+                    institution_financiere=institution,
+                    montant_emprunte=montant_emprunte,
+                    montant_rembourse=montant_rembourse,
+                )
 
             request.session.pop('current_sous_projet_id', None)
             messages.success(request, "✅ Sous-projet créé avec succès !")
             return redirect('formulaire:liste_sous_projets')
+
+        for field, errors in promoteur_form.errors.items():
+            for error in errors:
+                messages.error(request, f"❌ Promoteur - {field} : {error}")
 
         for form in realisation_formset.forms:
             for field, errors in form.errors.items():
@@ -562,11 +711,53 @@ def realisation_passif(request):
             for field, errors in form.errors.items():
                 for error in errors:
                     messages.error(request, f"❌ Emprunt - {field} : {error}")
+
     else:
-        realisation_formset = RealisationFormSet(prefix='real')
-        emprunt_formset = EmpruntFormSet(prefix='emprunt')
+        promoteur_form = PromoteurFinalForm(instance=sous_projet)
+
+        realisations_initial = [
+            {
+                'produit': r.produit,
+
+                'annee_1': r.annee_1,
+                'volume_annee_1': r.volume_annee_1,
+                'ventes_usd_annee_1': r.ventes_usd_annee_1,
+                'prix_vente_mru_annee_1': r.prix_vente_mru_annee_1,
+
+                'annee_2': r.annee_2,
+                'volume_annee_2': r.volume_annee_2,
+                'ventes_usd_annee_2': r.ventes_usd_annee_2,
+                'prix_vente_mru_annee_2': r.prix_vente_mru_annee_2,
+
+                'annee_3': r.annee_3,
+                'volume_annee_3': r.volume_annee_3,
+                'ventes_usd_annee_3': r.ventes_usd_annee_3,
+                'prix_vente_mru_annee_3': r.prix_vente_mru_annee_3,
+            }
+            for r in sous_projet.realisations.all()
+        ]
+
+        emprunts_initial = [
+            {
+                'annee': e.annee,
+                'institution_financiere': e.institution_financiere,
+                'montant_emprunte': e.montant_emprunte,
+                'montant_rembourse': e.montant_rembourse,
+            }
+            for e in sous_projet.emprunts.all()
+        ]
+
+        realisation_formset = RealisationFormSet(
+            prefix='real',
+            initial=realisations_initial
+        )
+        emprunt_formset = EmpruntFormSet(
+            prefix='emprunt',
+            initial=emprunts_initial
+        )
 
     return render(request, 'formulaire/realisation_passif.html', {
+        'promoteur_form': promoteur_form,
         'realisation_formset': realisation_formset,
         'emprunt_formset': emprunt_formset,
         'sous_projet': sous_projet,
@@ -656,6 +847,7 @@ def detail_sous_projet(request, pk):
     }
 
     return render(request, 'formulaire/detail_sous_projet.html', context)
+
 
 @login_required
 def supprimer_sous_projet(request, pk):
@@ -748,6 +940,7 @@ def get_villages(request):
             return JsonResponse([], safe=False)
 
     return JsonResponse([], safe=False)
+
 
 def evaluer_preselection(sp):
     """

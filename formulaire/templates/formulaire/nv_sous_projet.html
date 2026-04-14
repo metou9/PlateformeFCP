@@ -688,44 +688,6 @@
                 </div>
             </div>
 
-            <div class="section-title">7. Renseignement sur le promoteur</div>
-            <div class="card mb-4">
-                <div class="card-body">
-                    <div class="row">
-                        <div class="col-md-4">
-                            <div class="form-group">
-                                <label class="form-label">Année début activités</label>
-                                {{ form.annee_debut_activites }}
-                                {% if form.annee_debut_activites.errors %}
-                                    <div class="field-error">{{ form.annee_debut_activites.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-
-                        <div class="col-md-8">
-                            <div class="form-group">
-                                <label class="form-label">Historique</label>
-                                {{ form.historique_promoteur }}
-                                {% if form.historique_promoteur.errors %}
-                                    <div class="field-error">{{ form.historique_promoteur.errors }}</div>
-                                {% endif %}
-                            </div>
-                        </div>
-                    </div>
-                </div>
-            </div>
-            <div class="section-title">8. Ressources du promoteur</div>
-<div class="card mb-4">
-    <div class="card-body">
-        <div class="form-group mb-3">
-            <label class="form-label">Ressources du promoteur (inclure la source d’eau disponible)</label>
-            {{ form.ressources_promoteur }}
-            {% if form.ressources_promoteur.errors %}
-                <div class="field-error">{{ form.ressources_promoteur.errors }}</div>
-            {% endif %}
-        </div>
-    </div>
-</div>
 
             <div class="d-flex justify-content-end mt-4">
                 <button type="submit" class="btn-next">Suivant : Infrastructures →</button>

@@ -263,7 +263,6 @@ class Infrastructure(models.Model):
     montant_total = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        editable=False,
         blank=True,
         null=True
     )
@@ -272,15 +271,17 @@ class Infrastructure(models.Model):
     autre_financement = models.DecimalField(default=0, null=True, max_digits=15, decimal_places=2)
 
     def save(self, *args, **kwargs):
-        quantite = self.quantite or 0
-        prix_unit = self.prix_unit or Decimal('0')
-        self.montant_total = quantite * prix_unit
+        if not self.quantite:
+            self.quantite = 1
+
+        if self.montant_total is not None and self.quantite:
+            self.prix_unit = Decimal(self.montant_total) / Decimal(self.quantite)
+
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Infra - {self.sous_projet.id} - {self.description[:30]}"
-
-
+    
 class Equipement(models.Model):
     sous_projet = models.ForeignKey(
         SousProjet,
@@ -293,7 +294,6 @@ class Equipement(models.Model):
     montant_total = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        editable=False,
         blank=True,
         null=True
     )
@@ -302,15 +302,17 @@ class Equipement(models.Model):
     autre_financement = models.DecimalField(default=0, null=True, max_digits=15, decimal_places=2)
 
     def save(self, *args, **kwargs):
-        quantite = self.quantite or 0
-        prix_unit = self.prix_unit or Decimal('0')
-        self.montant_total = quantite * prix_unit
+        if not self.quantite:
+            self.quantite = 1
+
+        if self.montant_total is not None and self.quantite:
+            self.prix_unit = Decimal(self.montant_total) / Decimal(self.quantite)
+
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Équip - {self.sous_projet.id} - {self.description[:30]}"
-
-
+    
 class Intrant(models.Model):
     sous_projet = models.ForeignKey(
         SousProjet,
@@ -323,7 +325,6 @@ class Intrant(models.Model):
     montant_total = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        editable=False,
         blank=True,
         null=True
     )
@@ -332,14 +333,16 @@ class Intrant(models.Model):
     autre_financement = models.DecimalField(default=0, null=True, max_digits=15, decimal_places=2)
 
     def save(self, *args, **kwargs):
-        quantite = self.quantite or 0
-        prix_unit = self.prix_unit or Decimal('0')
-        self.montant_total = quantite * prix_unit
+        if not self.quantite:
+            self.quantite = 1
+
+        if self.montant_total is not None and self.quantite:
+            self.prix_unit = Decimal(self.montant_total) / Decimal(self.quantite)
+
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Intrant - {self.sous_projet.id} - {self.description[:30]}"
-
 
 class Fonctionnement(models.Model):
     sous_projet = models.ForeignKey(
@@ -353,7 +356,6 @@ class Fonctionnement(models.Model):
     montant_total = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        editable=False,
         blank=True,
         null=True
     )
@@ -361,14 +363,16 @@ class Fonctionnement(models.Model):
     autre_financement = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True, default=0)
 
     def save(self, *args, **kwargs):
-        quantite = self.quantite or 0
-        prix_unit = self.prix_unit or Decimal('0')
-        self.montant_total = quantite * prix_unit
+        if not self.quantite:
+            self.quantite = 1
+
+        if self.montant_total is not None and self.quantite:
+            self.prix_unit = Decimal(self.montant_total) / Decimal(self.quantite)
+
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Fonct - {self.sous_projet.id} - {self.description[:30]}"
-
 
 class Service(models.Model):
     sous_projet = models.ForeignKey(
@@ -382,7 +386,6 @@ class Service(models.Model):
     montant_total = models.DecimalField(
         max_digits=15,
         decimal_places=2,
-        editable=False,
         blank=True,
         null=True
     )
@@ -391,14 +394,16 @@ class Service(models.Model):
     autre_financement = models.DecimalField(max_digits=15, decimal_places=2, blank=True, null=True)
 
     def save(self, *args, **kwargs):
-        quantite = self.quantite or 0
-        prix_unit = self.prix_unit or Decimal('0')
-        self.montant_total = quantite * prix_unit
+        if not self.quantite:
+            self.quantite = 1
+
+        if self.montant_total is not None and self.quantite:
+            self.prix_unit = Decimal(self.montant_total) / Decimal(self.quantite)
+
         super().save(*args, **kwargs)
 
     def __str__(self):
         return f"Service - {self.sous_projet.id} - {self.description[:30]}"
-
 
 # ============================================
 # 4. ACTIVITÉS ET RÉALISATIONS PASSÉES
