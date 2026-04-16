@@ -201,7 +201,6 @@ class SousProjet(models.Model):
     )
     numero_reception_formulaire = models.CharField(
         max_length=100,
-        unique=True,
         blank=True,
         null=True,
         verbose_name="Numéro réception formulaire"
@@ -281,6 +280,12 @@ class SousProjet(models.Model):
     class Meta:
         verbose_name = "Sous-projet"
         verbose_name_plural = "Sous-projets"
+        constraints = [
+            models.UniqueConstraint(
+                fields=['wilaya', 'numero_reception_formulaire'],
+                 name='unique_numero_reception_par_wilaya'
+        )
+    ]
 
     def __str__(self):
         return f"{self.intitule_sous_projet} - {self.date_formulaire}"

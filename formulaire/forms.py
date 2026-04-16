@@ -219,9 +219,20 @@ class SousProjetForm(forms.ModelForm):
 
     class Meta:
         model = SousProjet
-        exclude = ['date_saisie', 'date_creation', 'date_modification']
+        exclude = [
+            'date_saisie',
+            'date_creation',
+            'date_modification',
+            'status',
+            'decision_comite',
+            'motif_comite',
+            'score_comite',
+            'date_evaluation_comite',
+            'evaluation_comite_terminee',
+            'createur_username',
+        ]
         widgets = {
-            'objectif_sous_projet': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
+             'objectif_sous_projet': forms.Textarea(attrs={'class': 'form-control', 'rows': 4}),
         }
 
     def __init__(self, *args, **kwargs):
@@ -345,19 +356,31 @@ class SousProjetForm(forms.ModelForm):
         numero = self.cleaned_data.get('numero_reception_formulaire')
 
         if not numero:
+            return numero
+
+    # On récupère la wilaya selon le rôle / contexte
+        wilaya = self.cleaned_data.get('wilaya')
+
+        if self.user and getattr(self.user, 'role', None) == 'agent' and getattr(self.user, 'wilaya', None):
+            wilaya = self.user.wilaya
+
+        if not wilaya:
            return numero
 
-        queryset = SousProjet.objects.filter(numero_reception_formulaire=numero)
+        queryset = SousProjet.objects.filter(
+            numero_reception_formulaire=numero,
+            wilaya=wilaya
+    )
 
         if self.instance and self.instance.pk:
             queryset = queryset.exclude(pk=self.instance.pk)
 
         if queryset.exists():
-           raise forms.ValidationError(
-            "Ce numéro de réception existe déjà. Veuillez saisir un numéro unique."
+            raise forms.ValidationError(
+            "Ce numéro de réception existe déjà pour cette wilaya. Veuillez saisir un numéro unique dans la wilaya."
         )
 
-        return numero
+        return numero   
 # ============================================
 # FORMULAIRE DES ACTIVITÉS
 # ============================================
