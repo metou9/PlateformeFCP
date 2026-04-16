@@ -58,4 +58,7 @@ urlpatterns = [
     path('api/get-paysages/', views.get_paysages, name='get_paysages'),
     path('api/get-villages/', views.get_villages, name='get_villages'),
     path('preselection-automatique/', views.preselection_automatique, name='preselection_automatique'),
+    path('preselection/<int:pk>/', views.preselection_detail, name='preselection_detail'),
+    path('preselection-comite/', views.preselection_comite_liste, name='preselection_comite_liste'),
+    path('preselection-comite/<int:pk>/', views.preselection_comite_detail, name='preselection_comite_detail'),
 ]

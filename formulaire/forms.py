@@ -5,11 +5,14 @@ from django.core.validators import RegexValidator
 from django.forms import inlineformset_factory, formset_factory, BaseFormSet
 from django.forms import BaseInlineFormSet
 from django.utils import timezone
+from django.forms import modelformset_factory
+
 
 from .models import (
     SousProjet, Infrastructure, Equipement, Intrant,
     Fonctionnement, Service, Activite,
     RealisationPassee, PassifEmprunt,
+    ResultatPreselection,
     Wilaya, Moughataa, Commune, Paysage
 )
 
@@ -338,23 +341,23 @@ class SousProjetForm(forms.ModelForm):
             raise forms.ValidationError('Le fax doit contenir exactement 4 chiffres.')
         return fax
 
-def clean_numero_reception_formulaire(self):
-    numero = self.cleaned_data.get('numero_reception_formulaire')
+    def clean_numero_reception_formulaire(self):
+        numero = self.cleaned_data.get('numero_reception_formulaire')
 
-    if not numero:
-        return numero
+        if not numero:
+           return numero
 
-    queryset = SousProjet.objects.filter(numero_reception_formulaire=numero)
+        queryset = SousProjet.objects.filter(numero_reception_formulaire=numero)
 
-    if self.instance and self.instance.pk:
-        queryset = queryset.exclude(pk=self.instance.pk)
+        if self.instance and self.instance.pk:
+            queryset = queryset.exclude(pk=self.instance.pk)
 
-    if queryset.exists():
-        raise forms.ValidationError(
+        if queryset.exists():
+           raise forms.ValidationError(
             "Ce numéro de réception existe déjà. Veuillez saisir un numéro unique."
         )
 
-    return numero
+        return numero
 # ============================================
 # FORMULAIRE DES ACTIVITÉS
 # ============================================
@@ -438,6 +441,8 @@ class BaseFinancementForm(forms.ModelForm):
     - l'utilisateur saisit quantite + montant_total
     - si la ligne est partiellement remplie et quantite est vide, on prend 1
     - prix_unit est calculé automatiquement
+    - si les sources sont toutes vides, on les met à 0 et on laisse passer
+    - si au moins une source est saisie, leur somme doit être égale au montant total
     """
     source_fields = ()
 
@@ -458,9 +463,6 @@ class BaseFinancementForm(forms.ModelForm):
         if 'DELETE' in self.fields:
             self.fields['DELETE'].required = False
 
-    def _is_zero_like(self, value):
-        return value in (None, '', 0, 0.0, Decimal('0'), Decimal('0.0'), Decimal('0.00'))
-
     def _has_any_value(self, cleaned_data):
         description = cleaned_data.get('description')
         quantite = cleaned_data.get('quantite')
@@ -480,102 +482,102 @@ class BaseFinancementForm(forms.ModelForm):
 
         return False
 
-def clean(self):
-    cleaned_data = super().clean()
+    def clean(self):
+        cleaned_data = super().clean()
 
-    if cleaned_data.get('DELETE'):
-        return cleaned_data
+        if cleaned_data.get('DELETE'):
+            return cleaned_data
 
-    description = cleaned_data.get('description')
-    quantite = cleaned_data.get('quantite')
-    montant_total = cleaned_data.get('montant_total')
+        description = cleaned_data.get('description')
+        quantite = cleaned_data.get('quantite')
+        montant_total = cleaned_data.get('montant_total')
 
-    # Ligne totalement vide : on l'ignore
-    if not self._has_any_value(cleaned_data):
-        cleaned_data['description'] = None
-        cleaned_data['quantite'] = None
-        cleaned_data['montant_total'] = None
-        cleaned_data['prix_unit'] = None
+        # Ligne totalement vide : on l'ignore
+        if not self._has_any_value(cleaned_data):
+            cleaned_data['description'] = None
+            cleaned_data['quantite'] = None
+            cleaned_data['montant_total'] = None
+            cleaned_data['prix_unit'] = None
+            for field in self.source_fields:
+                cleaned_data[field] = None
+            return cleaned_data
+
+        # Description obligatoire
+        if not description:
+            self.add_error('description', "La description est obligatoire si une ligne de financement est renseignée.")
+
+        # Quantité par défaut à 1
+        if quantite in (None, ''):
+            quantite = 1
+            cleaned_data['quantite'] = quantite
+
+        # Montant total obligatoire
+        if montant_total in (None, ''):
+            self.add_error('montant_total', "Le montant total est obligatoire si une ligne de financement est renseignée.")
+
+        if self.errors:
+            return cleaned_data
+
+        try:
+            quantite_decimal = Decimal(str(cleaned_data.get('quantite')))
+            montant_total_decimal = Decimal(str(montant_total))
+        except (InvalidOperation, ValueError, TypeError):
+            self.add_error(None, "Quantité ou montant total invalide.")
+            return cleaned_data
+
+        if quantite_decimal <= 0:
+            self.add_error('quantite', "La quantité doit être supérieure à zéro.")
+            return cleaned_data
+
+        if montant_total_decimal < 0:
+            self.add_error('montant_total', "Le montant total doit être supérieur ou égal à zéro.")
+            return cleaned_data
+
+        # Calcul du prix unitaire
+        cleaned_data['montant_total'] = montant_total_decimal
+        cleaned_data['prix_unit'] = montant_total_decimal / quantite_decimal
+
+        # Détection de saisie des sources via le POST brut
+        source_fields_touched = False
+        total_sources = Decimal('0')
+
         for field in self.source_fields:
-            cleaned_data[field] = None
-        return cleaned_data
+            raw_post_value = self.data.get(self.add_prefix(field))
 
-    # Description obligatoire
-    if not description:
-        self.add_error('description', "La description est obligatoire si une ligne de financement est renseignée.")
+            if raw_post_value not in (None, ''):
+                source_fields_touched = True
 
-    # Quantité par défaut à 1
-    if quantite in (None, ''):
-        quantite = 1
-        cleaned_data['quantite'] = quantite
+            value = cleaned_data.get(field)
 
-    # Montant total obligatoire
-    if montant_total in (None, ''):
-        self.add_error('montant_total', "Le montant total est obligatoire si une ligne de financement est renseignée.")
+            if value in (None, ''):
+                value_decimal = Decimal('0')
+            else:
+                try:
+                    value_decimal = Decimal(str(value))
+                except (InvalidOperation, ValueError, TypeError):
+                    self.add_error(field, "Montant invalide.")
+                    continue
 
-    if self.errors:
-        return cleaned_data
-
-    try:
-        quantite_decimal = Decimal(str(cleaned_data.get('quantite')))
-        montant_total_decimal = Decimal(str(montant_total))
-    except (InvalidOperation, ValueError, TypeError):
-        self.add_error(None, "Quantité ou montant total invalide.")
-        return cleaned_data
-
-    if quantite_decimal <= 0:
-        self.add_error('quantite', "La quantité doit être supérieure à zéro.")
-        return cleaned_data
-
-    if montant_total_decimal < 0:
-        self.add_error('montant_total', "Le montant total doit être supérieur ou égal à zéro.")
-        return cleaned_data
-
-    # Calcul du prix unitaire
-    cleaned_data['montant_total'] = montant_total_decimal
-    cleaned_data['prix_unit'] = montant_total_decimal / quantite_decimal
-
-    # ----- Gestion stricte des sources -----
-    source_fields_touched = False
-    total_sources = Decimal('0')
-
-    for field in self.source_fields:
-        raw_value = cleaned_data.get(field)
-
-        # Au moins une source a été saisie
-        if raw_value not in (None, ''):
-            source_fields_touched = True
-
-        # Si vide -> 0
-        if raw_value in (None, ''):
-            value_decimal = Decimal('0')
-        else:
-            try:
-                value_decimal = Decimal(str(raw_value))
-            except (InvalidOperation, ValueError, TypeError):
-                self.add_error(field, "Montant invalide.")
+            if value_decimal < 0:
+                self.add_error(field, "Le montant doit être supérieur ou égal à zéro.")
                 continue
 
-        if value_decimal < 0:
-            self.add_error(field, "Le montant doit être supérieur ou égal à zéro.")
-            continue
+            cleaned_data[field] = value_decimal
+            total_sources += value_decimal
 
-        cleaned_data[field] = value_decimal
-        total_sources += value_decimal
+        if self.errors:
+            return cleaned_data
 
-    if self.errors:
+        # Si au moins une source est saisie, la somme doit être égale au montant total
+        if source_fields_touched and total_sources != montant_total_decimal:
+            self.add_error(
+                'montant_total',
+                f"La somme des sources de financement ({total_sources}) doit être égale au montant total ({montant_total_decimal})."
+            )
+
         return cleaned_data
 
-    # Si au moins une source est saisie, la somme doit être égale au montant total
-    if source_fields_touched and total_sources != montant_total_decimal:
-        self.add_error(
-            'montant_total',
-            f"La somme des sources de financement ({total_sources}) doit être égale au montant total ({montant_total_decimal})."
-        )
-
-    return cleaned_data
-
-def save(self, commit=True):
+    def save(self, commit=True):
         instance = super().save(commit=False)
 
         quantite = self.cleaned_data.get('quantite')
@@ -590,8 +592,6 @@ def save(self, commit=True):
             instance.save()
 
         return instance
-
-
 class InfrastructureForm(BaseFinancementForm):
     source_fields = ('subvention_padisam', 'contribution_promoteur', 'autre_financement')
 
@@ -920,4 +920,29 @@ EmpruntFormSet = formset_factory(
     validate_max=False,
     can_delete=False,
     can_order=False
+)
+
+class ResultatPreselectionForm(forms.ModelForm):
+    class Meta:
+        model = ResultatPreselection
+        fields = ['decision_comite', 'motif_comite']
+        widgets = {
+            'decision_comite': forms.Select(attrs={'class': 'form-control'}),
+            'motif_comite': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+
+
+
+class DecisionComiteSousProjetForm(forms.ModelForm):
+    class Meta:
+        model = SousProjet
+        fields = ['decision_comite', 'motif_comite']
+        widgets = {
+            'decision_comite': forms.Select(attrs={'class': 'form-control'}),
+            'motif_comite': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+        }
+ResultatPreselectionFormSet = modelformset_factory(
+    ResultatPreselection,
+    form=ResultatPreselectionForm,
+    extra=0
 )

@@ -124,6 +124,17 @@ class SousProjet(models.Model):
         ('non', 'Non'),
     ]
 
+    STATUS_CHOICES = [
+    ('etude', 'En étude'),
+    ('preselectionne', 'Présélectionné'),
+    ('rejete', 'Rejeté'),
+]
+
+    DECISION_COMITE_CHOICES = [
+    ('preselectionne', 'Présélectionné'),
+    ('rejete', 'Rejeté'),
+]
+
     # 1. Informations générales
     date_saisie = models.DateTimeField(auto_now_add=True, verbose_name="Date de saisie")
     date_formulaire = models.DateField(verbose_name="Date du formulaire")
@@ -241,7 +252,28 @@ class SousProjet(models.Model):
     blank=True,
     null=True,
     verbose_name="Nom d'utilisateur du créateur"
-)
+    )
+
+    status = models.CharField(
+    max_length=30,
+    choices=STATUS_CHOICES,
+    default='etude',
+    verbose_name="Statut du dossier"
+    )
+
+    decision_comite = models.CharField(
+    max_length=30,
+    choices=DECISION_COMITE_CHOICES,
+    blank=True,
+    null=True,
+    verbose_name="Décision du comité"
+    )
+
+    motif_comite = models.TextField(
+    blank=True,
+    null=True,
+    verbose_name="Motif global du comité"
+    )
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
     date_modification = models.DateTimeField(auto_now=True, verbose_name="Date de modification")
@@ -509,8 +541,8 @@ class Utilisateur(models.Model):
     ROLE_CHOICES = [
         ('admin', 'Administrateur'),
         ('agent', 'Agent de saisie'),
-        ('superviseur', 'Superviseur'),
-        ('consultant', 'Consultant'),
+        ('superadmin', 'Super Admin'),
+        ('prescomite', 'Président du comité de présélection'),
     ]
 
     nom = models.CharField(max_length=100, verbose_name="Nom")
@@ -547,3 +579,55 @@ class Utilisateur(models.Model):
 
     def __str__(self):
         return f"{self.prenom} {self.nom} ({self.username})"
+    
+class ResultatPreselection(models.Model):
+    DECISION_AUTO_CHOICES = [
+        ('eligible', 'Éligible'),
+        ('non_eligible', 'Non éligible'),
+        ('a_examiner', 'À examiner'),
+    ]
+
+    DECISION_COMITE_CHOICES = [
+        ('preselectionne', 'Présélectionné'),
+        ('rejete', 'Rejeté'),
+        ('a_examiner', 'À examiner'),
+    ]
+
+    sous_projet = models.ForeignKey(
+        SousProjet,
+        on_delete=models.CASCADE,
+        related_name='resultats_preselection'
+    )
+
+    numero_critere = models.IntegerField()
+    critere = models.CharField(max_length=255)
+    question = models.TextField(blank=True, null=True)
+
+    resultat_automatique = models.CharField(max_length=255, blank=True, null=True)
+    decision_automatique = models.CharField(
+        max_length=30,
+        choices=DECISION_AUTO_CHOICES,
+        blank=True,
+        null=True
+    )
+    motif_automatique = models.TextField(blank=True, null=True)
+
+    decision_comite = models.CharField(
+        max_length=30,
+        choices=DECISION_COMITE_CHOICES,
+        blank=True,
+        null=True
+    )
+    motif_comite = models.TextField(blank=True, null=True)
+
+    date_creation = models.DateTimeField(auto_now_add=True)
+    date_modification = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['numero_critere']
+        unique_together = ('sous_projet', 'numero_critere')
+        verbose_name = "Résultat de présélection"
+        verbose_name_plural = "Résultats de présélection"
+
+    def __str__(self):
+        return f"{self.sous_projet.numero_reception_formulaire} - Critère {self.numero_critere}" 

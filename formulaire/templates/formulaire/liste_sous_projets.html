@@ -28,7 +28,7 @@
                         <th>Demandeur</th>
                         <th>Localisation</th>
                         {% if is_admin %}
-    <th>Créé par</th>
+    <th>Saisi par</th>
 {% endif %}
                         <th>Actions</th>
                     </tr>
@@ -63,17 +63,22 @@
                                 -
                             {% endif %}
                         </td>
-                        {% if is_admin %}
+              {% if is_admin %}
 <td>
     {% if projet.createur_username %}
-        {{ projet.createur_username }}
+        <div><strong>{{ projet.createur_username }}</strong></div>
+        {% if projet.date_saisie %}
+            <small class="text-muted">
+                {{ projet.date_saisie|date:"d/m/Y H:i" }}
+            </small>
+        {% endif %}
     {% else %}
         -
     {% endif %}
 </td>
 {% endif %}
                         <td class="action-buttons">
-                            <a href="{% url 'formulaire:detail_sous_projet' projet.id %}" class="btn btn-sm btn-outline-primary">👁️ Voir</a>
+                            <a href="{% url 'formulaire:detail_sous_projet' projet.id %}" class="btn btn-sm btn-outline-primary">Détail</a>
                             {% if is_admin %}
                                 <button type="button" class="btn-delete btn-sm" onclick="confirmerSuppression({{ projet.id }}, '{{ projet.intitule_sous_projet|escapejs }}')">🗑️ Supprimer</button>
                             {% endif %}

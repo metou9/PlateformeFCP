@@ -1,6 +1,6 @@
 {% extends 'formulaire/base.html' %}
 
-{% block title %}Présélection automatique - PADISAM{% endblock %}
+{% block title %}Présélection Comité régional - PADISAM{% endblock %}
 {% block extra_css %}
 <link href="/static/formulaire/css/formulaire.css" rel="stylesheet">
 <style>
@@ -124,39 +124,40 @@
         line-height: 1.5;
     }
 
+    .detail-btn {
+        display: inline-block;
+        padding: 8px 14px;
+        border-radius: 10px;
+        background: #ecfdf3;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .detail-btn:hover {
+        background: #d1fae5;
+        color: #14532d;
+        border-color: #86efac;
+        text-decoration: none;
+    }
+
     .empty-box {
         padding: 30px;
         text-align: center;
         color: #6b7280;
     }
-    .detail-btn {
-    display: inline-block;
-    padding: 8px 14px;
-    border-radius: 10px;
-    background: #ecfdf3;
-    color: #166534;
-    border: 1px solid #bbf7d0;
-    font-size: 13px;
-    font-weight: 700;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
-
-.detail-btn:hover {
-    background: #d1fae5;
-    color: #14532d;
-    border-color: #86efac;
-    text-decoration: none;
-}
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container preselection-page">
     <div class="preselection-header">
-        <h1>Présélection automatique</h1>
-        <p>Analyse simplifiée des sous-projets déjà inscrits</p>
+        <h1>Présélection du comité régional</h1>
+        <p>Analyse des dossiers par le comité de présélection régional</p>
     </div>
 
     <div class="stats-card">
@@ -172,39 +173,72 @@
             <div class="table-responsive">
                 <table class="preselection-table">
                     <thead>
-                       <tr>
-    <th>N° réception</th>
-    <th>Intitulé du sous-projet</th>
-    <th>Critère</th>
-    <th>Décision</th>
-    <th>Motif</th>
-    {% if can_view_preselection_detail %}
+                        <tr>
+                            <th>N° réception</th>
+                            <th>Intitulé du sous-projet</th>
+                            <th>Décision automatique</th>
+                            <th>Motif automatique</th>
+                            <th>Décision comité</th>
+                            <th>Motif comité</th>
+                            {% if can_validate_comite %}
     <th>Détail</th>
 {% endif %}
-</tr>
+                        </tr>
                     </thead>
-                    <tbody>
-                        {% for ligne in lignes %}
-                        <tr>
-    <td>{{ ligne.numero_reception }}</td>
-    <td>{{ ligne.intitule }}</td>
-    <td>{{ ligne.critere }}</td>
-    <td>
-        <span class="decision-badge {{ ligne.badge_class }}">
-            {{ ligne.decision }}
-        </span>
-    </td>
-    <td class="motif-text">{{ ligne.motif }}</td>
-   {% if can_view_preselection_detail %}
+                   <tbody>
+    {% for ligne in lignes %}
+    <tr>
+        <td>{{ ligne.numero_reception|default:"Non renseigné" }}</td>
+        <td>{{ ligne.intitule|default:"Non renseigné" }}</td>
+
+        <td>
+            {% if ligne.decision_automatique == 'Préselectionné' or ligne.decision_automatique == 'Éligible' %}
+                <span class="decision-badge badge-ok">{{ ligne.decision_automatique }}</span>
+            {% elif ligne.decision_automatique == 'Rejeté' or ligne.decision_automatique == 'Non éligible' %}
+                <span class="decision-badge badge-no">{{ ligne.decision_automatique }}</span>
+            {% elif ligne.decision_automatique %}
+                <span class="decision-badge badge-review">{{ ligne.decision_automatique }}</span>
+            {% else %}
+                <span class="text-muted">Non renseigné</span>
+            {% endif %}
+        </td>
+
+        <td class="motif-text">
+            {% if ligne.motif_automatique %}
+                {{ ligne.motif_automatique }}
+            {% else %}
+                <span class="text-muted">Non renseigné</span>
+            {% endif %}
+        </td>
+
+        <td>
+            {% if ligne.decision_comite == 'preselectionne' %}
+                <span class="decision-badge badge-ok">Présélectionné</span>
+            {% elif ligne.decision_comite == 'rejete' %}
+                <span class="decision-badge badge-no">Rejeté</span>
+            {% else %}
+                <span class="decision-badge badge-review">En étude</span>
+            {% endif %}
+        </td>
+
+        <td class="motif-text">
+            {% if ligne.motif_comite %}
+                {{ ligne.motif_comite }}
+            {% else %}
+                <span class="text-muted">Non renseigné</span>
+            {% endif %}
+        </td>
+
+       {% if can_validate_comite %}
 <td>
-    <a href="{% url 'formulaire:preselection_detail' ligne.sous_projet.id %}" class="detail-btn">
+    <a href="{% url 'formulaire:preselection_comite_detail' ligne.sous_projet.id %}" class="detail-btn">
          Détail
     </a>
 </td>
 {% endif %}
-</tr>
-                        {% endfor %}
-                    </tbody>
+    </tr>
+    {% endfor %}
+</tbody>
                 </table>
             </div>
         {% else %}

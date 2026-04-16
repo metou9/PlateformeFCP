@@ -274,15 +274,17 @@
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle main-nav-link" href="#" id="dossiersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Gestion des demandes</a>
                     <ul class="dropdown-menu custom-dropdown" aria-labelledby="dossiersDropdown">
-                        <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">Dépôt de dossier</a></li>
-                        <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:liste_sous_projets' %}">Liste des dossiers</a></li>
+ {% if request.session.user_role != 'prescomite' %}
+            <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">Dépôt de dossier</a></li>
+        {% endif %}                        
+            <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:liste_sous_projets' %}">Liste des dossiers</a></li>
                     </ul>
                 </li>
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle main-nav-link" href="#" id="examenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Présélection</a>
                     <ul class="dropdown-menu custom-dropdown" aria-labelledby="examenDropdown">
                         <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:preselection_automatique' %}">Présélection Automatique</a></li>
-                        <li><span class="dropdown-item disabled-submenu">Présélection Comité de présélection régional</span></li>
+                        <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:preselection_comite_liste' %}">Présélection Comité de présélection régional</a></li>
                         
                     </ul>
                 </li>

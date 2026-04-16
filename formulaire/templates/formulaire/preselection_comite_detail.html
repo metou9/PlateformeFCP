@@ -1,0 +1,306 @@
+{% extends 'formulaire/base.html' %}
+
+{% block title %}Détail présélection comité - PADISAM{% endblock %}
+{% block extra_css %}
+<link href="/static/formulaire/css/formulaire.css" rel="stylesheet">
+<style>
+    .preselection-page {
+        padding-top: 10px;
+        padding-bottom: 30px;
+    }
+
+    .preselection-header {
+        background: linear-gradient(135deg, #5dbb63 0%, #3f9142 100%);
+        color: white;
+        padding: 24px 28px;
+        border-radius: 18px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
+    }
+
+    .preselection-header h1 {
+        margin: 0 0 8px 0;
+        font-size: 28px;
+        font-weight: 700;
+    }
+
+    .preselection-header p {
+        margin: 0;
+        font-size: 15px;
+        opacity: 0.95;
+    }
+
+    .summary-row {
+        display: grid;
+        grid-template-columns: repeat(4, 1fr);
+        gap: 16px;
+        margin-bottom: 24px;
+    }
+
+    .summary-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 18px 22px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    }
+
+    .summary-card strong {
+        color: #1d4f2a;
+    }
+
+    .preselection-table-card {
+        background: #fff;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+        margin-bottom: 24px;
+    }
+
+    .preselection-table-card .card-header-custom {
+        background: #f8fafc;
+        padding: 18px 22px;
+        border-bottom: 1px solid #e5e7eb;
+    }
+
+    .preselection-table-card .card-header-custom h5 {
+        margin: 0;
+        color: #1f2937;
+        font-weight: 700;
+    }
+
+    .table-responsive {
+        width: 100%;
+        overflow-x: auto;
+    }
+
+    .preselection-table {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .preselection-table thead {
+        background: #5dbb63;
+        color: white;
+    }
+
+    .preselection-table th,
+    .preselection-table td {
+        padding: 14px 16px;
+        text-align: left;
+        border-bottom: 1px solid #e5e7eb;
+        vertical-align: top;
+        font-size: 14px;
+    }
+
+    .preselection-table th {
+        white-space: nowrap;
+        font-weight: 700;
+    }
+
+    .decision-badge {
+        display: inline-block;
+        padding: 6px 12px;
+        border-radius: 999px;
+        font-size: 12px;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .badge-ok {
+        background: #dcfce7;
+        color: #166534;
+    }
+
+    .badge-review {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .badge-no {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .form-control,
+    .form-select {
+        border-radius: 10px;
+        border: 1px solid #d1d5db;
+        font-size: 14px;
+    }
+
+    .actions-box {
+        background: #fff;
+        border-radius: 18px;
+        padding: 22px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    }
+
+    .btn-save {
+        background: #5dbb63;
+        color: white;
+        border: none;
+        padding: 10px 18px;
+        border-radius: 10px;
+        font-weight: 700;
+    }
+
+    .btn-save:hover {
+        background: #3f9142;
+        color: white;
+    }
+
+    .btn-back {
+        display: inline-block;
+        padding: 10px 18px;
+        border-radius: 10px;
+        background: #f3f4f6;
+        color: #111827;
+        text-decoration: none;
+        font-weight: 700;
+        border: 1px solid #d1d5db;
+    }
+
+    .btn-back:hover {
+        background: #e5e7eb;
+        color: #111827;
+        text-decoration: none;
+    }
+
+    .field-error {
+        color: #b91c1c;
+        font-size: 12px;
+        margin-top: 6px;
+    }
+
+    @media (max-width: 992px) {
+        .summary-row {
+            grid-template-columns: 1fr 1fr;
+        }
+    }
+
+    @media (max-width: 576px) {
+        .summary-row {
+            grid-template-columns: 1fr;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container preselection-page">
+    <div class="preselection-header">
+        <h1>Détail de la présélection du comité</h1>
+        <p>
+            Dossier : <strong>{{ sous_projet.numero_reception_formulaire }}</strong>
+            — {{ sous_projet.intitule_sous_projet }}
+        </p>
+    </div>
+
+    <div class="summary-row">
+        <div class="summary-card">
+            <strong>Éligibles :</strong> {{ nb_eligibles }}
+        </div>
+        <div class="summary-card">
+            <strong>Non éligibles :</strong> {{ nb_non_eligibles }}
+        </div>
+        <div class="summary-card">
+            <strong>À examiner :</strong> {{ nb_a_examiner }}
+        </div>
+        <div class="summary-card">
+            <strong>Statut dossier :</strong>
+            {% if sous_projet.status == 'preselectionne' %}
+                Présélectionné
+            {% elif sous_projet.status == 'rejete' %}
+                Rejeté
+            {% else %}
+                En étude
+            {% endif %}
+        </div>
+    </div>
+
+    <form method="post">
+        {% csrf_token %}
+
+        <div class="preselection-table-card">
+            <div class="card-header-custom">
+                <h5>Grille détaillée d’évaluation du comité</h5>
+            </div>
+
+            <div class="table-responsive">
+                <table class="preselection-table">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Critère</th>
+                            <th>Question de contrôle</th>
+                            <th>Résultat auto</th>
+                            <th>Décision auto</th>
+                            <th>Motif auto</th>
+                            <th>Décision comité</th>
+                            <th>Motif comité</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {{ formset.management_form }}
+                        {% for form in formset %}
+                        <tr>
+                            <td>{{ form.instance.numero_critere }}</td>
+                            <td>{{ form.instance.critere }}</td>
+                            <td>{{ form.instance.question }}</td>
+                            <td>{{ form.instance.resultat_automatique|default:"-" }}</td>
+                            <td>
+                                {% if form.instance.decision_automatique == 'eligible' %}
+                                    <span class="decision-badge badge-ok">Éligible</span>
+                                {% elif form.instance.decision_automatique == 'non_eligible' %}
+                                    <span class="decision-badge badge-no">Non éligible</span>
+                                {% else %}
+                                    <span class="decision-badge badge-review">À examiner</span>
+                                {% endif %}
+                            </td>
+                            <td>{{ form.instance.motif_automatique|default:"-" }}</td>
+                            <td style="min-width: 180px;">
+                                {{ form.decision_comite }}
+                                {% if form.decision_comite.errors %}
+                                    <div class="field-error">{{ form.decision_comite.errors }}</div>
+                                {% endif %}
+                            </td>
+                            <td style="min-width: 220px;">
+                                {{ form.motif_comite }}
+                                {% if form.motif_comite.errors %}
+                                    <div class="field-error">{{ form.motif_comite.errors }}</div>
+                                {% endif %}
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+
+        <div class="actions-box">
+            <div class="row g-3">
+                <div class="col-md-6">
+                    <label class="form-label"><strong>Décision globale du comité</strong></label>
+                    {{ decision_form.decision_comite }}
+                    {% if decision_form.decision_comite.errors %}
+                        <div class="field-error">{{ decision_form.decision_comite.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="col-md-6">
+                    <label class="form-label"><strong>Motif global du comité</strong></label>
+                    {{ decision_form.motif_comite }}
+                    {% if decision_form.motif_comite.errors %}
+                        <div class="field-error">{{ decision_form.motif_comite.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="mt-4 d-flex gap-2">
+                <button type="submit" class="btn-save">Enregistrer la décision du comité</button>
+                <a href="{% url 'formulaire:preselection_comite_liste' %}" class="btn-back">Retour à la liste</a>
+            </div>
+        </div>
+    </form>
+</div>
+{% endblock %}

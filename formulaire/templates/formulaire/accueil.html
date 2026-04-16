@@ -6,10 +6,14 @@
 <div class="welcome-section">
     <div class="row align-items-center">
         <div class="col-md-8 text-center">
-            <h1 class="welcome-title">Bonjour, {{ user_name }} !</h1>
+            <h1 class="welcome-title">Bienvenue, {{ user_name }} </h1>
+    
         </div>
         <div class="col-md-2 text-center">
-            <span class="badge bg-light text-dark p-2">Rôle: {{ user_role }}</span>
+            <span class="badge bg-light text-dark p-2">Mode : {{ mode_label }}
+    {% if wilaya_label %}
+        | Wilaya : {{ wilaya_label }}
+    {% endif %}</span>
         </div>
     </div>
 </div>
@@ -59,7 +63,7 @@
                                 <span class="badge-aci">{{ projet.guichet }}</span>
                             {% endif %}
                         </td>
-                        <td><a href="{% url 'formulaire:detail_sous_projet' projet.id %}" class="btn btn-sm btn-outline-primary">Voir</a></td>
+                        <td><a href="{% url 'formulaire:detail_sous_projet' projet.id %}" class="btn btn-sm btn-outline-primary">Détail</a></td>
                     </tr>
                     {% empty %}
                     <tr><td colspan="5" class="text-center">Aucun sous-projet enregistré</td></tr>

@@ -24,9 +24,12 @@ from .forms import (
     ServiceFormSet,
     RealisationFormSet,
     EmpruntFormSet,
+    ResultatPreselectionFormSet, 
+    DecisionComiteSousProjetForm
 )
 from .models import (
     SousProjet,
+    ResultatPreselection,
     Wilaya,
     Moughataa,
     Commune,
@@ -63,24 +66,61 @@ def get_current_user(request):
 def is_agent_saisie(utilisateur):
     """Retourne True si l'utilisateur est un agent de saisie."""
     return bool(utilisateur and utilisateur.role == 'agent')
+def is_superadmin(utilisateur):
+    return bool(utilisateur and utilisateur.role == 'superadmin')
 
+
+def is_admin(utilisateur):
+    return bool(utilisateur and utilisateur.role == 'admin')
+
+
+def is_admin_like(utilisateur):
+    """
+    Admin-like = admin + superadmin
+    """
+    return bool(utilisateur and utilisateur.role in ['admin', 'superadmin'])
+
+
+def is_comite(utilisateur):
+    """
+    Accès comité = prescomite + superadmin
+    """
+    return bool(utilisateur and utilisateur.role in ['prescomite', 'superadmin'])
+
+
+def can_delete_projects(utilisateur):
+    return is_admin_like(utilisateur)
+
+
+def can_manage_all_projects(utilisateur):
+    return is_admin_like(utilisateur)
+
+
+def can_validate_comite(utilisateur):
+    return bool(utilisateur and utilisateur.role in ['prescomite', 'superadmin'])
+
+def can_view_comite_list(utilisateur):
+    return bool(utilisateur and utilisateur.role in [
+        'admin', 'agent', 'superviseur', 'superadmin', 'prescomite'
+    ])
 
 def get_accessible_sous_projets(utilisateur):
     """
     Sous-projets visibles selon le rôle.
-    - Agent : seulement sa wilaya
-    - Autres rôles : tous
+    - admin et superadmin : voient tous les sous-projets
+    - autres utilisateurs avec wilaya : voient seulement les sous-projets de leur wilaya
+    - utilisateur sans wilaya et non admin : ne voit rien
     """
-    queryset = SousProjet.objects.all()
+    if not utilisateur:
+        return SousProjet.objects.none()
 
-    if is_agent_saisie(utilisateur):
-        if utilisateur.wilaya_id:
-            queryset = queryset.filter(wilaya_id=utilisateur.wilaya_id)
-        else:
-            queryset = queryset.none()
+    if can_manage_all_projects(utilisateur):
+        return SousProjet.objects.all()
 
-    return queryset
+    if utilisateur.wilaya_id:
+        return SousProjet.objects.filter(wilaya_id=utilisateur.wilaya_id)
 
+    return SousProjet.objects.none()
 
 def get_current_sous_projet(request):
     """
@@ -241,17 +281,39 @@ def accueil(request):
     utilisateur = get_current_user(request)
     sous_projets = get_accessible_sous_projets(utilisateur)
 
+    mode_label = ""
+    wilaya_label = ""
+
+    if utilisateur:
+        if utilisateur.role == 'superadmin':
+            mode_label = "Super administrateur"
+        elif utilisateur.role == 'admin':
+            mode_label = "Administrateur"
+        elif utilisateur.role == 'agent':
+            mode_label = "Saisie"
+        elif utilisateur.role == 'prescomite':
+            mode_label = "Président du comité de présélection"
+        elif utilisateur.role == 'superviseur':
+            mode_label = "Superviseur"
+        elif utilisateur.role == 'consultant':
+            mode_label = "Consultant"
+        else:
+            mode_label = utilisateur.role
+
+        if utilisateur.role not in ['admin', 'superadmin'] and utilisateur.wilaya:
+            wilaya_label = utilisateur.wilaya.nom
+
     context = {
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
+        'mode_label': mode_label,
+        'wilaya_label': wilaya_label,
         'total_projets': sous_projets.count(),
         'derniers_projets': sous_projets.order_by('-date_creation')[:5],
         'now': timezone.now(),
     }
     return render(request, 'formulaire/accueil.html', context)
-
-
 # =========================================================
 # ÉTAPE 1 : INFORMATIONS GÉNÉRALES + ACTIVITÉS
 # =========================================================
@@ -270,6 +332,10 @@ def nouveau_sous_projet(request):
     """
     utilisateur = get_current_user(request)
     sous_projet = get_current_sous_projet(request)
+
+    if utilisateur and utilisateur.role == 'prescomite':
+        messages.error(request, "❌ Le président du comité de présélection n'est pas autorisé à créer un nouveau dossier.")
+        return redirect('formulaire:accueil')
 
     if is_agent_saisie(utilisateur) and not utilisateur.wilaya_id:
         messages.error(request, "Cet agent n'a pas de wilaya affectée. Impossible de créer un sous-projet.")
@@ -787,9 +853,9 @@ def liste_sous_projets(request):
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
-        'is_admin': bool(utilisateur and utilisateur.role == 'admin'),
+        'is_admin': is_admin_like(utilisateur),
+        'is_superadmin': is_superadmin(utilisateur),
     })
-
 
 @login_required
 def detail_sous_projet(request, pk):
@@ -895,8 +961,8 @@ def supprimer_sous_projet(request, pk):
     """Supprime un sous-projet accessible."""
     utilisateur = get_current_user(request)
 
-    if not utilisateur or utilisateur.role != 'admin':
-        messages.error(request, "❌ Seul l'administrateur peut supprimer un sous-projet.")
+    if not can_delete_projects(utilisateur):
+        messages.error(request, "❌ Seuls les administrateurs peuvent supprimer un sous-projet.")
         return redirect('formulaire:liste_sous_projets')
 
     sous_projet = get_object_or_404(get_accessible_sous_projets(utilisateur), pk=pk)
@@ -908,7 +974,6 @@ def supprimer_sous_projet(request, pk):
         return redirect('formulaire:liste_sous_projets')
 
     return redirect('formulaire:liste_sous_projets')
-
 # =========================================================
 # API AJAX
 # =========================================================
@@ -1057,16 +1122,635 @@ def evaluer_preselection(sp):
     }
 
 
+@login_required
 def preselection_automatique(request):
     """
     Page simple de démonstration de la présélection automatique.
     """
-    sous_projets = SousProjet.objects.all().order_by("-id")
+    utilisateur = get_current_user(request)
+    sous_projets = get_accessible_sous_projets(utilisateur).order_by("-id")
 
     lignes = [evaluer_preselection(sp) for sp in sous_projets]
+
+    can_view_preselection_detail = bool(
+        utilisateur and utilisateur.role in ['admin', 'superadmin', 'prescomite']
+    )
 
     context = {
         "lignes": lignes,
         "total_dossiers": sous_projets.count(),
+        "can_view_preselection_detail": can_view_preselection_detail,
     }
     return render(request, "formulaire/preselection_automatique.html", context)
+
+def evaluer_criteres_preselection(sp):
+    """
+    Évalue les critères de présélection un par un.
+    Si le critère n'est pas mesurable automatiquement avec les données disponibles,
+    on met 'À examiner'.
+    """
+    criteres = []
+
+    def badge_for(decision):
+        if decision == "Éligible":
+            return "badge-ok"
+        if decision == "Non éligible":
+            return "badge-no"
+        return "badge-review"
+
+    # 1. Zone d’intervention
+    if sp.wilaya and sp.commune and sp.paysage:
+        criteres.append({
+            "numero": 1,
+            "critere": "Zone d’intervention",
+            "question": "Le sous-projet est-il situé dans une zone couverte par le PADISAM/FCP ?",
+            "resultat": "Oui",
+            "decision": "Éligible",
+            "motif": "Le sous-projet est localisé dans une zone renseignée du projet.",
+            "badge_class": badge_for("Éligible"),
+        })
+    else:
+        criteres.append({
+            "numero": 1,
+            "critere": "Zone d’intervention",
+            "question": "Le sous-projet est-il situé dans une zone couverte par le PADISAM/FCP ?",
+            "resultat": "À examiner",
+            "decision": "À examiner",
+            "motif": "La localisation n’est pas suffisamment renseignée pour confirmer automatiquement la zone.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 2. Guichet concerné
+    if sp.guichet in ["AGR", "ACI"]:
+        criteres.append({
+            "numero": 2,
+            "critere": "Guichet concerné",
+            "question": "Le dossier relève-t-il du bon guichet : AGR ou ACI ?",
+            "resultat": sp.guichet,
+            "decision": "Éligible",
+            "motif": "Le guichet est renseigné dans le dossier.",
+            "badge_class": badge_for("Éligible"),
+        })
+    else:
+        criteres.append({
+            "numero": 2,
+            "critere": "Guichet concerné",
+            "question": "Le dossier relève-t-il du bon guichet : AGR ou ACI ?",
+            "resultat": "À examiner",
+            "decision": "À examiner",
+            "motif": "Le guichet n’est pas clairement exploitable automatiquement.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 3. Profil du promoteur
+    if sp.nom_statut_juridique:
+        criteres.append({
+            "numero": 3,
+            "critere": "Profil du promoteur",
+            "question": "Le demandeur fait-il partie des catégories admises ?",
+            "resultat": "À examiner",
+            "decision": "À examiner",
+            "motif": "Le profil exact du promoteur nécessite une lecture métier du statut juridique.",
+            "badge_class": badge_for("À examiner"),
+        })
+    else:
+        criteres.append({
+            "numero": 3,
+            "critere": "Profil du promoteur",
+            "question": "Le demandeur fait-il partie des catégories admises ?",
+            "resultat": "Non renseigné",
+            "decision": "À examiner",
+            "motif": "Le profil du promoteur n’est pas suffisamment renseigné.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 4. Statut du promoteur
+    if sp.nom_statut_juridique:
+        criteres.append({
+            "numero": 4,
+            "critere": "Statut du promoteur",
+            "question": "Le statut du promoteur est-il conforme aux critères d’éligibilité ?",
+            "resultat": "À examiner",
+            "decision": "À examiner",
+            "motif": "Le statut juridique est renseigné mais nécessite une validation métier.",
+            "badge_class": badge_for("À examiner"),
+        })
+    else:
+        criteres.append({
+            "numero": 4,
+            "critere": "Statut du promoteur",
+            "question": "Le statut du promoteur est-il conforme aux critères d’éligibilité ?",
+            "resultat": "Non renseigné",
+            "decision": "À examiner",
+            "motif": "Le statut du promoteur n’est pas renseigné.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 5. Origine du promoteur
+    criteres.append({
+        "numero": 5,
+        "critere": "Origine du promoteur",
+        "question": "Le promoteur est-il résident ou originaire de la zone concernée ?",
+        "resultat": "À examiner",
+        "decision": "À examiner",
+        "motif": "Cette information n’est pas disponible de manière fiable dans les champs actuels.",
+        "badge_class": badge_for("À examiner"),
+    })
+
+    # 6. Dossier complet
+    champs_min = [
+        sp.numero_reception_formulaire,
+        sp.intitule_sous_projet,
+        sp.guichet,
+        sp.type_projet,
+        sp.nom_statut_juridique,
+        sp.personne_contact_nom,
+        sp.telephone,
+        sp.wilaya,
+        sp.moughataa,
+        sp.commune,
+        sp.paysage,
+        sp.village,
+        sp.objectif_sous_projet,
+    ]
+    if all(champs_min):
+        criteres.append({
+            "numero": 6,
+            "critere": "Dossier complet",
+            "question": "Le formulaire F1 et les pièces exigées sont-ils présents ?",
+            "resultat": "Partiellement mesurable",
+            "decision": "Éligible",
+            "motif": "Les principaux champs du formulaire sont renseignés. Les pièces jointes restent à vérifier.",
+            "badge_class": badge_for("Éligible"),
+        })
+    else:
+        criteres.append({
+            "numero": 6,
+            "critere": "Dossier complet",
+            "question": "Le formulaire F1 et les pièces exigées sont-ils présents ?",
+            "resultat": "Incomplet",
+            "decision": "Non éligible",
+            "motif": "Le formulaire contient des informations essentielles manquantes.",
+            "badge_class": badge_for("Non éligible"),
+        })
+
+    # 7. Activité proposée
+    if sp.activites.exists():
+        criteres.append({
+            "numero": 7,
+            "critere": "Activité proposée",
+            "question": "L’activité figure-t-elle parmi les activités finançables du FCP ?",
+            "resultat": "À examiner",
+            "decision": "À examiner",
+            "motif": "Les activités sont renseignées mais leur admissibilité doit être vérifiée selon la grille métier.",
+            "badge_class": badge_for("À examiner"),
+        })
+    else:
+        criteres.append({
+            "numero": 7,
+            "critere": "Activité proposée",
+            "question": "L’activité figure-t-elle parmi les activités finançables du FCP ?",
+            "resultat": "Aucune activité",
+            "decision": "Non éligible",
+            "motif": "Aucune activité n’est renseignée dans le dossier.",
+            "badge_class": badge_for("Non éligible"),
+        })
+
+    # 8. Filière / chaîne de valeur
+    if sp.chaine_approvisionnement:
+        criteres.append({
+            "numero": 8,
+            "critere": "Filière / chaîne de valeur",
+            "question": "Le sous-projet s’inscrit-il dans une filière admissible et prioritaire ?",
+            "resultat": "À examiner",
+            "decision": "À examiner",
+            "motif": "La chaîne de valeur est renseignée mais doit être confrontée aux priorités de zone.",
+            "badge_class": badge_for("À examiner"),
+        })
+    else:
+        criteres.append({
+            "numero": 8,
+            "critere": "Filière / chaîne de valeur",
+            "question": "Le sous-projet s’inscrit-il dans une filière admissible et prioritaire ?",
+            "resultat": "Non renseigné",
+            "decision": "À examiner",
+            "motif": "La chaîne de valeur n’est pas renseignée.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 9. Marché potentiel
+    if sp.marches_vises:
+        criteres.append({
+            "numero": 9,
+            "critere": "Marché potentiel",
+            "question": "Le marché potentiel est-il identifié et accessible ?",
+            "resultat": "Oui, déclaré",
+            "decision": "Éligible",
+            "motif": "Le dossier identifie un marché ou des débouchés visés.",
+            "badge_class": badge_for("Éligible"),
+        })
+    else:
+        criteres.append({
+            "numero": 9,
+            "critere": "Marché potentiel",
+            "question": "Le marché potentiel est-il identifié et accessible ?",
+            "resultat": "Non",
+            "decision": "À examiner",
+            "motif": "Aucun marché visé n’est renseigné.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 10. Cohérence du sous-projet
+    if sp.segment_ca and sp.activites.exists():
+        criteres.append({
+            "numero": 10,
+            "critere": "Cohérence du sous-projet",
+            "question": "Le segment de la chaîne de valeur correspond-il au type de sous-projet demandé ?",
+            "resultat": "À examiner",
+            "decision": "À examiner",
+            "motif": "Des données existent mais la cohérence nécessite une lecture métier.",
+            "badge_class": badge_for("À examiner"),
+        })
+    else:
+        criteres.append({
+            "numero": 10,
+            "critere": "Cohérence du sous-projet",
+            "question": "Le segment de la chaîne de valeur correspond-il au type de sous-projet demandé ?",
+            "resultat": "Insuffisant",
+            "decision": "À examiner",
+            "motif": "Le segment ou les activités ne permettent pas une validation automatique.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 11. Coûts réalistes
+    grand_total = (
+        (sp.infrastructures.aggregate(total=Sum('montant_total'))['total'] or 0) +
+        (sp.equipements.aggregate(total=Sum('montant_total'))['total'] or 0) +
+        (sp.intrants.aggregate(total=Sum('montant_total'))['total'] or 0) +
+        (sp.fonctionnements.aggregate(total=Sum('montant_total'))['total'] or 0) +
+        (sp.services.aggregate(total=Sum('montant_total'))['total'] or 0)
+    )
+
+    if grand_total > 0:
+        criteres.append({
+            "numero": 11,
+            "critere": "Coûts réalistes",
+            "question": "Les coûts annoncés sont-ils cohérents avec les barèmes du FCP ?",
+            "resultat": f"Total déclaré : {grand_total}",
+            "decision": "À examiner",
+            "motif": "Les montants existent mais leur conformité aux barèmes doit être vérifiée.",
+            "badge_class": badge_for("À examiner"),
+        })
+    else:
+        criteres.append({
+            "numero": 11,
+            "critere": "Coûts réalistes",
+            "question": "Les coûts annoncés sont-ils cohérents avec les barèmes du FCP ?",
+            "resultat": "Aucun coût exploitable",
+            "decision": "À examiner",
+            "motif": "Aucun coût consolidé n’est disponible pour une évaluation automatique.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 12. Plafond de subvention
+    total_subvention = (
+        (sp.infrastructures.aggregate(total=Sum('subvention_padisam'))['total'] or 0) +
+        (sp.equipements.aggregate(total=Sum('subvention_padisam'))['total'] or 0) +
+        (sp.intrants.aggregate(total=Sum('subvention_padisam'))['total'] or 0) +
+        (sp.services.aggregate(total=Sum('subvention_padisam'))['total'] or 0)
+    )
+
+    criteres.append({
+        "numero": 12,
+        "critere": "Plafond de subvention",
+        "question": "La subvention demandée respecte-t-elle le plafond prévu ?",
+        "resultat": f"Subvention déclarée : {total_subvention}",
+        "decision": "À examiner",
+        "motif": "Le montant de subvention doit être comparé aux plafonds par catégorie de promoteur.",
+        "badge_class": badge_for("À examiner"),
+    })
+
+    # 13. Expérience du promoteur
+    if sp.annee_debut_activites:
+        criteres.append({
+            "numero": 13,
+            "critere": "Expérience du promoteur",
+            "question": "Le promoteur a-t-il l’ancienneté ou l’expérience minimale requise ?",
+            "resultat": f"Début activité : {sp.annee_debut_activites}",
+            "decision": "Éligible",
+            "motif": "Une ancienneté est renseignée dans le dossier.",
+            "badge_class": badge_for("Éligible"),
+        })
+    else:
+        criteres.append({
+            "numero": 13,
+            "critere": "Expérience du promoteur",
+            "question": "Le promoteur a-t-il l’ancienneté ou l’expérience minimale requise ?",
+            "resultat": "Non renseigné",
+            "decision": "À examiner",
+            "motif": "L’ancienneté ou l’expérience n’est pas renseignée.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 14. Réalisme de l’extension
+    if sp.realisations.exists():
+        criteres.append({
+            "numero": 14,
+            "critere": "Réalisme de l’extension",
+            "question": "L’augmentation d’activité annoncée est-elle raisonnable ?",
+            "resultat": "Historique disponible",
+            "decision": "À examiner",
+            "motif": "Les réalisations passées existent mais le réalisme de l’extension doit être analysé.",
+            "badge_class": badge_for("À examiner"),
+        })
+    else:
+        criteres.append({
+            "numero": 14,
+            "critere": "Réalisme de l’extension",
+            "question": "L’augmentation d’activité annoncée est-elle raisonnable ?",
+            "resultat": "Pas d’historique",
+            "decision": "À examiner",
+            "motif": "Aucun historique suffisant pour juger automatiquement l’extension.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 15. Moyens minimums disponibles
+    if sp.ressources_promoteur:
+        criteres.append({
+            "numero": 15,
+            "critere": "Moyens minimums disponibles",
+            "question": "Le promoteur dispose-t-il du site, du minimum d’équipement et des ressources techniques de base ?",
+            "resultat": "Ressources déclarées",
+            "decision": "Éligible",
+            "motif": "Des ressources du promoteur sont renseignées dans le dossier.",
+            "badge_class": badge_for("Éligible"),
+        })
+    else:
+        criteres.append({
+            "numero": 15,
+            "critere": "Moyens minimums disponibles",
+            "question": "Le promoteur dispose-t-il du site, du minimum d’équipement et des ressources techniques de base ?",
+            "resultat": "Non renseigné",
+            "decision": "À examiner",
+            "motif": "Les moyens minimums ne sont pas décrits dans le dossier.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 16. Eau / faisabilité du site
+    if sp.type_projet == 'AG':
+        if sp.ressources_promoteur:
+            criteres.append({
+                "numero": 16,
+                "critere": "Eau / faisabilité du site",
+                "question": "Pour un sous-projet agricole, la source d’eau existe-t-elle ?",
+                "resultat": "À examiner",
+                "decision": "À examiner",
+                "motif": "Les ressources sont déclarées mais la disponibilité réelle de l’eau doit être confirmée.",
+                "badge_class": badge_for("À examiner"),
+            })
+        else:
+            criteres.append({
+                "numero": 16,
+                "critere": "Eau / faisabilité du site",
+                "question": "Pour un sous-projet agricole, la source d’eau existe-t-elle ?",
+                "resultat": "Non renseigné",
+                "decision": "À examiner",
+                "motif": "Aucune information exploitable sur l’eau n’est disponible.",
+                "badge_class": badge_for("À examiner"),
+            })
+    else:
+        criteres.append({
+            "numero": 16,
+            "critere": "Eau / faisabilité du site",
+            "question": "Pour un sous-projet agricole, la source d’eau existe-t-elle ?",
+            "resultat": "Non applicable",
+            "decision": "Éligible",
+            "motif": "Ce critère ne s’applique pas directement à ce type de projet.",
+            "badge_class": badge_for("Éligible"),
+        })
+
+    # 17. Double financement / duplication
+    criteres.append({
+        "numero": 17,
+        "critere": "Double financement / duplication",
+        "question": "Le sous-projet finance-t-il les mêmes dépenses qu’un autre appui déjà obtenu ?",
+        "resultat": "À examiner",
+        "decision": "À examiner",
+        "motif": "Aucune information suffisante dans la base actuelle pour détecter automatiquement une duplication.",
+        "badge_class": badge_for("À examiner"),
+    })
+
+    # 18. Exigences environnementales et sociales
+    criteres.append({
+        "numero": 18,
+        "critere": "Exigences environnementales et sociales",
+        "question": "Le sous-projet respecte-t-il les exigences sociales et environnementales de base ?",
+        "resultat": "À examiner",
+        "decision": "À examiner",
+        "motif": "Le screening E&S n’est pas automatisable avec les champs actuels.",
+        "badge_class": badge_for("À examiner"),
+    })
+
+    # 19. Antécédents de crédit
+    total_rembourse = sum(emp.montant_rembourse or 0 for emp in sp.emprunts.all())
+    total_emprunte = sum(emp.montant_emprunte or 0 for emp in sp.emprunts.all())
+
+    if total_emprunte == 0:
+        criteres.append({
+            "numero": 19,
+            "critere": "Antécédents de crédit",
+            "question": "Le demandeur a-t-il des antécédents connus de non-remboursement ?",
+            "resultat": "Aucun emprunt déclaré",
+            "decision": "Éligible",
+            "motif": "Aucun antécédent d’emprunt bloquant n’est déclaré.",
+            "badge_class": badge_for("Éligible"),
+        })
+    elif total_rembourse <= total_emprunte:
+        criteres.append({
+            "numero": 19,
+            "critere": "Antécédents de crédit",
+            "question": "Le demandeur a-t-il des antécédents connus de non-remboursement ?",
+            "resultat": "Données de crédit disponibles",
+            "decision": "À examiner",
+            "motif": "Les emprunts existent mais l’historique réel de remboursement doit être vérifié qualitativement.",
+            "badge_class": badge_for("À examiner"),
+        })
+    else:
+        criteres.append({
+            "numero": 19,
+            "critere": "Antécédents de crédit",
+            "question": "Le demandeur a-t-il des antécédents connus de non-remboursement ?",
+            "resultat": "Incohérent",
+            "decision": "À examiner",
+            "motif": "Les montants d’emprunt et de remboursement sont incohérents et nécessitent vérification.",
+            "badge_class": badge_for("À examiner"),
+        })
+
+    # 20. Visite de terrain nécessaire
+    criteres.append({
+        "numero": 20,
+        "critere": "Visite de terrain nécessaire",
+        "question": "Les informations du dossier suffisent-elles ou une vérification sur site est-elle nécessaire ?",
+        "resultat": "Visite recommandée",
+        "decision": "À examiner",
+        "motif": "Plusieurs critères nécessitent une validation physique ou documentaire complémentaire.",
+        "badge_class": badge_for("À examiner"),
+    })
+
+    return criteres
+
+
+@login_required
+def preselection_detail(request, pk):
+    utilisateur = get_current_user(request)
+
+    if not utilisateur or utilisateur.role not in ['admin', 'superadmin', 'prescomite']:
+        messages.error(request, "❌ Vous n'êtes pas autorisé à consulter le détail de la présélection.")
+        return redirect('formulaire:preselection_automatique')
+
+    sous_projet = get_object_or_404(get_accessible_sous_projets(utilisateur), pk=pk)
+
+    criteres = evaluer_criteres_preselection(sous_projet)
+
+    nb_eligibles = sum(1 for c in criteres if c['decision'] == 'Éligible')
+    nb_non_eligibles = sum(1 for c in criteres if c['decision'] == 'Non éligible')
+    nb_a_examiner = sum(1 for c in criteres if c['decision'] == 'À examiner')
+
+    return render(request, 'formulaire/preselection_detail.html', {
+        'sous_projet': sous_projet,
+        'criteres': criteres,
+        'nb_eligibles': nb_eligibles,
+        'nb_non_eligibles': nb_non_eligibles,
+        'nb_a_examiner': nb_a_examiner,
+    })
+
+@login_required
+def preselection_comite_liste(request):
+    """
+    Liste des dossiers pour la présélection comité.
+    - admin, agent, superviseur, superadmin, prescomite : peuvent voir la liste
+    - seul superadmin et prescomite peuvent valider
+    """
+    utilisateur = get_current_user(request)
+
+    if not can_view_comite_list(utilisateur):
+        messages.error(request, "❌ Vous n'êtes pas autorisé à accéder à cette page.")
+        return redirect('formulaire:accueil')
+
+    sous_projets = get_accessible_sous_projets(utilisateur).order_by('-id')
+
+    lignes = []
+    for sp in sous_projets:
+        ligne = evaluer_preselection(sp)
+
+        lignes.append({
+            'sous_projet': sp,
+            'numero_reception': ligne.get('numero_reception') or "Non renseigné",
+            'intitule': ligne.get('intitule') or "Non renseigné",
+            'critere': ligne.get('critere'),
+            'decision_automatique': ligne.get('decision') or "Non renseigné",
+            'motif_automatique': ligne.get('motif') or "Non renseigné",
+            'badge_class': ligne.get('badge_class') or "badge-review",
+            'decision_comite': sp.decision_comite,
+            'motif_comite': sp.motif_comite,
+            'status': sp.status,
+        })
+
+    context = {
+        'lignes': lignes,
+        'total_dossiers': sous_projets.count(),
+        'can_validate_comite': can_validate_comite(utilisateur),
+        'can_view_comite_list': True,
+        'is_superadmin': is_superadmin(utilisateur),
+    }
+
+    return render(request, 'formulaire/preselection_comite_liste.html', context)
+
+@login_required
+def preselection_comite_detail(request, pk):
+    """
+    Détail des 20 critères pour un sous-projet.
+    Le comité voit les résultats automatiques et saisit :
+    - décision comité par critère
+    - motif comité par critère
+    - décision globale comité
+    - motif global comité
+    """
+    utilisateur = get_current_user(request)
+
+    if not can_validate_comite(utilisateur):
+        messages.error(request, "❌ Vous n'êtes pas autorisé à accéder au détail de la présélection comité.")
+        return redirect('formulaire:liste_sous_projets')
+
+    sous_projet = get_object_or_404(get_accessible_sous_projets(utilisateur), pk=pk)
+
+    # Créer automatiquement les 20 lignes si elles n'existent pas encore
+    if not sous_projet.resultats_preselection.exists():
+        criteres_auto = evaluer_criteres_preselection(sous_projet)
+
+        for item in criteres_auto:
+            decision_auto = item.get('decision', 'À examiner')
+
+            if decision_auto == 'Éligible':
+                decision_auto_db = 'eligible'
+            elif decision_auto == 'Non éligible':
+                decision_auto_db = 'non_eligible'
+            else:
+                decision_auto_db = 'a_examiner'
+
+            ResultatPreselection.objects.create(
+                sous_projet=sous_projet,
+                numero_critere=item.get('numero'),
+                critere=item.get('critere'),
+                question=item.get('question'),
+                resultat_automatique=item.get('resultat'),
+                decision_automatique=decision_auto_db,
+                motif_automatique=item.get('motif'),
+            )
+
+    queryset = sous_projet.resultats_preselection.all().order_by('numero_critere')
+
+    if request.method == 'POST':
+        formset = ResultatPreselectionFormSet(request.POST, queryset=queryset, prefix='critere')
+        decision_form = DecisionComiteSousProjetForm(request.POST, instance=sous_projet, prefix='global')
+
+        if formset.is_valid() and decision_form.is_valid():
+            formset.save()
+
+            sous_projet = decision_form.save(commit=False)
+
+            if sous_projet.decision_comite == 'preselectionne':
+                sous_projet.status = 'preselectionne'
+            elif sous_projet.decision_comite == 'rejete':
+                sous_projet.status = 'rejete'
+            else:
+                sous_projet.status = 'etude'
+
+            sous_projet.save()
+
+            messages.success(request, "✅ Décision du comité enregistrée avec succès.")
+            return redirect('formulaire:preselection_comite_liste')
+
+        messages.error(request, "❌ Veuillez corriger les erreurs du formulaire.")
+
+    else:
+        formset = ResultatPreselectionFormSet(queryset=queryset, prefix='critere')
+        decision_form = DecisionComiteSousProjetForm(instance=sous_projet, prefix='global')
+
+    criteres = list(queryset)
+
+    nb_eligibles = sum(1 for c in criteres if c.decision_automatique == 'eligible')
+    nb_non_eligibles = sum(1 for c in criteres if c.decision_automatique == 'non_eligible')
+    nb_a_examiner = sum(1 for c in criteres if c.decision_automatique == 'a_examiner')
+
+    context = {
+        'sous_projet': sous_projet,
+        'formset': formset,
+        'decision_form': decision_form,
+        'criteres': criteres,
+        'nb_eligibles': nb_eligibles,
+        'nb_non_eligibles': nb_non_eligibles,
+        'nb_a_examiner': nb_a_examiner,
+    }
+
+    return render(request, 'formulaire/preselection_comite_detail.html', context)

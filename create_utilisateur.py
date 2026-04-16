@@ -23,18 +23,28 @@ from formulaire.models import Utilisateur, Wilaya
 # - wilaya_code doit correspondre au champ Wilaya.code en base
 utilisateurs = [
     {
+        'nom': 'Biha',
+        'prenom': 'Aminetou',
+        'username': 'aminab',
+        'password': 'amina92',
+        'role': 'superadmin',
+        'email': 'aminab92@fcp.com',
+        'actif': True,
+        'wilaya_code': None
+    },
+    {
         'nom': 'Isselmou',
         'prenom': 'Iss',
         'username': 'admin1',
         'password': 'admin12',
         'role': 'admin',
-        'email': 'mamadou.diallo@fcp.com',
+        'email': 'admininit@fcp.com',
         'actif': True,
         'wilaya_code': None
     },
     {
-        'nom': 'Nemine',
-        'prenom': 'Ahmed Louli',
+        'nom': 'Ahmed Louli',
+        'prenom': 'Nemine',
         'username': 'nemine',
         'password': 'nemine1224',
         'role': 'agent',
@@ -43,8 +53,8 @@ utilisateurs = [
         'wilaya_code': 'Gorgol'
     },
     {
-        'nom': 'Cheikh',
-        'prenom': 'Maaloum',
+        'nom': 'Maaloum',
+        'prenom': 'Cheikh',
         'username': 'cheikhM',
         'password': 'cheikh5643',
         'role': 'agent',
@@ -53,8 +63,8 @@ utilisateurs = [
         'wilaya_code': 'Gorgol'
     },
     {
-        'nom': 'Cheikh',
-        'prenom': 'Sidi Mohamed',
+        'nom': 'Sidi Mohamed',
+        'prenom': 'Cheikh',
         'username': 'cheikhS',
         'password': 'cheikh7896',
         'role': 'agent',
@@ -63,35 +73,46 @@ utilisateurs = [
         'wilaya_code': 'Gorgol'
     },
     {
-        'nom': 'Comite',
-        'prenom': 'President',
-        'username': 'presidComt',
+        'nom': 'Comité',
+        'prenom': 'Président',
+        'username': 'presidGorgol',
         'password': 'Presid3456',
-        'role': 'consultant',
-        'email': 'presid@fcp.com',
+        'role': 'prescomite',
+        'email': 'presidGorgol@fcp.com',
         'actif': True,
-        'wilaya_code': None
+        'wilaya_code': 'Gorgol'
+    },
+     {
+        'nom': 'Comité',
+        'prenom': 'Président',
+        'username': 'presidBrakna',
+        'password': 'Presid7865',
+        'role': 'prescomite',
+        'email': 'presidBrakna@fcp.com',
+        'actif': True,
+        'wilaya_code': 'Brakna'
+    },
+      {
+        'nom': 'Comité',
+        'prenom': 'Président',
+        'username': 'presidTrarza',
+        'password': 'Presid0987',
+        'role': 'prescomite',
+        'email': 'presidTrarza@fcp.com',
+        'actif': True,
+        'wilaya_code': 'Trarza'
     },
     {
-        'nom': 'Sy',
-        'prenom': 'Aminata',
-        'username': 'asy',
-        'password': 'asy123',
-        'role': 'superviseur',
-        'email': 'aminata.sy@fcp.com',
+        'nom': 'Comité',
+        'prenom': 'Président',
+        'username': 'presidAssaba',
+        'password': 'Presid1489',
+        'role': 'prescomite',
+        'email': 'presidAssaba@fcp.com',
         'actif': True,
-        'wilaya_code': None
+        'wilaya_code': 'Assaba'
     },
-    {
-        'nom': 'Faye',
-        'prenom': 'Ibrahima',
-        'username': 'ifaye',
-        'password': 'ifaye123',
-        'role': 'consultant',
-        'email': 'ibrahima.faye@fcp.com',
-        'actif': True,
-        'wilaya_code': None
-    }
+    
 ]
 
 
