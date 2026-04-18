@@ -112,6 +112,26 @@ utilisateurs = [
         'actif': True,
         'wilaya_code': 'Assaba'
     },
+     {
+        'nom': 'Mouhamed',
+        'prenom': 'Aziz',
+        'username': 'azizM',
+        'password': 'aziz8866',
+        'role': 'agent',
+        'email': 'azizm@fcp.com',
+        'actif': True,
+        'wilaya_code': 'Assaba'
+    },
+    {
+        'nom': 'Wele',
+        'prenom': 'Mamadou',
+        'username': 'mamadouW',
+        'password': 'mamadou4452',
+        'role': 'agent',
+        'email': 'mamadouW@fcp.com',
+        'actif': True,
+        'wilaya_code': 'Assaba'
+    },
     
 ]
 
