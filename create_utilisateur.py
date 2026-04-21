@@ -132,7 +132,36 @@ utilisateurs = [
         'actif': True,
         'wilaya_code': 'Assaba'
     },
-    
+     {
+        'nom': 'Beddi',
+        'prenom': 'Babah',
+        'username': 'babah',
+        'password': 'babah1224',
+        'role': 'agent',
+        'email': 'ouldbedy@gmail.com',
+        'actif': True,
+        'wilaya_code': 'Brakna'
+    },
+      {
+        'nom': 'Ahmed Salem',
+        'prenom': 'El hacen',
+        'username': 'hacen',
+        'password': 'hacen3456',
+        'role': 'agent',
+        'email': 'elhassensalem@yahoo.fr',
+        'actif': True,
+        'wilaya_code': 'Brakna'
+    },
+    {
+        'nom': 'El Wely',
+        'prenom': 'El houssein',
+        'username': 'houssein',
+        'password': 'houssein4789',
+        'role': 'agent',
+        'email': 'elhassensalem@yahoo.fr',
+        'actif': True,
+        'wilaya_code': 'Brakna'
+    },
 ]
 
 
