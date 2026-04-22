@@ -162,6 +162,37 @@ utilisateurs = [
         'actif': True,
         'wilaya_code': 'Brakna'
     },
+
+    {
+        'nom': 'Ahmed Louli',
+        'prenom': 'Nemine',
+        'username': 'nemine2',
+        'password': 'nemine1224',
+        'role': 'agent',
+        'email': 'nemine@fcp.com',
+        'actif': True,
+        'wilaya_code': 'Brakna'
+    },
+    {
+        'nom': 'Maaloum',
+        'prenom': 'Cheikh',
+        'username': 'cheikhM2',
+        'password': 'cheikh5643',
+        'role': 'agent',
+        'email': 'cheikhm@fcp.com',
+        'actif': True,
+        'wilaya_code': 'Brakna'
+    },
+    {
+        'nom': 'Sidi Mohamed',
+        'prenom': 'Cheikh',
+        'username': 'cheikhS2',
+        'password': 'cheikh7896',
+        'role': 'agent',
+        'email': 'cheikhs@fcp.com',
+        'actif': True,
+        'wilaya_code': 'Brakna'
+    },
 ]
 
 
