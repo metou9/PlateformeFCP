@@ -12,6 +12,9 @@ from django.http import JsonResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
 from django.db.models import Sum
+from django.db.models import Count
+from django.contrib.auth.decorators import login_required
+
 
 from .auth_forms import LoginForm
 from .forms import (
@@ -403,6 +406,53 @@ def nouveau_sous_projet(request):
 def save_sous_projet(request):
     """Alias de sauvegarde étape 1."""
     return nouveau_sous_projet(request)
+
+
+@login_required
+def statistiques(request):
+    utilisateur = get_current_user(request)
+
+    sous_projets = get_accessible_sous_projets(utilisateur)
+
+    # Stats paysage
+    stats_paysages = (
+        sous_projets
+        .values('paysage__nom')
+        .annotate(total=Count('id'))
+        .order_by('paysage__nom')
+    )
+
+    # Stats type projet
+    stats_types = (
+        sous_projets
+        .values('type_projet')
+        .annotate(total=Count('id'))
+        .order_by('type_projet')
+    )
+
+    type_map = {
+        'AG': 'Agriculture',
+        'EL': 'Élevage',
+        'ENV': 'Environnement'
+    }
+
+    labels = []
+    data = []
+
+    for item in stats_types:
+        code = item['type_projet'] or 'NR'
+        labels.append(type_map.get(code, code))
+        data.append(item['total'])
+
+    context = {
+        'stats_paysages': stats_paysages,
+        'stats_types': stats_types,
+        'chart_labels': labels,
+        'chart_data': data,
+        'total_projets': sous_projets.count(),
+    }
+
+    return render(request, 'formulaire/statistiques.html', context)
 # =========================================================
 # ÉTAPE 2 : INFRASTRUCTURES
 # =========================================================

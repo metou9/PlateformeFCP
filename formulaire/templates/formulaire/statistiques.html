@@ -1,0 +1,117 @@
+{% extends 'formulaire/base.html' %}
+
+{% block title %}Statistiques{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+
+    <div class="card shadow-sm mb-4">
+        <div class="card-body">
+            <h2 class="mb-3">📊 Tableau de bord statistique</h2>
+            <h5>Total des projets : <strong>{{ total_projets }}</strong></h5>
+        </div>
+    </div>
+
+    <div class="row">
+
+        <!-- Paysages -->
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-success text-white">
+                    Nombre de projets par Paysage / ZOCA
+                </div>
+
+                <div class="card-body">
+                    <table class="table table-striped">
+                        <thead>
+                            <tr>
+                                <th>Paysage</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for item in stats_paysages %}
+                            <tr>
+                                <td>{{ item.paysage__nom|default:"Non renseigné" }}</td>
+                                <td><strong>{{ item.total }}</strong></td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="2">Aucune donnée</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- Types -->
+        <div class="col-md-6">
+            <div class="card shadow-sm mb-4">
+                <div class="card-header bg-primary text-white">
+                    Nombre de projets par type
+                </div>
+
+                <div class="card-body">
+                    <canvas id="chartType"></canvas>
+
+                    <table class="table table-striped mt-4">
+                        <thead>
+                            <tr>
+                                <th>Type</th>
+                                <th>Total</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                        {% for item in stats_types %}
+                            <tr>
+                                <td>{{ item.type_projet }}</td>
+                                <td><strong>{{ item.total }}</strong></td>
+                            </tr>
+                        {% empty %}
+                            <tr>
+                                <td colspan="2">Aucune donnée</td>
+                            </tr>
+                        {% endfor %}
+                        </tbody>
+                    </table>
+
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+</div>
+{% endblock %}
+
+{% block extra_js %}
+<script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+
+<script>
+const labels = {{ chart_labels|safe }};
+const data = {{ chart_data|safe }};
+
+new Chart(document.getElementById('chartType'), {
+    type: 'bar',
+    data: {
+        labels: labels,
+        datasets: [{
+            label: 'Nombre de projets',
+            data: data,
+            borderWidth: 1
+        }]
+    },
+    options: {
+        responsive: true,
+        scales: {
+            y: {
+                beginAtZero: true,
+                ticks: { precision: 0 }
+            }
+        }
+    }
+});
+</script>
+{% endblock %}

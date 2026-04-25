@@ -61,4 +61,5 @@ urlpatterns = [
     path('preselection/<int:pk>/', views.preselection_detail, name='preselection_detail'),
     path('preselection-comite/', views.preselection_comite_liste, name='preselection_comite_liste'),
     path('preselection-comite/<int:pk>/', views.preselection_comite_detail, name='preselection_comite_detail'),
+    path('statistiques/', views.statistiques, name='statistiques'),
 ]
