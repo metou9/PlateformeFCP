@@ -479,12 +479,40 @@ def statistiques(request):
             'total': total,
             'pourcentage': pourcentage,
         })
-        stats_agents = (
-             sous_projets
-             .values('createur_username')
-             .annotate(total=Count('id'))
-             .order_by('-total', 'createur_username')
-        )
+
+    stats_agents_raw = (
+        sous_projets
+        .values('createur_username')
+        .annotate(total=Count('id'))
+     .order_by('-total', 'createur_username')
+    )
+
+    stats_agents = []
+
+    for item in stats_agents_raw:
+        username = item['createur_username']
+
+        nom_complet = "Non renseigné"
+        wilaya_nom = "-"
+
+        if username:
+            try:
+                user_obj = Utilisateur.objects.select_related('wilaya').get(username=username)
+
+                nom_complet = f"{user_obj.prenom} {user_obj.nom}"
+
+                if user_obj.wilaya:
+                   wilaya_nom = user_obj.wilaya.nom
+
+            except Utilisateur.DoesNotExist:
+               nom_complet = "Utilisateur introuvable"
+
+        stats_agents.append({
+            'login': username or "-",
+            'nom': nom_complet,
+            'wilaya': wilaya_nom,
+            'total': item['total'],
+    })
 
         chart_labels.append(label)
         chart_data.append(pourcentage)

@@ -223,7 +223,9 @@
                 <table class="table table-bordered">
                     <thead>
                         <tr>
-                            <th>Agent de saisie</th>
+                            <th>Login</th>
+                            <th>Nom</th>
+                            <th>Wilaya</th>
                             <th>Nombre de sous-projets</th>
                         </tr>
                     </thead>
@@ -231,18 +233,14 @@
                     <tbody>
                         {% for agent in stats_agents %}
                         <tr>
-                            <td>
-                                {% if agent.createur_username %}
-                                    {{ agent.createur_username }}
-                                {% else %}
-                                    Non renseigné
-                                {% endif %}
-                            </td>
+                            <td>{{ agent.login }}</td>
+                            <td>{{ agent.nom }}</td>
+                            <td>{{ agent.wilaya }}</td>
                             <td><strong>{{ agent.total }}</strong></td>
                         </tr>
                         {% empty %}
                         <tr>
-                            <td colspan="2" class="text-center">
+                            <td colspan="4" class="text-center">
                                 Aucune donnée disponible
                             </td>
                         </tr>
