@@ -90,8 +90,8 @@
     }
 
     .chart-box {
-        max-width: 420px;
-        margin: 0 auto 25px auto;
+        max-width: 430px;
+        margin: 0 auto;
     }
 
     .empty-text {
@@ -116,7 +116,6 @@
 
     <div class="row">
 
-        <!-- Bloc Wilaya / Paysage -->
         <div class="col-lg-6">
             <div class="stats-card">
                 <div class="stat-card-header">
@@ -124,10 +123,8 @@
                 </div>
 
                 <div class="stats-card-body">
-
                     {% for wilaya in stats_wilaya_paysages %}
                         <div class="wilaya-box">
-
                             <h5>
                                 {{ wilaya.wilaya }} :
                                 <strong>{{ wilaya.total }}</strong> projet(s)
@@ -140,7 +137,6 @@
                                         <th>Nombre</th>
                                     </tr>
                                 </thead>
-
                                 <tbody>
                                     {% for paysage in wilaya.paysages %}
                                     <tr>
@@ -156,19 +152,16 @@
                                     {% endfor %}
                                 </tbody>
                             </table>
-
                         </div>
                     {% empty %}
                         <div class="empty-text">
                             Aucune donnée disponible.
                         </div>
                     {% endfor %}
-
                 </div>
             </div>
         </div>
 
-        <!-- Bloc Type Projet -->
         <div class="col-lg-6">
             <div class="stats-card">
                 <div class="stat-card-header">
@@ -176,81 +169,55 @@
                 </div>
 
                 <div class="stats-card-body">
-
                     <div class="chart-box">
                         <canvas id="chartTypeProjet"></canvas>
                     </div>
+                </div>
+            </div>
+        </div>
 
+    </div>
+
+    <div class="row">
+        <div class="col-lg-12">
+            <div class="stats-card">
+                <div class="stat-card-header">
+                    Nombre de sous-projets saisis par agent
+                </div>
+
+                <div class="stats-card-body">
                     <table class="table table-bordered">
                         <thead>
                             <tr>
-                                <th>Type de projet</th>
-                                <th>Nombre</th>
-                                <th>Pourcentage</th>
+                                <th>Login</th>
+                                <th>Nom</th>
+                                <th>Wilaya</th>
+                                <th>Nombre de sous-projets</th>
                             </tr>
                         </thead>
 
                         <tbody>
-                            {% for item in stats_types %}
+                            {% for agent in stats_agents %}
                             <tr>
-                                <td>{{ item.type }}</td>
-                                <td><strong>{{ item.total }}</strong></td>
-                                <td>{{ item.pourcentage }}%</td>
+                                <td>{{ agent.login }}</td>
+                                <td>{{ agent.nom }}</td>
+                                <td>{{ agent.wilaya }}</td>
+                                <td><strong>{{ agent.total }}</strong></td>
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="3" class="text-center">
+                                <td colspan="4" class="text-center">
                                     Aucune donnée disponible
                                 </td>
                             </tr>
                             {% endfor %}
                         </tbody>
                     </table>
-
                 </div>
             </div>
         </div>
-
     </div>
-<div class="row">
-    <div class="col-lg-12">
-        <div class="stats-card">
-            <div class="stat-card-header">
-                Nombre de sous-projets saisis par agent
-            </div>
 
-            <div class="stats-card-body">
-                <table class="table table-bordered">
-                    <thead>
-                        <tr>
-                            <th>Login</th>
-                            <th>Nom</th>
-                            <th>Wilaya</th>
-                            <th>Nombre de sous-projets</th>
-                        </tr>
-                    </thead>
-
-                    <tbody>
-                        {% for agent in stats_agents %}
-                        <tr>
-                            <td>{{ agent.login }}</td>
-                            <td>{{ agent.nom }}</td>
-                            <td>{{ agent.wilaya }}</td>
-                            <td><strong>{{ agent.total }}</strong></td>
-                        </tr>
-                        {% empty %}
-                        <tr>
-                            <td colspan="4" class="text-center">
-                                Aucune donnée disponible
-                            </td>
-                        </tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
-        </div>
-    </div>
-</div>
 </div>
 {% endblock %}
 
@@ -270,7 +237,6 @@ if (ctx) {
             labels: labels,
             datasets: [{
                 data: data,
-
                 backgroundColor: [
                     '#A8DADC',
                     '#FBC4AB',
@@ -281,24 +247,24 @@ if (ctx) {
                     '#FFC8DD',
                     '#E2ECE9'
                 ],
-
                 borderColor: '#ffffff',
                 borderWidth: 2
             }]
         },
-
         options: {
             responsive: true,
-
             plugins: {
                 legend: {
-                    position: 'bottom'
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 18,
+                        padding: 16
+                    }
                 },
-
                 tooltip: {
                     callbacks: {
                         label: function(context) {
-                            return context.label + ': ' + context.raw + '%';
+                            return context.label;
                         }
                     }
                 }

@@ -478,6 +478,7 @@ def statistiques(request):
         'AG': 'Agriculture',
         'EL': 'Élevage',
         'ENV': 'Environnement',
+         'SER': 'Service',
     }
 
     stats_types = []
@@ -498,7 +499,7 @@ def statistiques(request):
             'pourcentage': pourcentage,
         })
 
-        chart_labels.append(label)
+        chart_labels.append(f"{label} : {total} projet(s) - {pourcentage}%")
         chart_data.append(pourcentage)
 
     # =====================================================
