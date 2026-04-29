@@ -411,19 +411,47 @@ def save_sous_projet(request):
 @login_required
 def statistiques(request):
     utilisateur = get_current_user(request)
-
     sous_projets = get_accessible_sous_projets(utilisateur)
 
-    # Stats paysage
-    stats_paysages = (
+    total_projets = sous_projets.count()
+
+    # 1) Totaux par wilaya
+    stats_wilayas = (
         sous_projets
-        .values('paysage__nom')
+        .values('wilaya__nom')
         .annotate(total=Count('id'))
-        .order_by('paysage__nom')
+        .order_by('wilaya__nom')
     )
 
-    # Stats type projet
-    stats_types = (
+    # 2) Détail Paysage / ZOCA par wilaya
+    stats_paysages = (
+        sous_projets
+        .values('wilaya__nom', 'paysage__nom')
+        .annotate(total=Count('id'))
+        .order_by('wilaya__nom', 'paysage__nom')
+    )
+
+    stats_wilaya_paysages = []
+    for wilaya in stats_wilayas:
+        wilaya_nom = wilaya['wilaya__nom'] or "Non renseignée"
+
+        paysages = []
+        for item in stats_paysages:
+            item_wilaya = item['wilaya__nom'] or "Non renseignée"
+            if item_wilaya == wilaya_nom:
+                paysages.append({
+                    'paysage': item['paysage__nom'] or "Non renseigné",
+                    'total': item['total'],
+                })
+
+        stats_wilaya_paysages.append({
+            'wilaya': wilaya_nom,
+            'total': wilaya['total'],
+            'paysages': paysages,
+        })
+
+    # 3) Types de projet avec pourcentage
+    stats_types_raw = (
         sous_projets
         .values('type_projet')
         .annotate(total=Count('id'))
@@ -433,23 +461,34 @@ def statistiques(request):
     type_map = {
         'AG': 'Agriculture',
         'EL': 'Élevage',
-        'ENV': 'Environnement'
+        'ENV': 'Environnement',
     }
 
-    labels = []
-    data = []
+    stats_types = []
+    chart_labels = []
+    chart_data = []
 
-    for item in stats_types:
-        code = item['type_projet'] or 'NR'
-        labels.append(type_map.get(code, code))
-        data.append(item['total'])
+    for item in stats_types_raw:
+        code = item['type_projet'] or "NR"
+        label = type_map.get(code, code)
+        total = item['total']
+        pourcentage = round((total / total_projets) * 100, 2) if total_projets else 0
+
+        stats_types.append({
+            'type': label,
+            'total': total,
+            'pourcentage': pourcentage,
+        })
+
+        chart_labels.append(label)
+        chart_data.append(pourcentage)
 
     context = {
-        'stats_paysages': stats_paysages,
+        'total_projets': total_projets,
+        'stats_wilaya_paysages': stats_wilaya_paysages,
         'stats_types': stats_types,
-        'chart_labels': labels,
-        'chart_data': data,
-        'total_projets': sous_projets.count(),
+        'chart_labels': chart_labels,
+        'chart_data': chart_data,
     }
 
     return render(request, 'formulaire/statistiques.html', context)

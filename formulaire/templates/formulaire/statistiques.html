@@ -1,79 +1,92 @@
 {% extends 'formulaire/base.html' %}
 
-{% block title %}Statistiques{% endblock %}
+{% block title %}Statistiques - PADISAM{% endblock %}
 
 {% block content %}
 <div class="container mt-4">
 
     <div class="card shadow-sm mb-4">
         <div class="card-body">
-            <h2 class="mb-3">📊 Tableau de bord statistique</h2>
-            <h5>Total des projets : <strong>{{ total_projets }}</strong></h5>
+            <h2>📊 Tableau de bord statistique</h2>
+            <p class="mb-0">Nombre total de projets : <strong>{{ total_projets }}</strong></p>
         </div>
     </div>
 
     <div class="row">
 
-        <!-- Paysages -->
+        <!-- Projets par Wilaya puis Paysage / ZOCA -->
         <div class="col-md-6">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-success text-white">
-                    Nombre de projets par Paysage / ZOCA
+                    Nombre de projets par Wilaya et Paysage / ZOCA
                 </div>
 
                 <div class="card-body">
-                    <table class="table table-striped">
-                        <thead>
-                            <tr>
-                                <th>Paysage</th>
-                                <th>Total</th>
-                            </tr>
-                        </thead>
-                        <tbody>
-                        {% for item in stats_paysages %}
-                            <tr>
-                                <td>{{ item.paysage__nom|default:"Non renseigné" }}</td>
-                                <td><strong>{{ item.total }}</strong></td>
-                            </tr>
-                        {% empty %}
-                            <tr>
-                                <td colspan="2">Aucune donnée</td>
-                            </tr>
-                        {% endfor %}
-                        </tbody>
-                    </table>
+                    {% for wilaya in stats_wilaya_paysages %}
+                        <div class="mb-4">
+                            <h5>
+                                {{ wilaya.wilaya }} :
+                                <strong>{{ wilaya.total }}</strong> projet(s)
+                            </h5>
+
+                            <table class="table table-sm table-bordered mt-2">
+                                <thead>
+                                    <tr>
+                                        <th>Paysage / ZOCA</th>
+                                        <th>Nombre</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    {% for paysage in wilaya.paysages %}
+                                    <tr>
+                                        <td>{{ paysage.paysage }}</td>
+                                        <td><strong>{{ paysage.total }}</strong></td>
+                                    </tr>
+                                    {% empty %}
+                                    <tr>
+                                        <td colspan="2" class="text-center">Aucun paysage renseigné</td>
+                                    </tr>
+                                    {% endfor %}
+                                </tbody>
+                            </table>
+                        </div>
+                    {% empty %}
+                        <p>Aucune donnée disponible.</p>
+                    {% endfor %}
                 </div>
             </div>
         </div>
 
-        <!-- Types -->
+        <!-- Projets par type -->
         <div class="col-md-6">
             <div class="card shadow-sm mb-4">
                 <div class="card-header bg-primary text-white">
-                    Nombre de projets par type
+                    Répartition des projets par type
                 </div>
 
                 <div class="card-body">
-                    <canvas id="chartType"></canvas>
+                    <canvas id="chartTypeProjet"></canvas>
 
-                    <table class="table table-striped mt-4">
+                    <table class="table table-bordered mt-4">
                         <thead>
                             <tr>
-                                <th>Type</th>
-                                <th>Total</th>
+                                <th>Type de projet</th>
+                                <th>Nombre</th>
+                                <th>Pourcentage</th>
                             </tr>
                         </thead>
                         <tbody>
-                        {% for item in stats_types %}
+                            {% for item in stats_types %}
                             <tr>
-                                <td>{{ item.type_projet }}</td>
+                                <td>{{ item.type }}</td>
                                 <td><strong>{{ item.total }}</strong></td>
+                                <td>{{ item.pourcentage }}%</td>
                             </tr>
-                        {% empty %}
+                            {% empty %}
                             <tr>
-                                <td colspan="2">Aucune donnée</td>
+                                <td colspan="3" class="text-center">Aucune donnée disponible</td>
                             </tr>
-                        {% endfor %}
+                            {% endfor %}
                         </tbody>
                     </table>
 
@@ -82,7 +95,6 @@
         </div>
 
     </div>
-
 </div>
 {% endblock %}
 
@@ -93,25 +105,32 @@
 const labels = {{ chart_labels|safe }};
 const data = {{ chart_data|safe }};
 
-new Chart(document.getElementById('chartType'), {
-    type: 'bar',
-    data: {
-        labels: labels,
-        datasets: [{
-            label: 'Nombre de projets',
-            data: data,
-            borderWidth: 1
-        }]
-    },
-    options: {
-        responsive: true,
-        scales: {
-            y: {
-                beginAtZero: true,
-                ticks: { precision: 0 }
+const ctx = document.getElementById('chartTypeProjet');
+
+if (ctx) {
+    new Chart(ctx, {
+        type: 'pie',
+        data: {
+            labels: labels,
+            datasets: [{
+                label: 'Pourcentage',
+                data: data,
+                borderWidth: 1
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label + ': ' + context.raw + '%';
+                        }
+                    }
+                }
             }
         }
-    }
-});
+    });
+}
 </script>
 {% endblock %}
