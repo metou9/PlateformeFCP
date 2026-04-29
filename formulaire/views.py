@@ -410,12 +410,21 @@ def save_sous_projet(request):
 
 @login_required
 def statistiques(request):
+    """
+    Page statistiques :
+    - total projets
+    - projets par wilaya / paysage / zoca
+    - projets par type avec pourcentage
+    - projets saisis par agent
+    """
     utilisateur = get_current_user(request)
     sous_projets = get_accessible_sous_projets(utilisateur)
 
     total_projets = sous_projets.count()
 
-    # 1) Totaux par wilaya
+    # =====================================================
+    # 1. Statistiques Wilaya
+    # =====================================================
     stats_wilayas = (
         sous_projets
         .values('wilaya__nom')
@@ -423,7 +432,9 @@ def statistiques(request):
         .order_by('wilaya__nom')
     )
 
-    # 2) Détail Paysage / ZOCA par wilaya
+    # =====================================================
+    # 2. Statistiques Paysage / ZOCA par Wilaya
+    # =====================================================
     stats_paysages = (
         sous_projets
         .values('wilaya__nom', 'paysage__nom')
@@ -432,12 +443,15 @@ def statistiques(request):
     )
 
     stats_wilaya_paysages = []
+
     for wilaya in stats_wilayas:
         wilaya_nom = wilaya['wilaya__nom'] or "Non renseignée"
 
         paysages = []
+
         for item in stats_paysages:
             item_wilaya = item['wilaya__nom'] or "Non renseignée"
+
             if item_wilaya == wilaya_nom:
                 paysages.append({
                     'paysage': item['paysage__nom'] or "Non renseigné",
@@ -450,7 +464,9 @@ def statistiques(request):
             'paysages': paysages,
         })
 
-    # 3) Types de projet avec pourcentage
+    # =====================================================
+    # 3. Statistiques Type Projet
+    # =====================================================
     stats_types_raw = (
         sous_projets
         .values('type_projet')
@@ -470,8 +486,10 @@ def statistiques(request):
 
     for item in stats_types_raw:
         code = item['type_projet'] or "NR"
+
         label = type_map.get(code, code)
         total = item['total']
+
         pourcentage = round((total / total_projets) * 100, 2) if total_projets else 0
 
         stats_types.append({
@@ -480,11 +498,17 @@ def statistiques(request):
             'pourcentage': pourcentage,
         })
 
+        chart_labels.append(label)
+        chart_data.append(pourcentage)
+
+    # =====================================================
+    # 4. Statistiques Agents de saisie
+    # =====================================================
     stats_agents_raw = (
         sous_projets
         .values('createur_username')
         .annotate(total=Count('id'))
-     .order_by('-total', 'createur_username')
+        .order_by('-total', 'createur_username')
     )
 
     stats_agents = []
@@ -502,28 +526,35 @@ def statistiques(request):
                 nom_complet = f"{user_obj.prenom} {user_obj.nom}"
 
                 if user_obj.wilaya:
-                   wilaya_nom = user_obj.wilaya.nom
+                    wilaya_nom = user_obj.wilaya.nom
 
             except Utilisateur.DoesNotExist:
-               nom_complet = "Utilisateur introuvable"
+                nom_complet = "Utilisateur introuvable"
 
         stats_agents.append({
             'login': username or "-",
             'nom': nom_complet,
             'wilaya': wilaya_nom,
             'total': item['total'],
-    })
+        })
 
-        chart_labels.append(label)
-        chart_data.append(pourcentage)
-
+    # =====================================================
+    # Context
+    # =====================================================
     context = {
         'total_projets': total_projets,
+
         'stats_wilaya_paysages': stats_wilaya_paysages,
+
         'stats_types': stats_types,
         'chart_labels': chart_labels,
         'chart_data': chart_data,
+
         'stats_agents': stats_agents,
+
+        'user_name': request.session.get('user_name'),
+        'user_role': request.session.get('user_role'),
+        'user_wilaya_nom': request.session.get('user_wilaya_nom'),
     }
 
     return render(request, 'formulaire/statistiques.html', context)
