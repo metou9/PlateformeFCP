@@ -2,40 +2,145 @@
 
 {% block title %}Statistiques - PADISAM{% endblock %}
 
-{% block content %}
-<div class="container mt-4">
+{% block extra_css %}
+<style>
+    .stats-page {
+        padding-top: 10px;
+        padding-bottom: 30px;
+    }
 
-    <div class="card shadow-sm mb-4">
-        <div class="card-body">
-            <h2>📊 Tableau de bord statistique</h2>
-            <p class="mb-0">Nombre total de projets : <strong>{{ total_projets }}</strong></p>
-        </div>
+    .stats-header {
+        background: linear-gradient(135deg, #5dbb63 0%, #3f9142 100%);
+        color: white;
+        padding: 24px 28px;
+        border-radius: 18px;
+        margin-bottom: 24px;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
+    }
+
+    .stats-header h1 {
+        margin: 0 0 8px 0;
+        font-size: 30px;
+        font-weight: 700;
+    }
+
+    .stats-header p {
+        margin: 0;
+        font-size: 15px;
+        opacity: 0.95;
+    }
+
+    .stats-summary {
+        background: #fff;
+        border-radius: 16px;
+        padding: 18px 22px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+        margin-bottom: 24px;
+        border-left: 5px solid #5dbb63;
+    }
+
+    .stats-card {
+        background: #fff;
+        border-radius: 18px;
+        overflow: hidden;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+        margin-bottom: 24px;
+    }
+
+    .stat-card-header {
+        background: #5dbb63 !important;
+        color: white !important;
+        font-weight: 700;
+        padding: 16px 20px;
+        font-size: 16px;
+    }
+
+    .stats-card-body {
+        padding: 20px;
+    }
+
+    .wilaya-box {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 16px;
+        margin-bottom: 18px;
+    }
+
+    .wilaya-box h5 {
+        margin-bottom: 12px;
+        color: #1f2937;
+        font-weight: 700;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table th {
+        background: #f3f4f6;
+        font-size: 14px;
+        font-weight: 700;
+        color: #374151;
+    }
+
+    .table td {
+        font-size: 14px;
+        vertical-align: middle;
+    }
+
+    .chart-box {
+        max-width: 420px;
+        margin: 0 auto 25px auto;
+    }
+
+    .empty-text {
+        color: #6b7280;
+        text-align: center;
+        padding: 20px;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container stats-page">
+
+    <div class="stats-header">
+        <h1>📊 Tableau de bord statistique</h1>
+        <p>Analyse synthétique des sous-projets enregistrés</p>
+    </div>
+
+    <div class="stats-summary">
+        Nombre total de projets : <strong>{{ total_projets }}</strong>
     </div>
 
     <div class="row">
 
-        <!-- Projets par Wilaya puis Paysage / ZOCA -->
-        <div class="col-md-6">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-success text-white">
-                    Nombre de projets par Wilaya et Paysage / ZOCA
+        <!-- Bloc Wilaya / Paysage -->
+        <div class="col-lg-6">
+            <div class="stats-card">
+                <div class="stat-card-header">
+                    Nombre de projets par Wilaya / Paysage / ZOCA
                 </div>
 
-                <div class="card-body">
+                <div class="stats-card-body">
+
                     {% for wilaya in stats_wilaya_paysages %}
-                        <div class="mb-4">
+                        <div class="wilaya-box">
+
                             <h5>
                                 {{ wilaya.wilaya }} :
                                 <strong>{{ wilaya.total }}</strong> projet(s)
                             </h5>
 
-                            <table class="table table-sm table-bordered mt-2">
+                            <table class="table table-sm table-bordered">
                                 <thead>
                                     <tr>
                                         <th>Paysage / ZOCA</th>
                                         <th>Nombre</th>
                                     </tr>
                                 </thead>
+
                                 <tbody>
                                     {% for paysage in wilaya.paysages %}
                                     <tr>
@@ -44,30 +149,39 @@
                                     </tr>
                                     {% empty %}
                                     <tr>
-                                        <td colspan="2" class="text-center">Aucun paysage renseigné</td>
+                                        <td colspan="2" class="text-center">
+                                            Aucun paysage renseigné
+                                        </td>
                                     </tr>
                                     {% endfor %}
                                 </tbody>
                             </table>
+
                         </div>
                     {% empty %}
-                        <p>Aucune donnée disponible.</p>
+                        <div class="empty-text">
+                            Aucune donnée disponible.
+                        </div>
                     {% endfor %}
+
                 </div>
             </div>
         </div>
 
-        <!-- Projets par type -->
-        <div class="col-md-6">
-            <div class="card shadow-sm mb-4">
-                <div class="card-header bg-primary text-white">
+        <!-- Bloc Type Projet -->
+        <div class="col-lg-6">
+            <div class="stats-card">
+                <div class="stat-card-header">
                     Répartition des projets par type
                 </div>
 
-                <div class="card-body">
-                    <canvas id="chartTypeProjet"></canvas>
+                <div class="stats-card-body">
 
-                    <table class="table table-bordered mt-4">
+                    <div class="chart-box">
+                        <canvas id="chartTypeProjet"></canvas>
+                    </div>
+
+                    <table class="table table-bordered">
                         <thead>
                             <tr>
                                 <th>Type de projet</th>
@@ -75,6 +189,7 @@
                                 <th>Pourcentage</th>
                             </tr>
                         </thead>
+
                         <tbody>
                             {% for item in stats_types %}
                             <tr>
@@ -84,7 +199,9 @@
                             </tr>
                             {% empty %}
                             <tr>
-                                <td colspan="3" class="text-center">Aucune donnée disponible</td>
+                                <td colspan="3" class="text-center">
+                                    Aucune donnée disponible
+                                </td>
                             </tr>
                             {% endfor %}
                         </tbody>
@@ -95,6 +212,48 @@
         </div>
 
     </div>
+    <div class="row">
+    <div class="col-lg-12">
+        <div class="stats-card">
+            <div class="stat-card-header">
+                Nombre de sous-projets saisis par agent
+            </div>
+
+            <div class="stats-card-body">
+                <table class="table table-bordered">
+                    <thead>
+                        <tr>
+                            <th>Agent de saisie</th>
+                            <th>Nombre de sous-projets</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for agent in stats_agents %}
+                        <tr>
+                            <td>
+                                {% if agent.createur_username %}
+                                    {{ agent.createur_username }}
+                                {% else %}
+                                    Non renseigné
+                                {% endif %}
+                            </td>
+                            <td><strong>{{ agent.total }}</strong></td>
+                        </tr>
+                        {% empty %}
+                        <tr>
+                            <td colspan="2" class="text-center">
+                                Aucune donnée disponible
+                            </td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+</div>
+
 </div>
 {% endblock %}
 
@@ -113,14 +272,32 @@ if (ctx) {
         data: {
             labels: labels,
             datasets: [{
-                label: 'Pourcentage',
                 data: data,
-                borderWidth: 1
+
+                backgroundColor: [
+                    '#A8DADC',
+                    '#FBC4AB',
+                    '#CDEAC0',
+                    '#DDBDF1',
+                    '#FFD6A5',
+                    '#BDE0FE',
+                    '#FFC8DD',
+                    '#E2ECE9'
+                ],
+
+                borderColor: '#ffffff',
+                borderWidth: 2
             }]
         },
+
         options: {
             responsive: true,
+
             plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+
                 tooltip: {
                     callbacks: {
                         label: function(context) {

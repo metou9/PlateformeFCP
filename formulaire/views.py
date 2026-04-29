@@ -479,6 +479,12 @@ def statistiques(request):
             'total': total,
             'pourcentage': pourcentage,
         })
+        stats_agents = (
+             sous_projets
+             .values('createur_username')
+             .annotate(total=Count('id'))
+             .order_by('-total', 'createur_username')
+        )
 
         chart_labels.append(label)
         chart_data.append(pourcentage)
@@ -489,6 +495,7 @@ def statistiques(request):
         'stats_types': stats_types,
         'chart_labels': chart_labels,
         'chart_data': chart_data,
+        'stats_agents': stats_agents,
     }
 
     return render(request, 'formulaire/statistiques.html', context)
