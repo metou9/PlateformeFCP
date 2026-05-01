@@ -504,6 +504,8 @@ def statistiques(request):
     Page statistiques dynamique :
     - Par défaut : statistiques globales
     - Si une wilaya est sélectionnée : statistiques filtrées par cette wilaya
+    - Ajout statistiques financement global par Wilaya
+    - Ajout données pour graphe bar financement
     """
     utilisateur = get_current_user(request)
 
@@ -687,7 +689,95 @@ def statistiques(request):
             chart_second_data.append(total)
 
     # =====================================================
-    # 5. Statistiques Agents de saisie
+    # 5. Statistiques globales des financements par Wilaya
+    # =====================================================
+
+    def total_relation(queryset, relation, champ):
+        """
+        Calcule une somme sur une relation.
+        Exemple :
+        infrastructures__subvention_padisam
+        equipements__contribution_promoteur
+        """
+        return queryset.aggregate(
+            total=Sum(f'{relation}__{champ}')
+        )['total'] or 0
+
+    stats_financement_wilayas = []
+
+    chart_financement_labels = []
+    chart_financement_subvention = []
+    chart_financement_contribution = []
+    chart_financement_autre = []
+    chart_financement_total = []
+
+    wilayas_pour_financement = (
+        sous_projets
+        .exclude(wilaya__isnull=True)
+        .values('wilaya_id', 'wilaya__nom')
+        .distinct()
+        .order_by('wilaya__nom')
+    )
+
+    for wilaya in wilayas_pour_financement:
+        wilaya_id = wilaya['wilaya_id']
+        wilaya_nom = wilaya['wilaya__nom'] or "Non renseignée"
+
+        qs_wilaya = sous_projets.filter(wilaya_id=wilaya_id)
+
+        # Subvention PADISAM
+        total_subvention = (
+            total_relation(qs_wilaya, 'infrastructures', 'subvention_padisam') +
+            total_relation(qs_wilaya, 'equipements', 'subvention_padisam') +
+            total_relation(qs_wilaya, 'intrants', 'subvention_padisam') +
+            total_relation(qs_wilaya, 'services', 'subvention_padisam')
+        )
+
+        # Contribution promoteur
+        total_contribution = (
+            total_relation(qs_wilaya, 'infrastructures', 'contribution_promoteur') +
+            total_relation(qs_wilaya, 'equipements', 'contribution_promoteur') +
+            total_relation(qs_wilaya, 'intrants', 'contribution_promoteur') +
+            total_relation(qs_wilaya, 'services', 'contribution_promoteur') +
+            total_relation(qs_wilaya, 'fonctionnements', 'contribution_promoteur')
+        )
+
+        # Autre financement
+        total_autre = (
+            total_relation(qs_wilaya, 'infrastructures', 'autre_financement') +
+            total_relation(qs_wilaya, 'equipements', 'autre_financement') +
+            total_relation(qs_wilaya, 'intrants', 'autre_financement') +
+            total_relation(qs_wilaya, 'services', 'autre_financement') +
+            total_relation(qs_wilaya, 'fonctionnements', 'autre_financement')
+        )
+
+        total_general_financement = (
+            total_subvention +
+            total_contribution +
+            total_autre
+        )
+
+        stats_financement_wilayas.append({
+            'wilaya': wilaya_nom,
+            'subvention': total_subvention,
+            'contribution': total_contribution,
+            'autre': total_autre,
+            'total': total_general_financement,
+        })
+
+        chart_financement_labels.append(wilaya_nom)
+        chart_financement_subvention.append(float(total_subvention))
+        chart_financement_contribution.append(float(total_contribution))
+        chart_financement_autre.append(float(total_autre))
+        chart_financement_total.append(float(total_general_financement))
+
+    total_financement_subvention = sum(item['subvention'] for item in stats_financement_wilayas)
+    total_financement_contribution = sum(item['contribution'] for item in stats_financement_wilayas)
+    total_financement_autre = sum(item['autre'] for item in stats_financement_wilayas)
+    total_financement_general = sum(item['total'] for item in stats_financement_wilayas)
+
+    # =====================================================
+    # 6. Statistiques Agents de saisie
     # =====================================================
     stats_agents_raw = (
         sous_projets
@@ -743,6 +833,18 @@ def statistiques(request):
         'second_chart_title': second_chart_title,
         'chart_second_labels': json.dumps(chart_second_labels),
         'chart_second_data': json.dumps(chart_second_data),
+
+        'stats_financement_wilayas': stats_financement_wilayas,
+        'total_financement_subvention': total_financement_subvention,
+        'total_financement_contribution': total_financement_contribution,
+        'total_financement_autre': total_financement_autre,
+        'total_financement_general': total_financement_general,
+
+        'chart_financement_labels': json.dumps(chart_financement_labels),
+        'chart_financement_subvention': json.dumps(chart_financement_subvention),
+        'chart_financement_contribution': json.dumps(chart_financement_contribution),
+        'chart_financement_autre': json.dumps(chart_financement_autre),
+        'chart_financement_total': json.dumps(chart_financement_total),
 
         'stats_agents': stats_agents,
 

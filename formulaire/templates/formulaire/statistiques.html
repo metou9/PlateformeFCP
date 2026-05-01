@@ -1,4 +1,5 @@
 {% extends 'formulaire/base.html' %}
+{% load humanize %}
 
 {% block title %}Statistiques - PADISAM{% endblock %}
 
@@ -14,7 +15,7 @@
         color: white;
         padding: 24px 28px;
         border-radius: 18px;
-        margin-bottom: 24px;
+        margin-bottom: 18px;
         box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
     }
 
@@ -33,18 +34,18 @@
     .stats-summary {
         background: #fff;
         border-radius: 16px;
-        padding: 18px 22px;
+        padding: 16px 20px;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-        margin-bottom: 24px;
+        margin-bottom: 18px;
         border-left: 5px solid #5dbb63;
     }
 
     .filter-card {
         background: #fff;
         border-radius: 16px;
-        padding: 18px 22px;
+        padding: 16px 20px;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-        margin-bottom: 24px;
+        margin-bottom: 18px;
     }
 
     .stats-card {
@@ -52,27 +53,31 @@
         border-radius: 18px;
         overflow: hidden;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-        margin-bottom: 24px;
+        margin-bottom: 18px;
     }
 
     .stat-card-header {
         background: #5dbb63 !important;
         color: white !important;
         font-weight: 700;
-        padding: 16px 20px;
+        padding: 14px 18px;
         font-size: 16px;
     }
 
     .stats-card-body {
-        padding: 20px;
+        padding: 18px;
     }
 
     .wilaya-box {
         background: #f8fafc;
         border: 1px solid #e5e7eb;
         border-radius: 14px;
-        padding: 16px;
-        margin-bottom: 18px;
+        padding: 14px;
+        margin-bottom: 14px;
+    }
+
+    .wilaya-box:last-child {
+        margin-bottom: 0;
     }
 
     .wilaya-box h5 {
@@ -111,14 +116,41 @@
     }
 
     .chart-box {
-        max-width: 430px;
+        max-width: 420px;
         margin: 0 auto;
+        min-height: 310px;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+    }
+
+    .chart-box canvas {
+        max-height: 310px;
+    }
+
+    .bar-chart-box {
+        height: 360px;
+        width: 100%;
     }
 
     .empty-text {
         color: #6b7280;
         text-align: center;
         padding: 20px;
+    }
+
+    .btn-success {
+        background-color: #5dbb63;
+        border-color: #5dbb63;
+    }
+
+    .btn-success:hover {
+        background-color: #4aa34f;
+        border-color: #4aa34f;
+    }
+
+    .compact-row {
+        row-gap: 0;
     }
 </style>
 {% endblock %}
@@ -130,7 +162,8 @@
         <h1>📊 Tableau de bord statistique</h1>
         <p>
             {% if selected_wilaya %}
-                Analyse des sous-projets pour la Wilaya : <strong>{{ selected_wilaya.nom }}</strong>
+                Analyse des sous-projets pour la Wilaya :
+                <strong>{{ selected_wilaya.nom }}</strong>
             {% else %}
                 Analyse globale des sous-projets enregistrés
             {% endif %}
@@ -181,9 +214,8 @@
         {% endif %}
     </div>
 
-    <div class="row">
-
-        <div class="col-lg-7">
+    <div class="row compact-row">
+        <div class="col-lg-12">
             <div class="stats-card">
                 <div class="stat-card-header">
                     Nombre de projets par Wilaya / Paysage / ZOCA
@@ -197,48 +229,50 @@
                                 <strong>{{ wilaya.total }}</strong> projet(s)
                             </h5>
 
-                            <table class="table table-sm table-bordered">
-                                <thead>
-                                    <tr>
-                                        <th>Paysage / ZOCA</th>
-                                        <th>AG</th>
-                                        <th>EL</th>
-                                        <th>SER</th>
-                                        <th>ENV</th>
-                                        <th>Total paysage</th>
-                                    </tr>
-                                </thead>
+                            <div class="table-responsive">
+                                <table class="table table-sm table-bordered">
+                                    <thead>
+                                        <tr>
+                                            <th>Paysage / ZOCA</th>
+                                            <th>AG</th>
+                                            <th>EL</th>
+                                            <th>SER</th>
+                                            <th>ENV</th>
+                                            <th>Total paysage</th>
+                                        </tr>
+                                    </thead>
 
-                                <tbody>
-                                    {% for paysage in wilaya.paysages %}
-                                    <tr>
-                                        <td>{{ paysage.paysage }}</td>
-                                        <td>{{ paysage.types.AG }}</td>
-                                        <td>{{ paysage.types.EL }}</td>
-                                        <td>{{ paysage.types.SER }}</td>
-                                        <td>{{ paysage.types.ENV }}</td>
-                                        <td>
-                                            <strong>{{ paysage.total }}</strong>
-                                        </td>
-                                    </tr>
-                                    {% empty %}
-                                    <tr>
-                                        <td colspan="6" class="text-center">
-                                            Aucun paysage renseigné
-                                        </td>
-                                    </tr>
-                                    {% endfor %}
+                                    <tbody>
+                                        {% for paysage in wilaya.paysages %}
+                                        <tr>
+                                            <td>{{ paysage.paysage }}</td>
+                                            <td>{{ paysage.types.AG }}</td>
+                                            <td>{{ paysage.types.EL }}</td>
+                                            <td>{{ paysage.types.SER }}</td>
+                                            <td>{{ paysage.types.ENV }}</td>
+                                            <td>
+                                                <strong>{{ paysage.total }}</strong>
+                                            </td>
+                                        </tr>
+                                        {% empty %}
+                                        <tr>
+                                            <td colspan="6" class="text-center">
+                                                Aucun paysage renseigné
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
 
-                                    <tr class="total-row">
-                                        <td>Total {{ wilaya.wilaya }}</td>
-                                        <td>{{ wilaya.totaux_types.AG }}</td>
-                                        <td>{{ wilaya.totaux_types.EL }}</td>
-                                        <td>{{ wilaya.totaux_types.SER }}</td>
-                                        <td>{{ wilaya.totaux_types.ENV }}</td>
-                                        <td>{{ wilaya.total }}</td>
-                                    </tr>
-                                </tbody>
-                            </table>
+                                        <tr class="total-row">
+                                            <td>Total {{ wilaya.wilaya }}</td>
+                                            <td>{{ wilaya.totaux_types.AG }}</td>
+                                            <td>{{ wilaya.totaux_types.EL }}</td>
+                                            <td>{{ wilaya.totaux_types.SER }}</td>
+                                            <td>{{ wilaya.totaux_types.ENV }}</td>
+                                            <td>{{ wilaya.total }}</td>
+                                        </tr>
+                                    </tbody>
+                                </table>
+                            </div>
                         </div>
                     {% empty %}
                         <div class="empty-text">
@@ -248,9 +282,10 @@
                 </div>
             </div>
         </div>
+    </div>
 
-        <div class="col-lg-5">
-
+    <div class="row compact-row">
+        <div class="col-lg-6">
             <div class="stats-card">
                 <div class="stat-card-header">
                     Répartition des projets par type
@@ -262,7 +297,9 @@
                     </div>
                 </div>
             </div>
+        </div>
 
+        <div class="col-lg-6">
             <div class="stats-card">
                 <div class="stat-card-header">
                     {{ second_chart_title }}
@@ -274,12 +311,76 @@
                     </div>
                 </div>
             </div>
-
         </div>
-
     </div>
 
-    <div class="row">
+    <div class="row compact-row">
+        <div class="col-lg-12">
+            <div class="stats-card">
+                <div class="stat-card-header">
+                    {% if selected_wilaya %}
+                        Financement global - {{ selected_wilaya.nom }} (MRU)
+                    {% else %}
+                        Financement global par Wilaya (MRU)
+                    {% endif %}
+                </div>
+
+                <div class="stats-card-body">
+                    <div class="table-responsive mb-3">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Wilaya</th>
+                                    <th>Subvention PADISAM (MRU)</th>
+                                    <th>Contribution promoteur (MRU)</th>
+                                    <th>Autre financement (MRU)</th>
+                                    <th>Total financement (MRU)</th>
+                                </tr>
+                            </thead>
+
+                            <tbody>
+                                {% for ligne in stats_financement_wilayas %}
+                                <tr>
+                                    <td>
+                                        <strong>{{ ligne.wilaya }}</strong>
+                                    </td>
+                                    <td>{{ ligne.subvention|floatformat:2|intcomma }}</td>
+                                    <td>{{ ligne.contribution|floatformat:2|intcomma }}</td>
+                                    <td>{{ ligne.autre|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        <strong>{{ ligne.total|floatformat:2|intcomma }}</strong>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="5" class="text-center">
+                                        Aucune donnée de financement disponible.
+                                    </td>
+                                </tr>
+                                {% endfor %}
+
+                                <tr class="total-row">
+                                    <td>Total général</td>
+                                    <td>{{ total_financement_subvention|floatformat:2|intcomma }}</td>
+                                    <td>{{ total_financement_contribution|floatformat:2|intcomma }}</td>
+                                    <td>{{ total_financement_autre|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        <strong>{{ total_financement_general|floatformat:2|intcomma }}</strong>
+                                    </td>
+                                </tr>
+                            </tbody>
+                        </table>
+                    </div>
+
+                    <div class="bar-chart-box">
+                        <canvas id="chartFinancementWilaya"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <div class="row compact-row">
         <div class="col-lg-12">
             <div class="stats-card">
                 <div class="stat-card-header">
@@ -287,35 +388,37 @@
                 </div>
 
                 <div class="stats-card-body">
-                    <table class="table table-bordered">
-                        <thead>
-                            <tr>
-                                <th>Login</th>
-                                <th>Nom</th>
-                                <th>Wilaya</th>
-                                <th>Nombre de sous-projets</th>
-                            </tr>
-                        </thead>
+                    <div class="table-responsive">
+                        <table class="table table-bordered">
+                            <thead>
+                                <tr>
+                                    <th>Login</th>
+                                    <th>Nom</th>
+                                    <th>Wilaya</th>
+                                    <th>Nombre de sous-projets</th>
+                                </tr>
+                            </thead>
 
-                        <tbody>
-                            {% for agent in stats_agents %}
-                            <tr>
-                                <td>{{ agent.login }}</td>
-                                <td>{{ agent.nom }}</td>
-                                <td>{{ agent.wilaya }}</td>
-                                <td>
-                                    <strong>{{ agent.total }}</strong>
-                                </td>
-                            </tr>
-                            {% empty %}
-                            <tr>
-                                <td colspan="4" class="text-center">
-                                    Aucune donnée disponible
-                                </td>
-                            </tr>
-                            {% endfor %}
-                        </tbody>
-                    </table>
+                            <tbody>
+                                {% for agent in stats_agents %}
+                                <tr>
+                                    <td>{{ agent.login }}</td>
+                                    <td>{{ agent.nom }}</td>
+                                    <td>{{ agent.wilaya }}</td>
+                                    <td>
+                                        <strong>{{ agent.total }}</strong>
+                                    </td>
+                                </tr>
+                                {% empty %}
+                                <tr>
+                                    <td colspan="4" class="text-center">
+                                        Aucune donnée disponible
+                                    </td>
+                                </tr>
+                                {% endfor %}
+                            </tbody>
+                        </table>
+                    </div>
                 </div>
             </div>
         </div>
@@ -333,6 +436,11 @@ const chartTypeData = {{ chart_type_data|safe }};
 
 const chartSecondLabels = {{ chart_second_labels|safe }};
 const chartSecondData = {{ chart_second_data|safe }};
+
+const chartFinancementLabels = {{ chart_financement_labels|safe }};
+const chartFinancementSubvention = {{ chart_financement_subvention|safe }};
+const chartFinancementContribution = {{ chart_financement_contribution|safe }};
+const chartFinancementAutre = {{ chart_financement_autre|safe }};
 
 const couleurs = [
     '#A8DADC',
@@ -367,12 +475,13 @@ if (ctxType) {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: true,
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
                         boxWidth: 18,
-                        padding: 16
+                        padding: 14
                     }
                 },
                 tooltip: {
@@ -403,18 +512,84 @@ if (ctxSecond) {
         },
         options: {
             responsive: true,
+            maintainAspectRatio: true,
             plugins: {
                 legend: {
                     position: 'bottom',
                     labels: {
                         boxWidth: 18,
-                        padding: 16
+                        padding: 14
                     }
                 },
                 tooltip: {
                     callbacks: {
                         label: function(context) {
                             return context.label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+const ctxFinancement = document.getElementById('chartFinancementWilaya');
+
+if (ctxFinancement) {
+    new Chart(ctxFinancement, {
+        type: 'bar',
+        data: {
+            labels: chartFinancementLabels,
+            datasets: [
+                {
+                    label: 'Subvention PADISAM (MRU)',
+                    data: chartFinancementSubvention,
+                    backgroundColor: '#5DBB63'
+                },
+                {
+                    label: 'Contribution promoteur (MRU)',
+                    data: chartFinancementContribution,
+                    backgroundColor: '#FBC4AB'
+                },
+                {
+                    label: 'Autre financement (MRU)',
+                    data: chartFinancementAutre,
+                    backgroundColor: '#A8DADC'
+                }
+            ]
+        },
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            plugins: {
+                legend: {
+                    position: 'bottom'
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            let value = context.raw || 0;
+                            return context.dataset.label + ' : ' + value.toLocaleString('fr-FR') + ' MRU';
+                        }
+                    }
+                }
+            },
+            scales: {
+                x: {
+                    ticks: {
+                        maxRotation: 45,
+                        minRotation: 0
+                    }
+                },
+                y: {
+                    beginAtZero: true,
+                    title: {
+                        display: true,
+                        text: 'Montant (MRU)'
+                    },
+                    ticks: {
+                        callback: function(value) {
+                            return value.toLocaleString('fr-FR');
                         }
                     }
                 }
