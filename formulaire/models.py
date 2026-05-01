@@ -133,6 +133,7 @@ class SousProjet(models.Model):
     DECISION_COMITE_CHOICES = [
     ('preselectionne', 'Présélectionné'),
     ('rejete', 'Rejeté'),
+    ('a_examiner', 'À examiner'),
 ]
 
     # 1. Informations générales

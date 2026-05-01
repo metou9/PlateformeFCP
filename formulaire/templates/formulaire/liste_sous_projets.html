@@ -1,20 +1,83 @@
 {% extends 'formulaire/base.html' %}
+
 {% block title %}Liste des sous-projets - PADISAM{% endblock %}
-{% block extra_css %}<link href="/static/formulaire/css/liste_sous_projets.css" rel="stylesheet">{% endblock %}
-{% block page_container_start %}<div class="container mt-5">{% endblock %}
+
+{% block extra_css %}
+<link href="/static/formulaire/css/liste_sous_projets.css" rel="stylesheet">
+{% endblock %}
+
+{% block page_container_start %}
+<div class="container mt-5">
+{% endblock %}
+
 {% block content %}
+
 <div class="welcome-section">
     <div class="row align-items-center">
         <div class="col-md-6">
             <h1>📋 Liste des dossiers</h1>
-            <p class="text-muted mb-0">Gérez et consultez tous les dossiers enregistrés</p>
+
+            <p class="text-muted mb-0">
+                {% if selected_wilaya %}
+                    Dossiers enregistrés dans la Wilaya :
+                    <strong>{{ selected_wilaya.nom }}</strong>
+                {% else %}
+                    Gérez et consultez tous les dossiers enregistrés
+                {% endif %}
+            </p>
         </div>
+    </div>
+</div>
+
+<div class="card mb-4">
+    <div class="card-header">
+        🔎 Recherche par Wilaya
+    </div>
+
+    <div class="card-body">
+        <form method="get" class="row align-items-end">
+            <div class="col-md-6">
+                <label for="wilaya" class="form-label">
+                    Choisir une Wilaya
+                </label>
+
+                <select name="wilaya" id="wilaya" class="form-select">
+                    <option value="">Toutes les Wilayas</option>
+
+                    {% for wilaya in wilayas_disponibles %}
+                        <option value="{{ wilaya.wilaya_id }}"
+                            {% if selected_wilaya_id == wilaya.wilaya_id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ wilaya.wilaya__nom }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6 mt-3 mt-md-0">
+                <button type="submit" class="btn btn-success">
+                    Appliquer
+                </button>
+
+                <a href="{% url 'formulaire:liste_sous_projets' %}" class="btn btn-outline-secondary">
+                    Réinitialiser
+                </a>
+            </div>
+        </form>
     </div>
 </div>
 
 {% if sous_projets %}
 <div class="card">
-    <div class="card-header">📌 Liste des dossiers</div>
+    <div class="card-header">
+        📌 Liste des dossiers
+        {% if selected_wilaya %}
+            - {{ selected_wilaya.nom }}
+        {% endif %}
+    </div>
+
     <div class="card-body">
         <div class="table-responsive">
             <table class="table" id="projetsTable">
@@ -27,18 +90,30 @@
                         <th>Type</th>
                         <th>Demandeur</th>
                         <th>Localisation</th>
+
                         {% if is_admin %}
-    <th>Saisi par</th>
-{% endif %}
+                            <th>Saisi par</th>
+                        {% endif %}
+
                         <th>Actions</th>
                     </tr>
                 </thead>
+
                 <tbody>
                     {% for projet in sous_projets %}
                     <tr>
-                        <td><strong>#{{ projet.numero_reception_formulaire }}</strong></td>
-                        <td>{{ projet.date_formulaire|date:"d/m/Y" }}</td>
-                        <td>{{ projet.intitule_sous_projet|truncatechars:50 }}</td>
+                        <td>
+                            <strong>#{{ projet.numero_reception_formulaire }}</strong>
+                        </td>
+
+                        <td>
+                            {{ projet.date_formulaire|date:"d/m/Y" }}
+                        </td>
+
+                        <td>
+                            {{ projet.intitule_sous_projet|truncatechars:50 }}
+                        </td>
+
                         <td>
                             {% if projet.guichet == 'AGR' %}
                                 <span class="badge-agr">{{ projet.guichet }}</span>
@@ -46,16 +121,23 @@
                                 <span class="badge-aci">{{ projet.guichet }}</span>
                             {% endif %}
                         </td>
+
                         <td>
                             {% if projet.type_projet == 'AG' %}
                                 <span class="badge-ag">{{ projet.type_projet }}</span>
                             {% elif projet.type_projet == 'EL' %}
                                 <span class="badge-el">{{ projet.type_projet }}</span>
+                            {% elif projet.type_projet == 'SER' %}
+                                <span class="badge-aci">{{ projet.type_projet }}</span>
                             {% else %}
                                 <span class="badge-env">{{ projet.type_projet }}</span>
                             {% endif %}
                         </td>
-                        <td>{{ projet.nom_statut_juridique|truncatechars:30 }}</td>
+
+                        <td>
+                            {{ projet.nom_statut_juridique|truncatechars:30 }}
+                        </td>
+
                         <td>
                             {% if projet.wilaya %}
                                 {{ projet.wilaya.nom|truncatechars:15 }}
@@ -63,24 +145,38 @@
                                 -
                             {% endif %}
                         </td>
-              {% if is_admin %}
-<td>
-    {% if projet.createur_username %}
-        <div><strong>{{ projet.createur_username }}</strong></div>
-        {% if projet.date_saisie %}
-            <small class="text-muted">
-                {{ projet.date_saisie|date:"d/m/Y H:i" }}
-            </small>
-        {% endif %}
-    {% else %}
-        -
-    {% endif %}
-</td>
-{% endif %}
+
+                        {% if is_admin %}
+                        <td>
+                            {% if projet.createur_username %}
+                                <div>
+                                    <strong>{{ projet.createur_username }}</strong>
+                                </div>
+
+                                {% if projet.date_saisie %}
+                                    <small class="text-muted">
+                                        {{ projet.date_saisie|date:"d/m/Y H:i" }}
+                                    </small>
+                                {% endif %}
+                            {% else %}
+                                -
+                            {% endif %}
+                        </td>
+                        {% endif %}
+
                         <td class="action-buttons">
-                            <a href="{% url 'formulaire:detail_sous_projet' projet.id %}" class="btn btn-sm btn-outline-primary">Détail</a>
+                            <a href="{% url 'formulaire:detail_sous_projet' projet.id %}" class="btn btn-sm btn-outline-primary">
+                                Détail
+                            </a>
+
                             {% if is_admin %}
-                                <button type="button" class="btn-delete btn-sm" onclick="confirmerSuppression({{ projet.id }}, '{{ projet.intitule_sous_projet|escapejs }}')">🗑️ Supprimer</button>
+                                <button
+                                    type="button"
+                                    class="btn-delete btn-sm"
+                                    onclick="confirmerSuppression({{ projet.id }}, '{{ projet.intitule_sous_projet|escapejs }}')"
+                                >
+                                    🗑️ Supprimer
+                                </button>
                             {% endif %}
                         </td>
                     </tr>
@@ -90,14 +186,40 @@
         </div>
     </div>
 </div>
+
 <div class="d-flex justify-content-between align-items-center mt-4">
-    <p class="text-muted">Affichage de {{ sous_projets|length }} sous-projet(s)</p>
+    <p class="text-muted">
+        {% if selected_wilaya %}
+            Affichage de {{ sous_projets|length }} sous-projet(s)
+            pour la Wilaya {{ selected_wilaya.nom }}
+        {% else %}
+            Affichage de {{ sous_projets|length }} sous-projet(s)
+        {% endif %}
+    </p>
 </div>
+
 {% else %}
 <div class="alert alert-info text-center p-5">
     <h3 class="mb-3">📭 Aucun sous-projet</h3>
-    <p class="mb-4">Vous n'avez pas encore enregistré de sous-projet dans la base de données.</p>
-    <a href="{% url 'formulaire:nouveau_sous_projet' %}" class="btn-add">➕ Créer le premier sous-projet</a>
+
+    {% if selected_wilaya %}
+        <p class="mb-4">
+            Aucun sous-projet trouvé pour la Wilaya
+            <strong>{{ selected_wilaya.nom }}</strong>.
+        </p>
+
+        <a href="{% url 'formulaire:liste_sous_projets' %}" class="btn btn-outline-secondary">
+            Voir tous les sous-projets
+        </a>
+    {% else %}
+        <p class="mb-4">
+            Vous n'avez pas encore enregistré de sous-projet dans la base de données.
+        </p>
+
+        <a href="{% url 'formulaire:nouveau_sous_projet' %}" class="btn-add">
+            ➕ Créer le premier sous-projet
+        </a>
+    {% endif %}
 </div>
 {% endif %}
 
@@ -105,25 +227,46 @@
 <div class="modal fade" id="confirmDeleteModal" tabindex="-1" aria-labelledby="confirmDeleteModalLabel" aria-hidden="true">
     <div class="modal-dialog">
         <div class="modal-content">
+
             <div class="modal-header bg-danger text-white">
-                <h5 class="modal-title" id="confirmDeleteModalLabel">Confirmation de suppression</h5>
+                <h5 class="modal-title" id="confirmDeleteModalLabel">
+                    Confirmation de suppression
+                </h5>
+
                 <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
             </div>
+
             <div class="modal-body">
                 <p>Êtes-vous sûr de vouloir supprimer le sous-projet suivant ?</p>
-                <div class="alert alert-warning"><strong id="projetNom"></strong></div>
-                <p class="text-danger mb-0">Cette action est irréversible !</p>
+
+                <div class="alert alert-warning">
+                    <strong id="projetNom"></strong>
+                </div>
+
+                <p class="text-danger mb-0">
+                    Cette action est irréversible !
+                </p>
             </div>
+
             <div class="modal-footer">
-                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Annuler</button>
-                <form id="deleteForm" method="post" style="display: inline;">{% csrf_token %}
-                    <button type="submit" class="btn btn-danger">Confirmer la suppression</button>
+                <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">
+                    Annuler
+                </button>
+
+                <form id="deleteForm" method="post" style="display: inline;">
+                    {% csrf_token %}
+
+                    <button type="submit" class="btn btn-danger">
+                        Confirmer la suppression
+                    </button>
                 </form>
             </div>
+
         </div>
     </div>
 </div>
 {% endif %}
+
 {% endblock %}
 
 {% block extra_js %}
@@ -131,6 +274,7 @@
 function confirmerSuppression(projetId, projetNom) {
     document.getElementById('projetNom').innerHTML = '"' + projetNom + '"';
     document.getElementById('deleteForm').action = '/formulaire/supprimer/' + projetId + '/';
+
     var modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
     modal.show();
 }

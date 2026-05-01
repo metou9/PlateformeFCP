@@ -1,6 +1,7 @@
 {% extends 'formulaire/base.html' %}
 
 {% block title %}Détail présélection comité - PADISAM{% endblock %}
+
 {% block extra_css %}
 <link href="/static/formulaire/css/formulaire.css" rel="stylesheet">
 <style>
@@ -56,16 +57,10 @@
         margin-bottom: 24px;
     }
 
-    .preselection-table-card .card-header-custom {
+    .card-header-custom {
         background: #f8fafc;
         padding: 18px 22px;
         border-bottom: 1px solid #e5e7eb;
-    }
-
-    .preselection-table-card .card-header-custom h5 {
-        margin: 0;
-        color: #1f2937;
-        font-weight: 700;
     }
 
     .table-responsive {
@@ -172,6 +167,16 @@
         margin-top: 6px;
     }
 
+    .readonly-note {
+        background: #fff7ed;
+        border: 1px solid #fdba74;
+        color: #9a3412;
+        padding: 14px 16px;
+        border-radius: 12px;
+        margin-bottom: 20px;
+        font-weight: 600;
+    }
+
     @media (max-width: 992px) {
         .summary-row {
             grid-template-columns: 1fr 1fr;
@@ -188,24 +193,35 @@
 
 {% block content %}
 <div class="container preselection-page">
+
     <div class="preselection-header">
         <h1>Détail de la présélection du comité</h1>
         <p>
-            Dossier : <strong>{{ sous_projet.numero_reception_formulaire }}</strong>
-            — {{ sous_projet.intitule_sous_projet }}
+            Dossier :
+            <strong>{{ sous_projet.numero_reception_formulaire|default:"Non renseigné" }}</strong>
+            — {{ sous_projet.intitule_sous_projet|default:"Non renseigné" }}
         </p>
     </div>
+
+    {% if readonly_mode %}
+    <div class="readonly-note">
+        Ce dossier a déjà une décision finale. Les informations sont visibles mais ne sont plus modifiables.
+    </div>
+    {% endif %}
 
     <div class="summary-row">
         <div class="summary-card">
             <strong>Éligibles :</strong> {{ nb_eligibles }}
         </div>
+
         <div class="summary-card">
             <strong>Non éligibles :</strong> {{ nb_non_eligibles }}
         </div>
+
         <div class="summary-card">
             <strong>À examiner :</strong> {{ nb_a_examiner }}
         </div>
+
         <div class="summary-card">
             <strong>Statut dossier :</strong>
             {% if sous_projet.status == 'preselectionne' %}
@@ -240,14 +256,19 @@
                             <th>Motif comité</th>
                         </tr>
                     </thead>
+
                     <tbody>
                         {{ formset.management_form }}
+
                         {% for form in formset %}
                         <tr>
-                            <td>{{ form.instance.numero_critere }}</td>
-                            <td>{{ form.instance.critere }}</td>
-                            <td>{{ form.instance.question }}</td>
+                            {{ form.id }}
+
+                            <td>{{ form.instance.numero_critere|default:"-" }}</td>
+                            <td>{{ form.instance.critere|default:"-" }}</td>
+                            <td>{{ form.instance.question|default:"-" }}</td>
                             <td>{{ form.instance.resultat_automatique|default:"-" }}</td>
+
                             <td>
                                 {% if form.instance.decision_automatique == 'eligible' %}
                                     <span class="decision-badge badge-ok">Éligible</span>
@@ -257,13 +278,16 @@
                                     <span class="decision-badge badge-review">À examiner</span>
                                 {% endif %}
                             </td>
+
                             <td>{{ form.instance.motif_automatique|default:"-" }}</td>
+
                             <td style="min-width: 180px;">
                                 {{ form.decision_comite }}
                                 {% if form.decision_comite.errors %}
                                     <div class="field-error">{{ form.decision_comite.errors }}</div>
                                 {% endif %}
                             </td>
+
                             <td style="min-width: 220px;">
                                 {{ form.motif_comite }}
                                 {% if form.motif_comite.errors %}
@@ -280,16 +304,24 @@
         <div class="actions-box">
             <div class="row g-3">
                 <div class="col-md-6">
-                    <label class="form-label"><strong>Décision globale du comité</strong></label>
+                    <label class="form-label">
+                        <strong>Décision globale du comité</strong>
+                    </label>
+
                     {{ decision_form.decision_comite }}
+
                     {% if decision_form.decision_comite.errors %}
                         <div class="field-error">{{ decision_form.decision_comite.errors }}</div>
                     {% endif %}
                 </div>
 
                 <div class="col-md-6">
-                    <label class="form-label"><strong>Motif global du comité</strong></label>
+                    <label class="form-label">
+                        <strong>Motif global du comité</strong>
+                    </label>
+
                     {{ decision_form.motif_comite }}
+
                     {% if decision_form.motif_comite.errors %}
                         <div class="field-error">{{ decision_form.motif_comite.errors }}</div>
                     {% endif %}
@@ -297,10 +329,22 @@
             </div>
 
             <div class="mt-4 d-flex gap-2">
-                <button type="submit" class="btn-save">Enregistrer la décision du comité</button>
-                <a href="{% url 'formulaire:preselection_comite_liste' %}" class="btn-back">Retour à la liste</a>
+                {% if not readonly_mode %}
+                    <button type="submit" class="btn-save">
+                        Enregistrer la décision du comité
+                    </button>
+                {% else %}
+                    <span class="decision-badge badge-ok">
+                        Décision finale verrouillée
+                    </span>
+                {% endif %}
+
+                <a href="{% url 'formulaire:preselection_comite_liste' %}" class="btn-back">
+                    Retour à la liste
+                </a>
             </div>
         </div>
     </form>
+
 </div>
 {% endblock %}

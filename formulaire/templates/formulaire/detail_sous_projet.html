@@ -394,6 +394,51 @@
         </div>
     </div>
 </div>
+<div class="info-card">
+    <div class="card-header">
+        <h5 class="mb-0">F. TABLEAU RÉCAPITULATIF DES SOURCES DE FINANCEMENT</h5>
+    </div>
+
+    <div class="card-body">
+        <div class="table-responsive">
+            <table class="table-detail">
+                <thead>
+                    <tr>
+                        <th>Rubrique</th>
+                        <th>Subvention PADISAM (MRU)</th>
+                        <th>Contribution promoteur (MRU)</th>
+                        <th>Autre financement (MRU)</th>
+                        <th>Total rubrique (MRU)</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+                    {% for ligne in recap_financement %}
+                        <tr>
+                            <td><strong>{{ ligne.libelle }}</strong></td>
+                            <td>{{ ligne.subvention|floatformat:2|intcomma }}</td>
+                            <td>{{ ligne.contribution|floatformat:2|intcomma }}</td>
+                            <td>{{ ligne.autre|floatformat:2|intcomma }}</td>
+                            <td class="amount">
+                                <strong>{{ ligne.total|floatformat:2|intcomma }}</strong>
+                            </td>
+                        </tr>
+                    {% endfor %}
+
+                    <tr class="total-row">
+                        <td>Total général</td>
+                        <td>{{ recap_total_subvention|floatformat:2|intcomma }}</td>
+                        <td>{{ recap_total_contribution|floatformat:2|intcomma }}</td>
+                        <td>{{ recap_total_autre|floatformat:2|intcomma }}</td>
+                        <td class="total-amount">
+                            {{ recap_total_general|floatformat:2|intcomma }}
+                        </td>
+                    </tr>
+                </tbody>
+            </table>
+        </div>
+    </div>
+</div>
 
 <div class="section-title">7. Renseignements sur le promoteur</div>
 <div class="info-card">

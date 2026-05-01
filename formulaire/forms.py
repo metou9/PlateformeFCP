@@ -403,7 +403,36 @@ class ActiviteForm(forms.ModelForm):
 
 
 class BaseActiviteFormSet(BaseInlineFormSet):
-    pass
+    def clean(self):
+        super().clean()
+
+        for form in self.forms:
+            if not hasattr(form, 'cleaned_data'):
+                continue
+
+            if form.cleaned_data.get('DELETE'):
+                continue
+
+            nom_activite = form.cleaned_data.get('nom_activite')
+            realisations = form.cleaned_data.get('realisations')
+
+            # Ligne totalement vide : autorisée
+            if not nom_activite and not realisations:
+                continue
+
+            # Objectifs saisis sans nom activité
+            if realisations and not nom_activite:
+                form.add_error(
+                    'nom_activite',
+                    "Le nom de l'activité est obligatoire si les objectifs quantitatifs sont renseignés."
+                )
+
+            # Nom activité saisi sans objectifs
+            if nom_activite and not realisations:
+                form.add_error(
+                    'realisations',
+                    "Les objectifs quantitatifs sont obligatoires si le nom de l'activité est renseigné."
+                )
 
 
 ActiviteFormSet = inlineformset_factory(
@@ -954,16 +983,44 @@ class ResultatPreselectionForm(forms.ModelForm):
             'motif_comite': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
 
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+
+        # Pas obligatoire au départ : on autorise l'enregistrement partiel
+        self.fields['decision_comite'].required = False
+        self.fields['motif_comite'].required = False
 
 
 class DecisionComiteSousProjetForm(forms.ModelForm):
+    decision_comite = forms.ChoiceField(
+        choices=[
+            ('', '---------'),
+            ('a_examiner', 'À examiner'),
+            ('preselectionne', 'Présélectionné'),
+            ('rejete', 'Rejeté'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
     class Meta:
         model = SousProjet
         fields = ['decision_comite', 'motif_comite']
         widgets = {
-            'decision_comite': forms.Select(attrs={'class': 'form-control'}),
             'motif_comite': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
         }
+
+    def __init__(self, *args, **kwargs):
+        readonly = kwargs.pop('readonly', False)
+        super().__init__(*args, **kwargs)
+
+        self.fields['decision_comite'].required = False
+        self.fields['motif_comite'].required = False
+
+        if readonly:
+            self.fields['decision_comite'].widget.attrs['disabled'] = 'disabled'
+            self.fields['motif_comite'].widget.attrs['readonly'] = 'readonly'
+
 ResultatPreselectionFormSet = modelformset_factory(
     ResultatPreselection,
     form=ResultatPreselectionForm,

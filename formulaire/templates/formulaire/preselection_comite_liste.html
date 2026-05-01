@@ -1,163 +1,137 @@
 {% extends 'formulaire/base.html' %}
 
 {% block title %}Présélection Comité régional - PADISAM{% endblock %}
+
 {% block extra_css %}
 <link href="/static/formulaire/css/formulaire.css" rel="stylesheet">
 <style>
-    .preselection-page {
-        padding-top: 10px;
-        padding-bottom: 30px;
-    }
 
-    .preselection-header {
-        background: linear-gradient(135deg, #5dbb63 0%, #3f9142 100%);
-        color: white;
-        padding: 24px 28px;
-        border-radius: 18px;
-        margin-bottom: 24px;
-        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
-    }
+.preselection-page {
+    padding-top: 10px;
+    padding-bottom: 30px;
+}
 
-    .preselection-header h1 {
-        margin: 0 0 8px 0;
-        font-size: 30px;
-        font-weight: 700;
-    }
+.preselection-header {
+    background: linear-gradient(135deg, #5dbb63 0%, #3f9142 100%);
+    color: white;
+    padding: 24px 28px;
+    border-radius: 18px;
+    margin-bottom: 24px;
+    box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
+}
 
-    .preselection-header p {
-        margin: 0;
-        font-size: 15px;
-        opacity: 0.95;
-    }
+.preselection-header h1 {
+    margin: 0 0 8px 0;
+    font-size: 30px;
+    font-weight: 700;
+}
 
-    .stats-card {
-        background: #fff;
-        border-radius: 16px;
-        padding: 18px 22px;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-        margin-bottom: 22px;
-        border-left: 5px solid #5dbb63;
-    }
+.stats-card {
+    background: #fff;
+    border-radius: 16px;
+    padding: 18px 22px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    margin-bottom: 22px;
+    border-left: 5px solid #5dbb63;
+}
 
-    .stats-card strong {
-        color: #1d4f2a;
-    }
+.preselection-table-card {
+    background: #fff;
+    border-radius: 18px;
+    overflow: hidden;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+}
 
-    .preselection-table-card {
-        background: #fff;
-        border-radius: 18px;
-        overflow: hidden;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-    }
+.card-header-custom {
+    background: #f8fafc;
+    padding: 18px 22px;
+    border-bottom: 1px solid #e5e7eb;
+}
 
-    .preselection-table-card .card-header-custom {
-        background: #f8fafc;
-        padding: 18px 22px;
-        border-bottom: 1px solid #e5e7eb;
-    }
+/* TABLE */
+.preselection-table {
+    width: 100%;
+    border-collapse: collapse;
+    table-layout: fixed;
+}
 
-    .preselection-table-card .card-header-custom h5 {
-        margin: 0;
-        color: #1f2937;
-        font-weight: 700;
-    }
+.preselection-table thead {
+    background: #5dbb63;
+    color: white;
+}
 
-    .table-responsive {
-        width: 100%;
-        overflow-x: auto;
-    }
+.preselection-table th,
+.preselection-table td {
+    padding: 14px 16px;
+    border-bottom: 1px solid #e5e7eb;
+    font-size: 14px;
+    vertical-align: middle;
+}
 
-    .preselection-table {
-        width: 100%;
-        border-collapse: collapse;
-    }
+/* largeur équilibrée */
+.preselection-table th:nth-child(1) { width: 8%; }
+.preselection-table th:nth-child(2) { width: 14%; }
+.preselection-table th:nth-child(3) { width: 14%; }
+.preselection-table th:nth-child(4) { width: 32%; }
+.preselection-table th:nth-child(5) { width: 12%; }
+.preselection-table th:nth-child(6) { width: 14%; }
+.preselection-table th:nth-child(7) { width: 6%; }
 
-    .preselection-table thead {
-        background: #5dbb63;
-        color: white;
-    }
+/* BADGES */
+.decision-badge {
+    display: inline-block;
+    padding: 7px 12px;
+    border-radius: 999px;
+    font-size: 12px;
+    font-weight: 700;
+    white-space: nowrap;
+}
 
-    .preselection-table th,
-    .preselection-table td {
-        padding: 14px 16px;
-        text-align: left;
-        border-bottom: 1px solid #e5e7eb;
-        vertical-align: top;
-        font-size: 14px;
-    }
+.badge-ok { background: #dcfce7; color: #166534; }
+.badge-review { background: #fef3c7; color: #92400e; }
+.badge-no { background: #fee2e2; color: #991b1b; }
 
-    .preselection-table th {
-        white-space: nowrap;
-        font-weight: 700;
-    }
+/* MOTIFS */
+.motif-text {
+    color: #374151;
+    line-height: 1.5;
+    white-space: normal;
+    word-break: break-word;
+}
 
-    .preselection-table tbody tr:hover {
-        background: #f9fafb;
-    }
+/* BOUTON */
+.detail-btn {
+    display: inline-block;
+    padding: 8px 14px;
+    border-radius: 10px;
+    background: #ecfdf3;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+    font-size: 13px;
+    font-weight: 700;
+    text-decoration: none;
+    white-space: nowrap;
+}
 
-    .decision-badge {
-        display: inline-block;
-        padding: 6px 12px;
-        border-radius: 999px;
-        font-size: 12px;
-        font-weight: 700;
-        white-space: nowrap;
-    }
+.detail-btn:hover {
+    background: #d1fae5;
+}
 
-    .badge-ok {
-        background: #dcfce7;
-        color: #166534;
-    }
+.empty-box {
+    padding: 30px;
+    text-align: center;
+    color: #6b7280;
+}
 
-    .badge-review {
-        background: #fef3c7;
-        color: #92400e;
-    }
-
-    .badge-no {
-        background: #fee2e2;
-        color: #991b1b;
-    }
-
-    .motif-text {
-        color: #374151;
-        line-height: 1.5;
-    }
-
-    .detail-btn {
-        display: inline-block;
-        padding: 8px 14px;
-        border-radius: 10px;
-        background: #ecfdf3;
-        color: #166534;
-        border: 1px solid #bbf7d0;
-        font-size: 13px;
-        font-weight: 700;
-        text-decoration: none;
-        transition: all 0.2s ease;
-        white-space: nowrap;
-    }
-
-    .detail-btn:hover {
-        background: #d1fae5;
-        color: #14532d;
-        border-color: #86efac;
-        text-decoration: none;
-    }
-
-    .empty-box {
-        padding: 30px;
-        text-align: center;
-        color: #6b7280;
-    }
 </style>
 {% endblock %}
 
 {% block content %}
 <div class="container preselection-page">
+
     <div class="preselection-header">
         <h1>Présélection du comité régional</h1>
-        <p>Analyse des dossiers par le comité de présélection régional</p>
+        <p>Analyse des dossiers par le comité</p>
     </div>
 
     <div class="stats-card">
@@ -170,82 +144,71 @@
         </div>
 
         {% if lignes %}
-            <div class="table-responsive">
-                <table class="preselection-table">
-                    <thead>
-                        <tr>
-                            <th>N° réception</th>
-                            <th>Intitulé du sous-projet</th>
-                            <th>Décision automatique</th>
-                            <th>Motif automatique</th>
-                            <th>Décision comité</th>
-                            <th>Motif comité</th>
-                            {% if can_validate_comite %}
-    <th>Détail</th>
-{% endif %}
-                        </tr>
-                    </thead>
-                   <tbody>
-    {% for ligne in lignes %}
-    <tr>
-        <td>{{ ligne.numero_reception|default:"Non renseigné" }}</td>
-        <td>{{ ligne.intitule|default:"Non renseigné" }}</td>
+        <div class="table-responsive">
+            <table class="preselection-table">
+                <thead>
+                    <tr>
+                        <th>N° réception</th>
+                        <th>Intitulé</th>
+                        <th>Décision automatique</th>
+                        <th>Motif automatique</th>
+                        <th>Décision comité</th>
+                        <th>Motif comité</th>
+                        {% if can_validate_comite %}
+                        <th>Détail</th>
+                        {% endif %}
+                    </tr>
+                </thead>
 
-        <td>
-            {% if ligne.decision_automatique == 'Préselectionné' or ligne.decision_automatique == 'Éligible' %}
-                <span class="decision-badge badge-ok">{{ ligne.decision_automatique }}</span>
-            {% elif ligne.decision_automatique == 'Rejeté' or ligne.decision_automatique == 'Non éligible' %}
-                <span class="decision-badge badge-no">{{ ligne.decision_automatique }}</span>
-            {% elif ligne.decision_automatique %}
-                <span class="decision-badge badge-review">{{ ligne.decision_automatique }}</span>
-            {% else %}
-                <span class="text-muted">Non renseigné</span>
-            {% endif %}
-        </td>
+                <tbody>
+                    {% for ligne in lignes %}
+                    <tr>
+                        <td>{{ ligne.numero_reception }}</td>
+                        <td>{{ ligne.intitule }}</td>
 
-        <td class="motif-text">
-            {% if ligne.motif_automatique %}
-                {{ ligne.motif_automatique }}
-            {% else %}
-                <span class="text-muted">Non renseigné</span>
-            {% endif %}
-        </td>
+                        <td>
+                            <span class="decision-badge {{ ligne.badge_class }}">
+                                {{ ligne.decision_automatique }}
+                            </span>
+                        </td>
 
-        <td>
-            {% if ligne.decision_comite == 'preselectionne' %}
-                <span class="decision-badge badge-ok">Présélectionné</span>
-            {% elif ligne.decision_comite == 'rejete' %}
-                <span class="decision-badge badge-no">Rejeté</span>
-            {% else %}
-                <span class="decision-badge badge-review">En étude</span>
-            {% endif %}
-        </td>
+                        <td class="motif-text">
+                            {{ ligne.motif_automatique }}
+                        </td>
 
-        <td class="motif-text">
-            {% if ligne.motif_comite %}
-                {{ ligne.motif_comite }}
-            {% else %}
-                <span class="text-muted">Non renseigné</span>
-            {% endif %}
-        </td>
+                        <td>
+                            {% if ligne.decision_comite == 'preselectionne' %}
+                                <span class="decision-badge badge-ok">Présélectionné</span>
+                            {% elif ligne.decision_comite == 'rejete' %}
+                                <span class="decision-badge badge-no">Rejeté</span>
+                            {% else %}
+                                <span class="decision-badge badge-review">À examiner</span>
+                            {% endif %}
+                        </td>
 
-       {% if can_validate_comite %}
-<td>
-    <a href="{% url 'formulaire:preselection_comite_detail' ligne.sous_projet.id %}" class="detail-btn">
-         Détail
-    </a>
-</td>
-{% endif %}
-    </tr>
-    {% endfor %}
-</tbody>
-                </table>
-            </div>
+                        <td class="motif-text">
+                            {{ ligne.motif_comite|default:"Non renseigné" }}
+                        </td>
+
+                        {% if can_validate_comite %}
+                        <td>
+                            <a href="{% url 'formulaire:preselection_comite_detail' ligne.sous_projet.id %}" class="detail-btn">
+                                Détail
+                            </a>
+                        </td>
+                        {% endif %}
+                    </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
         {% else %}
-            <div class="empty-box">
-                Aucun sous-projet trouvé.
-            </div>
+        <div class="empty-box">
+            Aucun sous-projet trouvé.
+        </div>
         {% endif %}
+
     </div>
+
 </div>
 {% endblock %}

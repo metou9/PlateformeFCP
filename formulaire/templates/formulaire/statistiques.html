@@ -39,6 +39,14 @@
         border-left: 5px solid #5dbb63;
     }
 
+    .filter-card {
+        background: #fff;
+        border-radius: 16px;
+        padding: 18px 22px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+        margin-bottom: 24px;
+    }
+
     .stats-card {
         background: #fff;
         border-radius: 18px;
@@ -82,11 +90,24 @@
         font-size: 14px;
         font-weight: 700;
         color: #374151;
+        text-align: center;
+        vertical-align: middle;
     }
 
     .table td {
         font-size: 14px;
         vertical-align: middle;
+        text-align: center;
+    }
+
+    .table td:first-child,
+    .table th:first-child {
+        text-align: left;
+    }
+
+    .total-row {
+        background: #ecfdf5;
+        font-weight: 700;
     }
 
     .chart-box {
@@ -107,16 +128,62 @@
 
     <div class="stats-header">
         <h1>📊 Tableau de bord statistique</h1>
-        <p>Analyse synthétique des sous-projets enregistrés</p>
+        <p>
+            {% if selected_wilaya %}
+                Analyse des sous-projets pour la Wilaya : <strong>{{ selected_wilaya.nom }}</strong>
+            {% else %}
+                Analyse globale des sous-projets enregistrés
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="filter-card">
+        <form method="get" class="row align-items-end">
+            <div class="col-md-6">
+                <label for="wilaya" class="form-label">
+                    Filtrer par Wilaya
+                </label>
+
+                <select name="wilaya" id="wilaya" class="form-select">
+                    <option value="">Toutes les Wilayas</option>
+
+                    {% for wilaya in wilayas_disponibles %}
+                        <option value="{{ wilaya.wilaya_id }}"
+                            {% if selected_wilaya_id == wilaya.wilaya_id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ wilaya.wilaya__nom }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6 mt-3 mt-md-0">
+                <button type="submit" class="btn btn-success">
+                    Appliquer
+                </button>
+
+                <a href="{% url 'formulaire:statistiques' %}" class="btn btn-outline-secondary">
+                    Réinitialiser
+                </a>
+            </div>
+        </form>
     </div>
 
     <div class="stats-summary">
-        Nombre total de projets : <strong>{{ total_projets }}</strong>
+        {% if selected_wilaya %}
+            Nombre total de projets dans {{ selected_wilaya.nom }} :
+            <strong>{{ total_projets }}</strong>
+        {% else %}
+            Nombre total de projets :
+            <strong>{{ total_projets }}</strong>
+        {% endif %}
     </div>
 
     <div class="row">
 
-        <div class="col-lg-6">
+        <div class="col-lg-7">
             <div class="stats-card">
                 <div class="stat-card-header">
                     Nombre de projets par Wilaya / Paysage / ZOCA
@@ -134,22 +201,42 @@
                                 <thead>
                                     <tr>
                                         <th>Paysage / ZOCA</th>
-                                        <th>Nombre</th>
+                                        <th>AG</th>
+                                        <th>EL</th>
+                                        <th>SER</th>
+                                        <th>ENV</th>
+                                        <th>Total paysage</th>
                                     </tr>
                                 </thead>
+
                                 <tbody>
                                     {% for paysage in wilaya.paysages %}
                                     <tr>
                                         <td>{{ paysage.paysage }}</td>
-                                        <td><strong>{{ paysage.total }}</strong></td>
+                                        <td>{{ paysage.types.AG }}</td>
+                                        <td>{{ paysage.types.EL }}</td>
+                                        <td>{{ paysage.types.SER }}</td>
+                                        <td>{{ paysage.types.ENV }}</td>
+                                        <td>
+                                            <strong>{{ paysage.total }}</strong>
+                                        </td>
                                     </tr>
                                     {% empty %}
                                     <tr>
-                                        <td colspan="2" class="text-center">
+                                        <td colspan="6" class="text-center">
                                             Aucun paysage renseigné
                                         </td>
                                     </tr>
                                     {% endfor %}
+
+                                    <tr class="total-row">
+                                        <td>Total {{ wilaya.wilaya }}</td>
+                                        <td>{{ wilaya.totaux_types.AG }}</td>
+                                        <td>{{ wilaya.totaux_types.EL }}</td>
+                                        <td>{{ wilaya.totaux_types.SER }}</td>
+                                        <td>{{ wilaya.totaux_types.ENV }}</td>
+                                        <td>{{ wilaya.total }}</td>
+                                    </tr>
                                 </tbody>
                             </table>
                         </div>
@@ -162,7 +249,8 @@
             </div>
         </div>
 
-        <div class="col-lg-6">
+        <div class="col-lg-5">
+
             <div class="stats-card">
                 <div class="stat-card-header">
                     Répartition des projets par type
@@ -174,6 +262,19 @@
                     </div>
                 </div>
             </div>
+
+            <div class="stats-card">
+                <div class="stat-card-header">
+                    {{ second_chart_title }}
+                </div>
+
+                <div class="stats-card-body">
+                    <div class="chart-box">
+                        <canvas id="chartSecondProjet"></canvas>
+                    </div>
+                </div>
+            </div>
+
         </div>
 
     </div>
@@ -202,7 +303,9 @@
                                 <td>{{ agent.login }}</td>
                                 <td>{{ agent.nom }}</td>
                                 <td>{{ agent.wilaya }}</td>
-                                <td><strong>{{ agent.total }}</strong></td>
+                                <td>
+                                    <strong>{{ agent.total }}</strong>
+                                </td>
                             </tr>
                             {% empty %}
                             <tr>
@@ -225,28 +328,75 @@
 <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
 
 <script>
-const labels = {{ chart_labels|safe }};
-const data = {{ chart_data|safe }};
+const chartTypeLabels = {{ chart_type_labels|safe }};
+const chartTypeData = {{ chart_type_data|safe }};
 
-const ctx = document.getElementById('chartTypeProjet');
+const chartSecondLabels = {{ chart_second_labels|safe }};
+const chartSecondData = {{ chart_second_data|safe }};
 
-if (ctx) {
-    new Chart(ctx, {
+const couleurs = [
+    '#A8DADC',
+    '#FBC4AB',
+    '#CDEAC0',
+    '#DDBDF1',
+    '#FFD6A5',
+    '#BDE0FE',
+    '#FFC8DD',
+    '#E2ECE9',
+    '#C7F9CC',
+    '#FFAFCC',
+    '#B8C0FF',
+    '#FDFFB6',
+    '#CAFFBF',
+    '#9BF6FF'
+];
+
+const ctxType = document.getElementById('chartTypeProjet');
+
+if (ctxType) {
+    new Chart(ctxType, {
         type: 'pie',
         data: {
-            labels: labels,
+            labels: chartTypeLabels,
             datasets: [{
-                data: data,
-                backgroundColor: [
-                    '#A8DADC',
-                    '#FBC4AB',
-                    '#CDEAC0',
-                    '#DDBDF1',
-                    '#FFD6A5',
-                    '#BDE0FE',
-                    '#FFC8DD',
-                    '#E2ECE9'
-                ],
+                data: chartTypeData,
+                backgroundColor: couleurs,
+                borderColor: '#ffffff',
+                borderWidth: 2
+            }]
+        },
+        options: {
+            responsive: true,
+            plugins: {
+                legend: {
+                    position: 'bottom',
+                    labels: {
+                        boxWidth: 18,
+                        padding: 16
+                    }
+                },
+                tooltip: {
+                    callbacks: {
+                        label: function(context) {
+                            return context.label;
+                        }
+                    }
+                }
+            }
+        }
+    });
+}
+
+const ctxSecond = document.getElementById('chartSecondProjet');
+
+if (ctxSecond) {
+    new Chart(ctxSecond, {
+        type: 'pie',
+        data: {
+            labels: chartSecondLabels,
+            datasets: [{
+                data: chartSecondData,
+                backgroundColor: couleurs,
                 borderColor: '#ffffff',
                 borderWidth: 2
             }]

@@ -169,44 +169,43 @@
         </div>
 
         {% if lignes %}
-            <div class="table-responsive">
-                <table class="preselection-table">
-                    <thead>
-                       <tr>
-    <th>N° réception</th>
-    <th>Intitulé du sous-projet</th>
-    <th>Critère</th>
-    <th>Décision</th>
-    <th>Motif</th>
-    {% if can_view_preselection_detail %}
-    <th>Détail</th>
+         {% if lignes %}
+<div class="table-responsive">
+    <table class="preselection-table">
+        <thead>
+            <tr>
+                <th>N° réception</th>
+                <th>Intitulé du sous-projet</th>
+                <th>Décision</th>
+                <th>Motif</th>
+            </tr>
+        </thead>
+
+        <tbody>
+            {% for ligne in lignes %}
+            <tr>
+                <td>{{ ligne.numero_reception }}</td>
+                <td>{{ ligne.intitule }}</td>
+
+                <td>
+                    <span class="decision-badge {{ ligne.badge_class }}">
+                        {{ ligne.decision }}
+                    </span>
+                </td>
+
+                <td class="motif-text">
+                    {{ ligne.motif }}
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+</div>
+{% else %}
+<div class="empty-box">
+    Aucun sous-projet trouvé.
+</div>
 {% endif %}
-</tr>
-                    </thead>
-                    <tbody>
-                        {% for ligne in lignes %}
-                        <tr>
-    <td>{{ ligne.numero_reception }}</td>
-    <td>{{ ligne.intitule }}</td>
-    <td>{{ ligne.critere }}</td>
-    <td>
-        <span class="decision-badge {{ ligne.badge_class }}">
-            {{ ligne.decision }}
-        </span>
-    </td>
-    <td class="motif-text">{{ ligne.motif }}</td>
-   {% if can_view_preselection_detail %}
-<td>
-    <a href="{% url 'formulaire:preselection_detail' ligne.sous_projet.id %}" class="detail-btn">
-         Détail
-    </a>
-</td>
-{% endif %}
-</tr>
-                        {% endfor %}
-                    </tbody>
-                </table>
-            </div>
         {% else %}
             <div class="empty-box">
                 Aucun sous-projet trouvé.

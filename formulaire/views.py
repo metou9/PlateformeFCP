@@ -4,13 +4,15 @@ Vues principales de l'application FCP / PADISAM
 """
 
 from functools import wraps
+import json
 
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.forms import inlineformset_factory
-from django.http import JsonResponse
+from django.http import JsonResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
 from django.utils import timezone
+from django.db import transaction
 from django.db.models import Sum
 from django.db.models import Count
 from django.contrib.auth.decorators import login_required
@@ -141,6 +143,104 @@ def get_current_sous_projet(request):
             return None
 
     return None
+
+
+# =========================================================
+# BROUILLON EN SESSION POUR LA CRÉATION MULTI-ÉTAPES
+# =========================================================
+# Objectif : pendant la création d'un nouveau sous-projet, aucune ligne n'est
+# enregistrée dans la base de données avant la validation de la dernière étape.
+# Les données validées étape par étape sont conservées dans la session.
+
+NOUVEAU_SOUS_PROJET_DRAFT_KEY = 'nouveau_sous_projet_draft'
+
+
+def _post_to_session_data(post_data):
+    """Convertit un QueryDict POST en dict sérialisable pour la session."""
+    return {key: post_data.getlist(key) for key in post_data.keys()}
+
+
+def _session_data_to_querydict(data):
+    """Reconstruit un QueryDict depuis les données conservées en session."""
+    querydict = QueryDict('', mutable=True)
+    for key, values in (data or {}).items():
+        if isinstance(values, list):
+            querydict.setlist(key, values)
+        else:
+            querydict.setlist(key, [values])
+    return querydict
+
+
+def _get_creation_draft(request):
+    return request.session.get(NOUVEAU_SOUS_PROJET_DRAFT_KEY, {})
+
+
+def _save_creation_step(request, step_name, post_data):
+    draft = _get_creation_draft(request)
+    draft[step_name] = _post_to_session_data(post_data)
+    request.session[NOUVEAU_SOUS_PROJET_DRAFT_KEY] = draft
+    request.session.modified = True
+
+
+def _clear_creation_draft(request):
+    request.session.pop(NOUVEAU_SOUS_PROJET_DRAFT_KEY, None)
+    request.session.pop('current_sous_projet_id', None)
+    request.session.modified = True
+
+
+def _get_step_querydict(request, step_name):
+    return _session_data_to_querydict(_get_creation_draft(request).get(step_name))
+
+
+def _build_unsaved_sous_projet_from_step1(request, utilisateur):
+    """
+    Reconstruit un objet SousProjet non enregistré depuis l'étape 1.
+    Sert uniquement à valider/afficher les formsets inline des étapes suivantes.
+    """
+    step1_data = _get_creation_draft(request).get('step1')
+    if not step1_data:
+        return None
+
+    form = SousProjetForm(_session_data_to_querydict(step1_data), user=utilisateur)
+    if not form.is_valid():
+        return None
+
+    sous_projet = form.save(commit=False)
+
+    if is_agent_saisie(utilisateur):
+        sous_projet.wilaya = utilisateur.wilaya
+
+    if utilisateur:
+        sous_projet.createur_username = utilisateur.username
+
+    return sous_projet
+
+
+def _financement_totals_from_formset(formset, include_subvention=True):
+    """Calcule les totaux à partir des données du formset non encore sauvegardées."""
+    totals = {
+        'total_montant': 0,
+        'total_contribution': 0,
+        'total_autre': 0,
+    }
+    if include_subvention:
+        totals['total_subvention'] = 0
+
+    if formset.is_bound and formset.is_valid():
+        for form in formset.forms:
+            cleaned = getattr(form, 'cleaned_data', None) or {}
+            if cleaned.get('DELETE'):
+                continue
+            if not cleaned.get('description') and cleaned.get('montant_total') in (None, ''):
+                continue
+
+            totals['total_montant'] += cleaned.get('montant_total') or 0
+            totals['total_contribution'] += cleaned.get('contribution_promoteur') or 0
+            totals['total_autre'] += cleaned.get('autre_financement') or 0
+            if include_subvention:
+                totals['total_subvention'] += cleaned.get('subvention_padisam') or 0
+
+    return totals
 
 
 def login_required(view_func):
@@ -325,16 +425,12 @@ def accueil(request):
 @login_required
 def nouveau_sous_projet(request):
     """
-    Étape 1 :
-    - formulaire principal
-    - activités
+    Étape 1 : informations générales + activités.
 
-    Règle :
-    - nouveau dossier : 1 ligne activité
-    - refresh / dossier existant : pas de ligne vide supplémentaire
+    Nouvelle règle : aucune donnée n'est enregistrée en base à cette étape.
+    Les données validées sont stockées temporairement dans la session.
     """
     utilisateur = get_current_user(request)
-    sous_projet = get_current_sous_projet(request)
 
     if utilisateur and utilisateur.role == 'prescomite':
         messages.error(request, "❌ Le président du comité de présélection n'est pas autorisé à créer un nouveau dossier.")
@@ -345,32 +441,17 @@ def nouveau_sous_projet(request):
         return redirect('formulaire:accueil')
 
     if request.method == 'POST':
-        form = SousProjetForm(request.POST, instance=sous_projet, user=utilisateur)
-
+        form = SousProjetForm(request.POST, user=utilisateur)
         ActiviteDynamicFormSet = get_activite_formset_class(extra=0)
         activite_formset = ActiviteDynamicFormSet(
             request.POST,
-            instance=sous_projet if sous_projet else SousProjet(),
+            instance=SousProjet(),
             prefix='activite'
         )
 
         if form.is_valid() and activite_formset.is_valid():
-            sous_projet = form.save(commit=False)
-
-            if is_agent_saisie(utilisateur):
-                sous_projet.wilaya = utilisateur.wilaya
-
-            # Ajouter le username du créateur
-            if utilisateur:
-                sous_projet.createur_username = utilisateur.username
-
-            sous_projet.save()
-
-            activite_formset.instance = sous_projet
-            activite_formset.save()
-
-            request.session['current_sous_projet_id'] = sous_projet.id
-            messages.success(request, "✅ Informations générales enregistrées.")
+            _save_creation_step(request, 'step1', request.POST)
+            messages.success(request, "✅ Étape 1 validée. Les données seront enregistrées définitivement à la dernière étape.")
             return redirect('formulaire:financement_infrastructure')
 
         for field, errors in form.errors.items():
@@ -382,22 +463,31 @@ def nouveau_sous_projet(request):
                 messages.error(request, f"❌ Activités : {error}")
 
     else:
-        form = SousProjetForm(instance=sous_projet, user=utilisateur) if sous_projet else SousProjetForm(user=utilisateur)
+        draft_step1 = _get_creation_draft(request).get('step1')
 
-        if sous_projet and sous_projet.pk and sous_projet.activites.exists():
+        if draft_step1:
+            step1_querydict = _session_data_to_querydict(draft_step1)
+            form = SousProjetForm(step1_querydict, user=utilisateur)
             ActiviteDynamicFormSet = get_activite_formset_class(extra=0)
+            activite_formset = ActiviteDynamicFormSet(
+                step1_querydict,
+                instance=SousProjet(),
+                prefix='activite'
+            )
         else:
+            # Nouveau flux : on nettoie tout ancien ID temporaire issu de l'ancien comportement.
+            request.session.pop('current_sous_projet_id', None)
+            form = SousProjetForm(user=utilisateur)
             ActiviteDynamicFormSet = get_activite_formset_class(extra=1)
-
-        activite_formset = ActiviteDynamicFormSet(
-            instance=sous_projet if sous_projet else SousProjet(),
-            prefix='activite'
-        )
+            activite_formset = ActiviteDynamicFormSet(
+                instance=SousProjet(),
+                prefix='activite'
+            )
 
     return render(request, 'formulaire/nv_sous_projet.html', {
         'form': form,
         'activite_formset_data': activite_formset,
-        'sous_projet': sous_projet,
+        'sous_projet': None,
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
     })
 
@@ -411,16 +501,50 @@ def save_sous_projet(request):
 @login_required
 def statistiques(request):
     """
-    Page statistiques :
-    - total projets
-    - projets par wilaya / paysage / zoca
-    - projets par type avec pourcentage
-    - projets saisis par agent
+    Page statistiques dynamique :
+    - Par défaut : statistiques globales
+    - Si une wilaya est sélectionnée : statistiques filtrées par cette wilaya
     """
     utilisateur = get_current_user(request)
-    sous_projets = get_accessible_sous_projets(utilisateur)
+
+    # Tous les sous-projets accessibles selon le rôle de l'utilisateur
+    sous_projets_base = get_accessible_sous_projets(utilisateur)
+
+    # Wilaya sélectionnée depuis le champ select
+    selected_wilaya_id = request.GET.get('wilaya') or ''
+    selected_wilaya = None
+
+    # Liste des wilayas disponibles selon les projets accessibles
+    wilayas_disponibles = (
+        sous_projets_base
+        .exclude(wilaya__isnull=True)
+        .values('wilaya_id', 'wilaya__nom')
+        .distinct()
+        .order_by('wilaya__nom')
+    )
+
+    # Filtrage si l'utilisateur choisit une wilaya
+    sous_projets = sous_projets_base
+
+    if selected_wilaya_id:
+        sous_projets = sous_projets_base.filter(wilaya_id=selected_wilaya_id)
+
+        try:
+            selected_wilaya = Wilaya.objects.get(id=selected_wilaya_id)
+        except Wilaya.DoesNotExist:
+            selected_wilaya = None
 
     total_projets = sous_projets.count()
+
+    # Ordre des types à afficher dans les tableaux
+    type_codes = ['AG', 'EL', 'SER', 'ENV']
+
+    type_labels_long = {
+        'AG': 'Agriculture',
+        'EL': 'Élevage',
+        'SER': 'Service',
+        'ENV': 'Environnement',
+    }
 
     # =====================================================
     # 1. Statistiques Wilaya
@@ -433,39 +557,68 @@ def statistiques(request):
     )
 
     # =====================================================
-    # 2. Statistiques Paysage / ZOCA par Wilaya
+    # 2. Tableau Wilaya / Paysage / Type
     # =====================================================
-    stats_paysages = (
+    stats_paysages_types_raw = (
         sous_projets
-        .values('wilaya__nom', 'paysage__nom')
+        .values('wilaya__nom', 'paysage__nom', 'type_projet')
         .annotate(total=Count('id'))
-        .order_by('wilaya__nom', 'paysage__nom')
+        .order_by('wilaya__nom', 'paysage__nom', 'type_projet')
     )
 
-    stats_wilaya_paysages = []
+    wilaya_data = {}
 
     for wilaya in stats_wilayas:
         wilaya_nom = wilaya['wilaya__nom'] or "Non renseignée"
 
-        paysages = []
-
-        for item in stats_paysages:
-            item_wilaya = item['wilaya__nom'] or "Non renseignée"
-
-            if item_wilaya == wilaya_nom:
-                paysages.append({
-                    'paysage': item['paysage__nom'] or "Non renseigné",
-                    'total': item['total'],
-                })
-
-        stats_wilaya_paysages.append({
+        wilaya_data[wilaya_nom] = {
             'wilaya': wilaya_nom,
             'total': wilaya['total'],
+            'paysages_dict': {},
+            'totaux_types': {code: 0 for code in type_codes},
+        }
+
+    for item in stats_paysages_types_raw:
+        wilaya_nom = item['wilaya__nom'] or "Non renseignée"
+        paysage_nom = item['paysage__nom'] or "Non renseigné"
+        type_code = item['type_projet'] or "NR"
+        total = item['total']
+
+        if wilaya_nom not in wilaya_data:
+            wilaya_data[wilaya_nom] = {
+                'wilaya': wilaya_nom,
+                'total': 0,
+                'paysages_dict': {},
+                'totaux_types': {code: 0 for code in type_codes},
+            }
+
+        if paysage_nom not in wilaya_data[wilaya_nom]['paysages_dict']:
+            wilaya_data[wilaya_nom]['paysages_dict'][paysage_nom] = {
+                'paysage': paysage_nom,
+                'types': {code: 0 for code in type_codes},
+                'total': 0,
+            }
+
+        if type_code in type_codes:
+            wilaya_data[wilaya_nom]['paysages_dict'][paysage_nom]['types'][type_code] += total
+            wilaya_data[wilaya_nom]['totaux_types'][type_code] += total
+
+        wilaya_data[wilaya_nom]['paysages_dict'][paysage_nom]['total'] += total
+
+    stats_wilaya_paysages = []
+
+    for wilaya_nom, data in wilaya_data.items():
+        paysages = list(data['paysages_dict'].values())
+
+        stats_wilaya_paysages.append({
+            'wilaya': data['wilaya'],
+            'total': data['total'],
             'paysages': paysages,
+            'totaux_types': data['totaux_types'],
         })
 
     # =====================================================
-    # 3. Statistiques Type Projet
+    # 3. Pie chart : Répartition des projets par type
     # =====================================================
     stats_types_raw = (
         sous_projets
@@ -474,21 +627,13 @@ def statistiques(request):
         .order_by('type_projet')
     )
 
-    type_map = {
-        'AG': 'Agriculture',
-        'EL': 'Élevage',
-        'ENV': 'Environnement',
-         'SER': 'Service',
-    }
-
     stats_types = []
-    chart_labels = []
-    chart_data = []
+    chart_type_labels = []
+    chart_type_data = []
 
     for item in stats_types_raw:
         code = item['type_projet'] or "NR"
-
-        label = type_map.get(code, code)
+        label = type_labels_long.get(code, code)
         total = item['total']
 
         pourcentage = round((total / total_projets) * 100, 2) if total_projets else 0
@@ -499,11 +644,50 @@ def statistiques(request):
             'pourcentage': pourcentage,
         })
 
-        chart_labels.append(f"{label} : {total} projet(s) - {pourcentage}%")
-        chart_data.append(pourcentage)
+        chart_type_labels.append(f"{label} : {total} projet(s) - {pourcentage}%")
+        chart_type_data.append(total)
 
     # =====================================================
-    # 4. Statistiques Agents de saisie
+    # 4. Deuxième pie chart dynamique
+    #    - Global : Répartition par Wilaya
+    #    - Si Wilaya choisie : Répartition par Paysage
+    # =====================================================
+    chart_second_labels = []
+    chart_second_data = []
+
+    if selected_wilaya_id:
+        second_chart_title = "Répartition des projets par paysage"
+
+        stats_paysages_chart = (
+            sous_projets
+            .values('paysage__nom')
+            .annotate(total=Count('id'))
+            .order_by('paysage__nom')
+        )
+
+        for item in stats_paysages_chart:
+            paysage_nom = item['paysage__nom'] or "Non renseigné"
+            total = item['total']
+
+            pourcentage = round((total / total_projets) * 100, 2) if total_projets else 0
+
+            chart_second_labels.append(f"{paysage_nom} : {total} projet(s) - {pourcentage}%")
+            chart_second_data.append(total)
+
+    else:
+        second_chart_title = "Répartition des projets par Wilaya"
+
+        for item in stats_wilayas:
+            wilaya_nom = item['wilaya__nom'] or "Non renseignée"
+            total = item['total']
+
+            pourcentage = round((total / total_projets) * 100, 2) if total_projets else 0
+
+            chart_second_labels.append(f"{wilaya_nom} : {total} projet(s) - {pourcentage}%")
+            chart_second_data.append(total)
+
+    # =====================================================
+    # 5. Statistiques Agents de saisie
     # =====================================================
     stats_agents_raw = (
         sous_projets
@@ -545,11 +729,20 @@ def statistiques(request):
     context = {
         'total_projets': total_projets,
 
+        'selected_wilaya_id': str(selected_wilaya_id),
+        'selected_wilaya': selected_wilaya,
+        'wilayas_disponibles': wilayas_disponibles,
+
         'stats_wilaya_paysages': stats_wilaya_paysages,
 
         'stats_types': stats_types,
-        'chart_labels': chart_labels,
-        'chart_data': chart_data,
+
+        'chart_type_labels': json.dumps(chart_type_labels),
+        'chart_type_data': json.dumps(chart_type_data),
+
+        'second_chart_title': second_chart_title,
+        'chart_second_labels': json.dumps(chart_second_labels),
+        'chart_second_data': json.dumps(chart_second_data),
 
         'stats_agents': stats_agents,
 
@@ -565,25 +758,18 @@ def statistiques(request):
 
 @login_required
 def financement_infrastructure(request):
-    """
-    Étape 2 :
-    - premier affichage : 3 lignes vides
-    - refresh / données existantes : 0 ligne vide supplémentaire
-    """
-    sous_projet = get_current_sous_projet(request)
+    utilisateur = get_current_user(request)
+    sous_projet = _build_unsaved_sous_projet_from_step1(request, utilisateur)
     if not sous_projet:
+        messages.error(request, "❌ Veuillez compléter l'étape 1 avant de continuer.")
         return redirect('formulaire:nouveau_sous_projet')
 
-    DynamicInfrastructureFormSet = clone_formset_with_extra(
-        InfrastructureFormSet,
-        0 if sous_projet.infrastructures.exists() else 3
-    )
-
     if request.method == 'POST':
+        DynamicInfrastructureFormSet = clone_formset_with_extra(InfrastructureFormSet, 0)
         formset = DynamicInfrastructureFormSet(request.POST, instance=sous_projet, prefix='infra')
         if formset.is_valid():
-            formset.save()
-            messages.success(request, "✅ Infrastructures enregistrées.")
+            _save_creation_step(request, 'infrastructures', request.POST)
+            messages.success(request, "✅ Infrastructures validées temporairement.")
             return redirect('formulaire:financement_equipement')
 
         for form in formset.forms:
@@ -591,12 +777,15 @@ def financement_infrastructure(request):
                 for error in errors:
                     messages.error(request, f"❌ Infrastructure - {field} : {error}")
     else:
-        formset = DynamicInfrastructureFormSet(instance=sous_projet, prefix='infra')
+        stored_data = _get_creation_draft(request).get('infrastructures')
+        if stored_data:
+            DynamicInfrastructureFormSet = clone_formset_with_extra(InfrastructureFormSet, 0)
+            formset = DynamicInfrastructureFormSet(_session_data_to_querydict(stored_data), instance=sous_projet, prefix='infra')
+        else:
+            DynamicInfrastructureFormSet = clone_formset_with_extra(InfrastructureFormSet, 3)
+            formset = DynamicInfrastructureFormSet(instance=sous_projet, prefix='infra')
 
-    infrastructures_totaux = compute_financement_totals(
-        sous_projet.infrastructures.all(),
-        include_subvention=True
-    )
+    infrastructures_totaux = _financement_totals_from_formset(formset, include_subvention=True)
 
     return render(request, 'formulaire/financement_infrastructure.html', {
         'infrastructure_formset': formset,
@@ -616,25 +805,18 @@ def save_infrastructure(request):
 
 @login_required
 def financement_equipement(request):
-    """
-    Étape 3 :
-    - premier affichage : 3 lignes vides
-    - refresh / données existantes : 0 ligne vide supplémentaire
-    """
-    sous_projet = get_current_sous_projet(request)
+    utilisateur = get_current_user(request)
+    sous_projet = _build_unsaved_sous_projet_from_step1(request, utilisateur)
     if not sous_projet:
+        messages.error(request, "❌ Veuillez compléter l'étape 1 avant de continuer.")
         return redirect('formulaire:nouveau_sous_projet')
 
-    DynamicEquipementFormSet = clone_formset_with_extra(
-        EquipementFormSet,
-        0 if sous_projet.equipements.exists() else 3
-    )
-
     if request.method == 'POST':
+        DynamicEquipementFormSet = clone_formset_with_extra(EquipementFormSet, 0)
         formset = DynamicEquipementFormSet(request.POST, instance=sous_projet, prefix='equip')
         if formset.is_valid():
-            formset.save()
-            messages.success(request, "✅ Équipements enregistrés.")
+            _save_creation_step(request, 'equipements', request.POST)
+            messages.success(request, "✅ Équipements validés temporairement.")
             return redirect('formulaire:financement_intrant')
 
         for form in formset.forms:
@@ -642,12 +824,15 @@ def financement_equipement(request):
                 for error in errors:
                     messages.error(request, f"❌ Équipement - {field} : {error}")
     else:
-        formset = DynamicEquipementFormSet(instance=sous_projet, prefix='equip')
+        stored_data = _get_creation_draft(request).get('equipements')
+        if stored_data:
+            DynamicEquipementFormSet = clone_formset_with_extra(EquipementFormSet, 0)
+            formset = DynamicEquipementFormSet(_session_data_to_querydict(stored_data), instance=sous_projet, prefix='equip')
+        else:
+            DynamicEquipementFormSet = clone_formset_with_extra(EquipementFormSet, 3)
+            formset = DynamicEquipementFormSet(instance=sous_projet, prefix='equip')
 
-    equipements_totaux = compute_financement_totals(
-        sous_projet.equipements.all(),
-        include_subvention=True
-    )
+    equipements_totaux = _financement_totals_from_formset(formset, include_subvention=True)
 
     return render(request, 'formulaire/financement_equipement.html', {
         'equipement_formset': formset,
@@ -667,25 +852,18 @@ def save_equipement(request):
 
 @login_required
 def financement_intrant(request):
-    """
-    Étape 4 :
-    - premier affichage : 3 lignes vides
-    - refresh / données existantes : 0 ligne vide supplémentaire
-    """
-    sous_projet = get_current_sous_projet(request)
+    utilisateur = get_current_user(request)
+    sous_projet = _build_unsaved_sous_projet_from_step1(request, utilisateur)
     if not sous_projet:
+        messages.error(request, "❌ Veuillez compléter l'étape 1 avant de continuer.")
         return redirect('formulaire:nouveau_sous_projet')
 
-    DynamicIntrantFormSet = clone_formset_with_extra(
-        IntrantFormSet,
-        0 if sous_projet.intrants.exists() else 3
-    )
-
     if request.method == 'POST':
+        DynamicIntrantFormSet = clone_formset_with_extra(IntrantFormSet, 0)
         formset = DynamicIntrantFormSet(request.POST, instance=sous_projet, prefix='intrant')
         if formset.is_valid():
-            formset.save()
-            messages.success(request, "✅ Intrants enregistrés.")
+            _save_creation_step(request, 'intrants', request.POST)
+            messages.success(request, "✅ Intrants validés temporairement.")
             return redirect('formulaire:financement_fonctionnement')
 
         for form in formset.forms:
@@ -693,12 +871,15 @@ def financement_intrant(request):
                 for error in errors:
                     messages.error(request, f"❌ Intrant - {field} : {error}")
     else:
-        formset = DynamicIntrantFormSet(instance=sous_projet, prefix='intrant')
+        stored_data = _get_creation_draft(request).get('intrants')
+        if stored_data:
+            DynamicIntrantFormSet = clone_formset_with_extra(IntrantFormSet, 0)
+            formset = DynamicIntrantFormSet(_session_data_to_querydict(stored_data), instance=sous_projet, prefix='intrant')
+        else:
+            DynamicIntrantFormSet = clone_formset_with_extra(IntrantFormSet, 3)
+            formset = DynamicIntrantFormSet(instance=sous_projet, prefix='intrant')
 
-    intrants_totaux = compute_financement_totals(
-        sous_projet.intrants.all(),
-        include_subvention=True
-    )
+    intrants_totaux = _financement_totals_from_formset(formset, include_subvention=True)
 
     return render(request, 'formulaire/financement_intrant.html', {
         'intrant_formset': formset,
@@ -718,25 +899,18 @@ def save_intrant(request):
 
 @login_required
 def financement_fonctionnement(request):
-    """
-    Étape 5 :
-    - premier affichage : 1 ligne vide
-    - refresh / données existantes : 0 ligne vide supplémentaire
-    """
-    sous_projet = get_current_sous_projet(request)
+    utilisateur = get_current_user(request)
+    sous_projet = _build_unsaved_sous_projet_from_step1(request, utilisateur)
     if not sous_projet:
+        messages.error(request, "❌ Veuillez compléter l'étape 1 avant de continuer.")
         return redirect('formulaire:nouveau_sous_projet')
 
-    DynamicFonctionnementFormSet = clone_formset_with_extra(
-        FonctionnementFormSet,
-        0 if sous_projet.fonctionnements.exists() else 1
-    )
-
     if request.method == 'POST':
+        DynamicFonctionnementFormSet = clone_formset_with_extra(FonctionnementFormSet, 0)
         formset = DynamicFonctionnementFormSet(request.POST, instance=sous_projet, prefix='fonc')
         if formset.is_valid():
-            formset.save()
-            messages.success(request, "✅ Fonctionnement enregistré.")
+            _save_creation_step(request, 'fonctionnements', request.POST)
+            messages.success(request, "✅ Fonctionnement validé temporairement.")
             return redirect('formulaire:financement_services')
 
         for form in formset.forms:
@@ -744,12 +918,15 @@ def financement_fonctionnement(request):
                 for error in errors:
                     messages.error(request, f"❌ Fonctionnement - {field} : {error}")
     else:
-        formset = DynamicFonctionnementFormSet(instance=sous_projet, prefix='fonc')
+        stored_data = _get_creation_draft(request).get('fonctionnements')
+        if stored_data:
+            DynamicFonctionnementFormSet = clone_formset_with_extra(FonctionnementFormSet, 0)
+            formset = DynamicFonctionnementFormSet(_session_data_to_querydict(stored_data), instance=sous_projet, prefix='fonc')
+        else:
+            DynamicFonctionnementFormSet = clone_formset_with_extra(FonctionnementFormSet, 1)
+            formset = DynamicFonctionnementFormSet(instance=sous_projet, prefix='fonc')
 
-    fonctionnements_totaux = compute_financement_totals(
-        sous_projet.fonctionnements.all(),
-        include_subvention=False
-    )
+    fonctionnements_totaux = _financement_totals_from_formset(formset, include_subvention=False)
 
     return render(request, 'formulaire/financement_fonctionnement.html', {
         'fonctionnement_formset': formset,
@@ -769,25 +946,18 @@ def save_fonctionnement(request):
 
 @login_required
 def financement_services(request):
-    """
-    Étape 6 :
-    - premier affichage : 1 ligne vide
-    - refresh / données existantes : 0 ligne vide supplémentaire
-    """
-    sous_projet = get_current_sous_projet(request)
+    utilisateur = get_current_user(request)
+    sous_projet = _build_unsaved_sous_projet_from_step1(request, utilisateur)
     if not sous_projet:
+        messages.error(request, "❌ Veuillez compléter l'étape 1 avant de continuer.")
         return redirect('formulaire:nouveau_sous_projet')
 
-    DynamicServiceFormSet = clone_formset_with_extra(
-        ServiceFormSet,
-        0 if sous_projet.services.exists() else 1
-    )
-
     if request.method == 'POST':
+        DynamicServiceFormSet = clone_formset_with_extra(ServiceFormSet, 0)
         formset = DynamicServiceFormSet(request.POST, instance=sous_projet, prefix='serv')
         if formset.is_valid():
-            formset.save()
-            messages.success(request, "✅ Services enregistrés.")
+            _save_creation_step(request, 'services', request.POST)
+            messages.success(request, "✅ Services validés temporairement.")
             return redirect('formulaire:realisation_passif')
 
         for form in formset.forms:
@@ -795,12 +965,15 @@ def financement_services(request):
                 for error in errors:
                     messages.error(request, f"❌ Service - {field} : {error}")
     else:
-        formset = DynamicServiceFormSet(instance=sous_projet, prefix='serv')
+        stored_data = _get_creation_draft(request).get('services')
+        if stored_data:
+            DynamicServiceFormSet = clone_formset_with_extra(ServiceFormSet, 0)
+            formset = DynamicServiceFormSet(_session_data_to_querydict(stored_data), instance=sous_projet, prefix='serv')
+        else:
+            DynamicServiceFormSet = clone_formset_with_extra(ServiceFormSet, 1)
+            formset = DynamicServiceFormSet(instance=sous_projet, prefix='serv')
 
-    services_totaux = compute_financement_totals(
-        sous_projet.services.all(),
-        include_subvention=True
-    )
+    services_totaux = _financement_totals_from_formset(formset, include_subvention=True)
 
     return render(request, 'formulaire/financement_services.html', {
         'service_formset': formset,
@@ -820,9 +993,23 @@ def save_service(request):
 
 @login_required
 def realisation_passif(request):
-    """Étape 7 : informations finales, réalisations passées et emprunts."""
-    sous_projet = get_current_sous_projet(request)
+    """
+    Dernière étape.
+    C'est uniquement ici que le sous-projet et toutes ses tables liées sont créés en base.
+    Si l'utilisateur abandonne avant cette étape, rien n'est enregistré.
+    """
+    utilisateur = get_current_user(request)
+    sous_projet = _build_unsaved_sous_projet_from_step1(request, utilisateur)
     if not sous_projet:
+        messages.error(request, "❌ Veuillez compléter l'étape 1 avant de continuer.")
+        return redirect('formulaire:nouveau_sous_projet')
+
+    draft = _get_creation_draft(request)
+    required_steps = ['step1', 'infrastructures', 'equipements', 'intrants', 'fonctionnements', 'services']
+    missing_steps = [step for step in required_steps if step not in draft]
+
+    if missing_steps:
+        messages.error(request, "❌ Veuillez compléter toutes les étapes avant l'enregistrement final.")
         return redirect('formulaire:nouveau_sous_projet')
 
     if request.method == 'POST':
@@ -830,156 +1017,159 @@ def realisation_passif(request):
         realisation_formset = RealisationFormSet(request.POST, prefix='real')
         emprunt_formset = EmpruntFormSet(request.POST, prefix='emprunt')
 
-        if promoteur_form.is_valid() and realisation_formset.is_valid() and emprunt_formset.is_valid():
-            promoteur_form.save()
+        # On revalide toutes les étapes conservées en session juste avant la création réelle.
+        step1_qd = _get_step_querydict(request, 'step1')
+        step1_form = SousProjetForm(step1_qd, user=utilisateur)
+        step1_activite_formset = get_activite_formset_class(extra=0)(step1_qd, instance=SousProjet(), prefix='activite')
 
-            # On remplace complètement les anciennes réalisations
-            sous_projet.realisations.all().delete()
+        infrastructure_formset = clone_formset_with_extra(InfrastructureFormSet, 0)(
+            _get_step_querydict(request, 'infrastructures'), instance=sous_projet, prefix='infra'
+        )
+        equipement_formset = clone_formset_with_extra(EquipementFormSet, 0)(
+            _get_step_querydict(request, 'equipements'), instance=sous_projet, prefix='equip'
+        )
+        intrant_formset = clone_formset_with_extra(IntrantFormSet, 0)(
+            _get_step_querydict(request, 'intrants'), instance=sous_projet, prefix='intrant'
+        )
+        fonctionnement_formset = clone_formset_with_extra(FonctionnementFormSet, 0)(
+            _get_step_querydict(request, 'fonctionnements'), instance=sous_projet, prefix='fonc'
+        )
+        service_formset = clone_formset_with_extra(ServiceFormSet, 0)(
+            _get_step_querydict(request, 'services'), instance=sous_projet, prefix='serv'
+        )
 
-            for real_form in realisation_formset:
-                cleaned_data = getattr(real_form, 'cleaned_data', None)
-                if not cleaned_data:
-                    continue
+        all_valid = all([
+            step1_form.is_valid(),
+            step1_activite_formset.is_valid(),
+            infrastructure_formset.is_valid(),
+            equipement_formset.is_valid(),
+            intrant_formset.is_valid(),
+            fonctionnement_formset.is_valid(),
+            service_formset.is_valid(),
+            promoteur_form.is_valid(),
+            realisation_formset.is_valid(),
+            emprunt_formset.is_valid(),
+        ])
 
-                produit = cleaned_data.get('produit')
+        if all_valid:
+            try:
+                with transaction.atomic():
+                    sous_projet = step1_form.save(commit=False)
 
-                annee_1 = cleaned_data.get('annee_1')
-                volume_1 = cleaned_data.get('volume_annee_1')
-                ventes_1 = cleaned_data.get('ventes_usd_annee_1')
-                prix_1 = cleaned_data.get('prix_vente_mru_annee_1')
+                    if is_agent_saisie(utilisateur):
+                        sous_projet.wilaya = utilisateur.wilaya
 
-                annee_2 = cleaned_data.get('annee_2')
-                volume_2 = cleaned_data.get('volume_annee_2')
-                ventes_2 = cleaned_data.get('ventes_usd_annee_2')
-                prix_2 = cleaned_data.get('prix_vente_mru_annee_2')
+                    if utilisateur:
+                        sous_projet.createur_username = utilisateur.username
 
-                annee_3 = cleaned_data.get('annee_3')
-                volume_3 = cleaned_data.get('volume_annee_3')
-                ventes_3 = cleaned_data.get('ventes_usd_annee_3')
-                prix_3 = cleaned_data.get('prix_vente_mru_annee_3')
+                    # Ajoute les champs de la dernière étape sur le même objet.
+                    promoteur_final = PromoteurFinalForm(request.POST, instance=sous_projet).save(commit=False)
+                    sous_projet = promoteur_final
+                    sous_projet.save()
 
-                has_data = any([
-                    produit,
-                    annee_1, volume_1, ventes_1, prix_1,
-                    annee_2, volume_2, ventes_2, prix_2,
-                    annee_3, volume_3, ventes_3, prix_3,
-                ])
+                    step1_activite_formset.instance = sous_projet
+                    step1_activite_formset.save()
 
-                if not has_data:
-                    continue
+                    for formset in [
+                        infrastructure_formset,
+                        equipement_formset,
+                        intrant_formset,
+                        fonctionnement_formset,
+                        service_formset,
+                    ]:
+                        formset.instance = sous_projet
+                        formset.save()
 
-                RealisationPassee.objects.create(
-                    sous_projet=sous_projet,
-                    produit=produit,
+                    for real_form in realisation_formset:
+                        cleaned_data = getattr(real_form, 'cleaned_data', None)
+                        if not cleaned_data:
+                            continue
 
-                    annee_1=annee_1,
-                    volume_annee_1=volume_1,
-                    ventes_usd_annee_1=ventes_1,
-                    prix_vente_mru_annee_1=prix_1,
+                        has_data = any([
+                            cleaned_data.get('produit'),
+                            cleaned_data.get('annee_1'), cleaned_data.get('volume_annee_1'), cleaned_data.get('ventes_usd_annee_1'), cleaned_data.get('prix_vente_mru_annee_1'),
+                            cleaned_data.get('annee_2'), cleaned_data.get('volume_annee_2'), cleaned_data.get('ventes_usd_annee_2'), cleaned_data.get('prix_vente_mru_annee_2'),
+                            cleaned_data.get('annee_3'), cleaned_data.get('volume_annee_3'), cleaned_data.get('ventes_usd_annee_3'), cleaned_data.get('prix_vente_mru_annee_3'),
+                        ])
 
-                    annee_2=annee_2,
-                    volume_annee_2=volume_2,
-                    ventes_usd_annee_2=ventes_2,
-                    prix_vente_mru_annee_2=prix_2,
+                        if not has_data:
+                            continue
 
-                    annee_3=annee_3,
-                    volume_annee_3=volume_3,
-                    ventes_usd_annee_3=ventes_3,
-                    prix_vente_mru_annee_3=prix_3,
-                )
+                        RealisationPassee.objects.create(
+                            sous_projet=sous_projet,
+                            produit=cleaned_data.get('produit'),
+                            annee_1=cleaned_data.get('annee_1'),
+                            volume_annee_1=cleaned_data.get('volume_annee_1'),
+                            ventes_usd_annee_1=cleaned_data.get('ventes_usd_annee_1'),
+                            prix_vente_mru_annee_1=cleaned_data.get('prix_vente_mru_annee_1'),
+                            annee_2=cleaned_data.get('annee_2'),
+                            volume_annee_2=cleaned_data.get('volume_annee_2'),
+                            ventes_usd_annee_2=cleaned_data.get('ventes_usd_annee_2'),
+                            prix_vente_mru_annee_2=cleaned_data.get('prix_vente_mru_annee_2'),
+                            annee_3=cleaned_data.get('annee_3'),
+                            volume_annee_3=cleaned_data.get('volume_annee_3'),
+                            ventes_usd_annee_3=cleaned_data.get('ventes_usd_annee_3'),
+                            prix_vente_mru_annee_3=cleaned_data.get('prix_vente_mru_annee_3'),
+                        )
 
-            # On remplace complètement les anciens emprunts
-            sous_projet.emprunts.all().delete()
+                    for emp_form in emprunt_formset:
+                        cleaned_data = getattr(emp_form, 'cleaned_data', None)
+                        if not cleaned_data:
+                            continue
 
-            for emp_form in emprunt_formset:
-                cleaned_data = getattr(emp_form, 'cleaned_data', None)
-                if not cleaned_data:
-                    continue
+                        has_data = any([
+                            cleaned_data.get('annee'),
+                            cleaned_data.get('institution_financiere'),
+                            cleaned_data.get('montant_emprunte'),
+                            cleaned_data.get('montant_rembourse'),
+                        ])
 
-                annee = cleaned_data.get('annee')
-                institution = cleaned_data.get('institution_financiere')
-                montant_emprunte = cleaned_data.get('montant_emprunte')
-                montant_rembourse = cleaned_data.get('montant_rembourse')
+                        if not has_data:
+                            continue
 
-                has_data = any([
-                    annee,
-                    institution,
-                    montant_emprunte,
-                    montant_rembourse,
-                ])
+                        PassifEmprunt.objects.create(
+                            sous_projet=sous_projet,
+                            annee=cleaned_data.get('annee'),
+                            institution_financiere=cleaned_data.get('institution_financiere'),
+                            montant_emprunte=cleaned_data.get('montant_emprunte'),
+                            montant_rembourse=cleaned_data.get('montant_rembourse'),
+                        )
 
-                if not has_data:
-                    continue
+                _clear_creation_draft(request)
+                messages.success(request, "✅ Sous-projet créé avec succès !")
+                return redirect('formulaire:liste_sous_projets')
 
-                PassifEmprunt.objects.create(
-                    sous_projet=sous_projet,
-                    annee=annee,
-                    institution_financiere=institution,
-                    montant_emprunte=montant_emprunte,
-                    montant_rembourse=montant_rembourse,
-                )
+            except Exception as exc:
+                messages.error(request, f"❌ Enregistrement annulé. Aucune donnée n'a été sauvegardée. Détail : {exc}")
 
-            request.session.pop('current_sous_projet_id', None)
-            messages.success(request, "✅ Sous-projet créé avec succès !")
-            return redirect('formulaire:liste_sous_projets')
+        else:
+            messages.error(request, "❌ Certaines étapes contiennent des erreurs. Aucune donnée n'a été sauvegardée.")
 
-        for field, errors in promoteur_form.errors.items():
-            for error in errors:
-                messages.error(request, f"❌ Promoteur - {field} : {error}")
-
-        for form in realisation_formset.forms:
-            for field, errors in form.errors.items():
+            for field, errors in promoteur_form.errors.items():
                 for error in errors:
-                    messages.error(request, f"❌ Réalisation - {field} : {error}")
+                    messages.error(request, f"❌ Promoteur - {field} : {error}")
 
-        for form in emprunt_formset.forms:
-            for field, errors in form.errors.items():
-                for error in errors:
-                    messages.error(request, f"❌ Emprunt - {field} : {error}")
+            for form in realisation_formset.forms:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"❌ Réalisation - {field} : {error}")
+
+            for form in emprunt_formset.forms:
+                for field, errors in form.errors.items():
+                    for error in errors:
+                        messages.error(request, f"❌ Emprunt - {field} : {error}")
 
     else:
-        promoteur_form = PromoteurFinalForm(instance=sous_projet)
-
-        realisations_initial = [
-            {
-                'produit': r.produit,
-
-                'annee_1': r.annee_1,
-                'volume_annee_1': r.volume_annee_1,
-                'ventes_usd_annee_1': r.ventes_usd_annee_1,
-                'prix_vente_mru_annee_1': r.prix_vente_mru_annee_1,
-
-                'annee_2': r.annee_2,
-                'volume_annee_2': r.volume_annee_2,
-                'ventes_usd_annee_2': r.ventes_usd_annee_2,
-                'prix_vente_mru_annee_2': r.prix_vente_mru_annee_2,
-
-                'annee_3': r.annee_3,
-                'volume_annee_3': r.volume_annee_3,
-                'ventes_usd_annee_3': r.ventes_usd_annee_3,
-                'prix_vente_mru_annee_3': r.prix_vente_mru_annee_3,
-            }
-            for r in sous_projet.realisations.all()
-        ]
-
-        emprunts_initial = [
-            {
-                'annee': e.annee,
-                'institution_financiere': e.institution_financiere,
-                'montant_emprunte': e.montant_emprunte,
-                'montant_rembourse': e.montant_rembourse,
-            }
-            for e in sous_projet.emprunts.all()
-        ]
-
-        realisation_formset = RealisationFormSet(
-            prefix='real',
-            initial=realisations_initial
-        )
-        emprunt_formset = EmpruntFormSet(
-            prefix='emprunt',
-            initial=emprunts_initial
-        )
+        stored_final = draft.get('final')
+        if stored_final:
+            final_qd = _session_data_to_querydict(stored_final)
+            promoteur_form = PromoteurFinalForm(final_qd, instance=sous_projet)
+            realisation_formset = RealisationFormSet(final_qd, prefix='real')
+            emprunt_formset = EmpruntFormSet(final_qd, prefix='emprunt')
+        else:
+            promoteur_form = PromoteurFinalForm(instance=sous_projet)
+            realisation_formset = RealisationFormSet(prefix='real')
+            emprunt_formset = EmpruntFormSet(prefix='emprunt')
 
     return render(request, 'formulaire/realisation_passif.html', {
         'promoteur_form': promoteur_form,
@@ -1000,12 +1190,50 @@ def save_realisation_passif(request):
 
 @login_required
 def liste_sous_projets(request):
-    """Liste des sous-projets accessibles."""
+    """
+    Liste des sous-projets accessibles.
+
+    Par défaut :
+    - affiche tous les sous-projets accessibles.
+
+    Si une wilaya est choisie :
+    - affiche seulement les sous-projets de cette wilaya.
+    """
     utilisateur = get_current_user(request)
-    sous_projets = get_accessible_sous_projets(utilisateur).order_by('-date_creation')
+
+    sous_projets_base = get_accessible_sous_projets(utilisateur)
+
+    selected_wilaya_id = request.GET.get('wilaya') or ''
+    selected_wilaya = None
+
+    # Liste des wilayas disponibles selon les sous-projets accessibles
+    wilayas_disponibles = (
+        sous_projets_base
+        .exclude(wilaya__isnull=True)
+        .values('wilaya_id', 'wilaya__nom')
+        .distinct()
+        .order_by('wilaya__nom')
+    )
+
+    sous_projets = sous_projets_base
+
+    if selected_wilaya_id:
+        sous_projets = sous_projets.filter(wilaya_id=selected_wilaya_id)
+
+        try:
+            selected_wilaya = Wilaya.objects.get(id=selected_wilaya_id)
+        except Wilaya.DoesNotExist:
+            selected_wilaya = None
+
+    sous_projets = sous_projets.order_by('-date_creation')
 
     return render(request, 'formulaire/liste_sous_projets.html', {
         'sous_projets': sous_projets,
+
+        'wilayas_disponibles': wilayas_disponibles,
+        'selected_wilaya_id': str(selected_wilaya_id),
+        'selected_wilaya': selected_wilaya,
+
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
@@ -1050,6 +1278,78 @@ def detail_sous_projet(request, pk):
     service_subvention = sous_projet.services.aggregate(total=Sum('subvention_padisam'))['total'] or 0
     service_contribution = sous_projet.services.aggregate(total=Sum('contribution_promoteur'))['total'] or 0
     service_autre = sous_projet.services.aggregate(total=Sum('autre_financement'))['total'] or 0
+     # =====================================================
+    # Tableau récapitulatif des financements
+    # =====================================================
+
+    recap_financement = [
+        {
+            'libelle': 'Fonctionnement',
+            'subvention': 0,
+            'contribution': fonct_contribution,
+            'autre': fonct_autre,
+            'total': total_fonctionnements,
+        },
+        {
+            'libelle': 'Infrastructures',
+            'subvention': infra_subvention,
+            'contribution': infra_contribution,
+            'autre': infra_autre,
+            'total': total_infrastructures,
+        },
+        {
+            'libelle': 'Équipements',
+            'subvention': equip_subvention,
+            'contribution': equip_contribution,
+            'autre': equip_autre,
+            'total': total_equipements,
+        },
+        {
+            'libelle': 'Services',
+            'subvention': service_subvention,
+            'contribution': service_contribution,
+            'autre': service_autre,
+            'total': total_services,
+        },
+        {
+            'libelle': 'Intrants',
+            'subvention': intrant_subvention,
+            'contribution': intrant_contribution,
+            'autre': intrant_autre,
+            'total': total_intrants,
+        },
+    ]
+
+    recap_total_subvention = (
+        infra_subvention +
+        equip_subvention +
+        intrant_subvention +
+        service_subvention
+    )
+
+    recap_total_contribution = (
+        fonct_contribution +
+        infra_contribution +
+        equip_contribution +
+        service_contribution +
+        intrant_contribution
+    )
+
+    recap_total_autre = (
+        fonct_autre +
+        infra_autre +
+        equip_autre +
+        service_autre +
+        intrant_autre
+    )
+
+    recap_total_general = (
+        total_fonctionnements +
+        total_infrastructures +
+        total_equipements +
+        total_services +
+        total_intrants
+    )
 
     grand_total = (
         total_infrastructures +
@@ -1104,6 +1404,18 @@ def detail_sous_projet(request, pk):
         'service_subvention': service_subvention,
         'service_contribution': service_contribution,
         'service_autre': service_autre,
+
+                'service_subvention': service_subvention,
+        'service_contribution': service_contribution,
+        'service_autre': service_autre,
+
+        'recap_financement': recap_financement,
+        'recap_total_subvention': recap_total_subvention,
+        'recap_total_contribution': recap_total_contribution,
+        'recap_total_autre': recap_total_autre,
+        'recap_total_general': recap_total_general,
+
+        'grand_total': grand_total,
 
         'grand_total': grand_total,
         'total_ventes': total_ventes,
@@ -1210,73 +1522,61 @@ def get_villages(request):
 
 def evaluer_preselection(sp):
     """
-    Présélection simple de démonstration.
-    Règles automatiques vérifiables sur les champs déjà existants.
+    Présélection automatique simple.
+    Champs obligatoires éliminatoires :
+    - Intitulé du sous-projet
+    - Objectif du sous-projet
     """
 
-    criteres = []
     motifs_manquants = []
 
-    # Critères vérifiables
-    if sp.numero_reception_formulaire:
-        criteres.append("Numéro de réception renseigné")
-    else:
-        motifs_manquants.append("Numéro de réception non renseigné")
-
-    if sp.intitule_sous_projet:
-        criteres.append("Intitulé du sous-projet renseigné")
-    else:
+    if not sp.intitule_sous_projet:
         motifs_manquants.append("Intitulé du sous-projet non renseigné")
 
-    if sp.guichet:
-        criteres.append("Guichet renseigné")
-    else:
-        motifs_manquants.append("Guichet non renseigné")
-
-    if sp.type_projet:
-        criteres.append("Type de projet renseigné")
-    else:
-        motifs_manquants.append("Type de projet non renseigné")
-
-    if sp.wilaya:
-        criteres.append("Wilaya renseignée")
-    else:
-        motifs_manquants.append("Wilaya non renseignée")
-
-    if sp.objectif_sous_projet:
-        criteres.append("Objectif du sous-projet renseigné")
-    else:
+    if not sp.objectif_sous_projet:
         motifs_manquants.append("Objectif du sous-projet non renseigné")
 
-    if sp.nom_statut_juridique:
-        criteres.append("Demandeur / bénéficiaire renseigné")
-    else:
-        motifs_manquants.append("Demandeur / bénéficiaire non renseigné")
-
-    # Décision automatique simple
-    if len(motifs_manquants) == 0:
-        decision = "Préselectionné"
-        motif = "Le dossier contient les informations minimales nécessaires pour passer à l’étape suivante."
-        badge_class = "badge-ok"
-    elif len(motifs_manquants) <= 2:
-        decision = "À examiner"
-        motif = "Le dossier est partiellement complet : " + "; ".join(motifs_manquants) + "."
-        badge_class = "badge-review"
-    else:
-        decision = "Rejet provisoire"
-        motif = "Le dossier est incomplet : " + "; ".join(motifs_manquants) + "."
+    if motifs_manquants:
+        decision = "Rejeté"
+        motif = "Rejet automatique : " + "; ".join(motifs_manquants) + "."
         badge_class = "badge-no"
+    else:
+        decision = "À examiner"
+        motif = "Le dossier contient l’intitulé et l’objectif du sous-projet. Il peut être examiné par le comité."
+        badge_class = "badge-review"
 
     return {
         "numero_reception": sp.numero_reception_formulaire or "Non renseigné",
         "intitule": sp.intitule_sous_projet or "Non renseigné",
-        "critere": " / ".join(criteres) if criteres else "Aucun critère validé",
         "decision": decision,
         "motif": motif,
         "badge_class": badge_class,
         "sous_projet": sp,
     }
 
+def appliquer_preselection_automatique(sp):
+    motifs_manquants = []
+
+    if not sp.intitule_sous_projet:
+        motifs_manquants.append("Intitulé du sous-projet non renseigné")
+
+    if not sp.objectif_sous_projet:
+        motifs_manquants.append("Objectif du sous-projet non renseigné")
+
+    if motifs_manquants:
+        return {
+            'decision': 'Rejet automatique',
+            'motif': "Informations manquantes : " + "; ".join(motifs_manquants) + ".",
+            'badge_class': 'badge-no',
+            'bloque_comite': False,
+        }
+
+    return {
+        'decision': 'À examiner',
+        'motif': "Le dossier contient l’intitulé et l’objectif du sous-projet. Il peut être examiné par le comité.",
+        'badge_class': 'badge-review',
+        'bloque_comite': False,
+    }
 
 @login_required
 def preselection_automatique(request):
@@ -1783,9 +2083,11 @@ def preselection_detail(request, pk):
 @login_required
 def preselection_comite_liste(request):
     """
-    Liste des dossiers pour la présélection comité.
-    - admin, agent, superviseur, superadmin, prescomite : peuvent voir la liste
-    - seul superadmin et prescomite peuvent valider
+     Liste des dossiers pour la présélection comité.
+    - la décision automatique affiche Rejet automatique ou À examiner
+    - elle ne modifie pas le status du dossier
+    - tous les dossiers restent examinables par le comité
+    - seul superadmin et prescomite peuvent accéder au détail
     """
     utilisateur = get_current_user(request)
 
@@ -1796,20 +2098,26 @@ def preselection_comite_liste(request):
     sous_projets = get_accessible_sous_projets(utilisateur).order_by('-id')
 
     lignes = []
+
     for sp in sous_projets:
-        ligne = evaluer_preselection(sp)
+        auto = appliquer_preselection_automatique(sp)
 
         lignes.append({
             'sous_projet': sp,
-            'numero_reception': ligne.get('numero_reception') or "Non renseigné",
-            'intitule': ligne.get('intitule') or "Non renseigné",
-            'critere': ligne.get('critere'),
-            'decision_automatique': ligne.get('decision') or "Non renseigné",
-            'motif_automatique': ligne.get('motif') or "Non renseigné",
-            'badge_class': ligne.get('badge_class') or "badge-review",
+            'numero_reception': sp.numero_reception_formulaire or "Non renseigné",
+            'intitule': sp.intitule_sous_projet or "Non renseigné",
+
+            'decision_automatique': auto['decision'],
+            'motif_automatique': auto['motif'],
+            'badge_class': auto['badge_class'],
+            'bloque_comite': auto['bloque_comite'],
+
             'decision_comite': sp.decision_comite,
             'motif_comite': sp.motif_comite,
+
             'status': sp.status,
+            'score_comite': getattr(sp, 'score_comite', 0),
+            'evaluation_comite_terminee': getattr(sp, 'evaluation_comite_terminee', False),
         })
 
     context = {
@@ -1824,14 +2132,6 @@ def preselection_comite_liste(request):
 
 @login_required
 def preselection_comite_detail(request, pk):
-    """
-    Détail des 20 critères pour un sous-projet.
-    Le comité voit les résultats automatiques et saisit :
-    - décision comité par critère
-    - motif comité par critère
-    - décision globale comité
-    - motif global comité
-    """
     utilisateur = get_current_user(request)
 
     if not can_validate_comite(utilisateur):
@@ -1839,8 +2139,11 @@ def preselection_comite_detail(request, pk):
         return redirect('formulaire:liste_sous_projets')
 
     sous_projet = get_object_or_404(get_accessible_sous_projets(utilisateur), pk=pk)
+    auto = appliquer_preselection_automatique(sous_projet)
 
-    # Créer automatiquement les 20 lignes si elles n'existent pas encore
+    # Si décision finale déjà faite, la page devient lecture seule
+    readonly_mode = sous_projet.status in ['preselectionne', 'rejete']
+
     if not sous_projet.resultats_preselection.exists():
         criteres_auto = evaluer_criteres_preselection(sous_projet)
 
@@ -1867,31 +2170,108 @@ def preselection_comite_detail(request, pk):
     queryset = sous_projet.resultats_preselection.all().order_by('numero_critere')
 
     if request.method == 'POST':
-        formset = ResultatPreselectionFormSet(request.POST, queryset=queryset, prefix='critere')
-        decision_form = DecisionComiteSousProjetForm(request.POST, instance=sous_projet, prefix='global')
+        if readonly_mode:
+            messages.warning(request, "⚠️ Ce dossier a déjà une décision finale et n'est plus modifiable.")
+            return redirect('formulaire:preselection_comite_detail', pk=sous_projet.pk)
+
+        formset = ResultatPreselectionFormSet(
+            request.POST,
+            queryset=queryset,
+            prefix='critere'
+        )
+
+        decision_form = DecisionComiteSousProjetForm(
+            request.POST,
+            instance=sous_projet,
+            prefix='global'
+        )
+
+        decision_globale = request.POST.get('global-decision_comite')
+        motif_global = request.POST.get('global-motif_comite')
+
+        decision_finale = decision_globale in ['preselectionne', 'rejete']
+        decision_attente = decision_globale in ['', None, 'a_examiner']
+
+        if decision_finale:
+            for form in formset.forms:
+                decision = form.data.get(form.add_prefix('decision_comite'))
+                motif = form.data.get(form.add_prefix('motif_comite'))
+
+                if not decision:
+                    form.add_error(
+                        'decision_comite',
+                        "La décision est obligatoire pour valider définitivement le dossier."
+                    )
+
+                if not motif:
+                    form.add_error(
+                        'motif_comite',
+                        "Le motif est obligatoire pour valider définitivement le dossier."
+                    )
+
+            if not motif_global:
+                decision_form.add_error(
+                    'motif_comite',
+                    "Le motif global est obligatoire pour valider définitivement le dossier."
+                )
 
         if formset.is_valid() and decision_form.is_valid():
             formset.save()
 
             sous_projet = decision_form.save(commit=False)
 
-            if sous_projet.decision_comite == 'preselectionne':
-                sous_projet.status = 'preselectionne'
-            elif sous_projet.decision_comite == 'rejete':
-                sous_projet.status = 'rejete'
-            else:
+            if decision_finale:
+                score = 0
+
+                for resultat in sous_projet.resultats_preselection.all():
+                    if resultat.decision_comite == 'preselectionne':
+                        score += 1
+
+                if hasattr(sous_projet, 'score_comite'):
+                    sous_projet.score_comite = score
+
+                if hasattr(sous_projet, 'evaluation_comite_terminee'):
+                    sous_projet.evaluation_comite_terminee = True
+
+                if hasattr(sous_projet, 'date_evaluation_comite'):
+                    sous_projet.date_evaluation_comite = timezone.now()
+
+                sous_projet.status = decision_globale
+                sous_projet.save()
+
+                messages.success(
+                    request,
+                    f"✅ Décision finale du comité enregistrée avec succès. Score : {score}/20."
+                )
+                return redirect('formulaire:preselection_comite_liste')
+
+            if decision_attente:
                 sous_projet.status = 'etude'
 
-            sous_projet.save()
+                if hasattr(sous_projet, 'evaluation_comite_terminee'):
+                    sous_projet.evaluation_comite_terminee = False
 
-            messages.success(request, "✅ Décision du comité enregistrée avec succès.")
-            return redirect('formulaire:preselection_comite_liste')
+                sous_projet.save()
+
+                messages.success(
+                    request,
+                    "✅ Travail du comité enregistré. Le dossier reste à examiner."
+                )
+                return redirect('formulaire:preselection_comite_liste')
 
         messages.error(request, "❌ Veuillez corriger les erreurs du formulaire.")
 
     else:
-        formset = ResultatPreselectionFormSet(queryset=queryset, prefix='critere')
-        decision_form = DecisionComiteSousProjetForm(instance=sous_projet, prefix='global')
+        formset = ResultatPreselectionFormSet(
+            queryset=queryset,
+            prefix='critere'
+        )
+
+        decision_form = DecisionComiteSousProjetForm(
+            instance=sous_projet,
+            prefix='global',
+            readonly=readonly_mode
+        )
 
     criteres = list(queryset)
 
@@ -1907,6 +2287,8 @@ def preselection_comite_detail(request, pk):
         'nb_eligibles': nb_eligibles,
         'nb_non_eligibles': nb_non_eligibles,
         'nb_a_examiner': nb_a_examiner,
+        'auto': auto,
+        'readonly_mode': readonly_mode,
     }
 
     return render(request, 'formulaire/preselection_comite_detail.html', context)
