@@ -315,9 +315,25 @@
                     </ul>
                 </li>
                 
-             <li class="nav-item ms-lg-3">
-                    <a class="nav-link main-nav-link" href="#">Reporting</a>
-                </li>
+         <li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="reportingDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
+        Reporting
+    </a>
+
+    <ul class="dropdown-menu custom-dropdown" aria-labelledby="reportingDropdown">
+        <li>
+            <a class="dropdown-item active-submenu" href="{% url 'formulaire:statistiques' %}">
+                Statistiques
+            </a>
+        </li>
+
+        <li>
+            <a class="dropdown-item active-submenu" href="{% url 'formulaire:rapport_paysage_type_financement' %}">
+                Rapport paysage par type projet et financement
+            </a>
+        </li>
+    </ul>
+</li>
                 <li class="nav-item ms-lg-3">
                     <a class="nav-link main-nav-link" href="{% url 'formulaire:logout' %}">Déconnexion</a>
                 </li>

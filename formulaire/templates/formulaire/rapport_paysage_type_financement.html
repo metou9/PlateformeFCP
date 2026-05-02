@@ -1,0 +1,339 @@
+{% extends 'formulaire/base.html' %}
+{% load humanize %}
+
+{% block title %}Rapport paysage par type projet et financement - PADISAM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .report-page {
+        padding-top: 10px;
+        padding-bottom: 30px;
+    }
+
+    .report-header {
+        background: linear-gradient(135deg, #5dbb63 0%, #3f9142 100%);
+        color: white;
+        padding: 24px 28px;
+        border-radius: 18px;
+        margin-bottom: 18px;
+        box-shadow: 0 8px 22px rgba(0, 0, 0, 0.10);
+    }
+
+    .report-header h1 {
+        margin: 0 0 8px 0;
+        font-size: 28px;
+        font-weight: 700;
+    }
+
+    .report-header p {
+        margin: 0;
+        font-size: 15px;
+        opacity: 0.95;
+    }
+
+    .filter-card,
+    .report-card,
+    .summary-card {
+        background: white;
+        border-radius: 16px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+        margin-bottom: 18px;
+    }
+
+    .filter-card {
+        padding: 16px 20px;
+    }
+
+    .summary-card {
+        padding: 16px 20px;
+        border-left: 5px solid #5dbb63;
+    }
+
+    .report-card {
+        overflow: hidden;
+    }
+
+    .report-card-header {
+        background: #5dbb63;
+        color: white;
+        padding: 14px 18px;
+        font-weight: 700;
+        font-size: 16px;
+    }
+
+    .report-card-body {
+        padding: 18px;
+    }
+
+    .wilaya-title {
+        background: #f8fafc;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        padding: 14px 16px;
+        margin-bottom: 14px;
+    }
+
+    .wilaya-title h5 {
+        margin: 0;
+        font-weight: 700;
+        color: #1f2937;
+    }
+
+    .table {
+        margin-bottom: 0;
+    }
+
+    .table th {
+        background: #f3f4f6;
+        font-size: 13px;
+        font-weight: 700;
+        color: #374151;
+        text-align: center;
+        vertical-align: middle;
+        white-space: nowrap;
+    }
+
+    .table td {
+        font-size: 13px;
+        vertical-align: middle;
+        text-align: center;
+    }
+
+    .table td:first-child,
+    .table th:first-child {
+        text-align: left;
+    }
+
+    .total-row {
+        background: #ecfdf5;
+        font-weight: 700;
+    }
+
+    .general-total-row {
+        background: #dcfce7;
+        font-weight: 800;
+    }
+
+    .empty-text {
+        color: #6b7280;
+        text-align: center;
+        padding: 24px;
+    }
+
+    .btn-success {
+        background-color: #5dbb63;
+        border-color: #5dbb63;
+    }
+
+    .btn-success:hover {
+        background-color: #4aa34f;
+        border-color: #4aa34f;
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+<div class="container report-page">
+
+    <div class="report-header">
+        <h1>📑 Rapport paysage par type projet et financement</h1>
+        <p>
+            {% if selected_wilaya %}
+                Rapport détaillé pour la Wilaya :
+                <strong>{{ selected_wilaya.nom }}</strong>
+            {% else %}
+                Rapport global de toutes les Wilayas
+            {% endif %}
+        </p>
+    </div>
+
+    <div class="filter-card">
+        <form method="get" class="row align-items-end">
+            <div class="col-md-6">
+                <label for="wilaya" class="form-label">
+                    Filtrer par Wilaya
+                </label>
+
+                <select name="wilaya" id="wilaya" class="form-select">
+                    <option value="">Toutes les Wilayas</option>
+
+                    {% for wilaya in wilayas_disponibles %}
+                        <option value="{{ wilaya.wilaya_id }}"
+                            {% if selected_wilaya_id == wilaya.wilaya_id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ wilaya.wilaya__nom }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-6 mt-3 mt-md-0">
+                <button type="submit" class="btn btn-success">
+                    Appliquer
+                </button>
+
+                <a href="{% url 'formulaire:rapport_paysage_type_financement' %}" class="btn btn-outline-secondary">
+                    Réinitialiser
+                </a>
+            </div>
+        </form>
+    </div>
+
+    <div class="summary-card">
+        {% if selected_wilaya %}
+            Total projets pour {{ selected_wilaya.nom }} :
+            <strong>{{ total_general_projets }}</strong>
+            —
+            Financement total :
+            <strong>{{ total_general_financement|floatformat:2|intcomma }} MRU</strong>
+        {% else %}
+            Total général des projets :
+            <strong>{{ total_general_projets }}</strong>
+            —
+            Financement total général :
+            <strong>{{ total_general_financement|floatformat:2|intcomma }} MRU</strong>
+        {% endif %}
+    </div>
+
+    {% for item in rapport %}
+        <div class="report-card">
+            <div class="report-card-header">
+                Wilaya : {{ item.wilaya }}
+            </div>
+
+            <div class="report-card-body">
+
+                <div class="wilaya-title">
+                    <h5>
+                        Total Wilaya :
+                        {{ item.total_projets }} projet(s)
+                        —
+                        {{ item.total_financement|floatformat:2|intcomma }} MRU
+                    </h5>
+                </div>
+
+                <div class="table-responsive">
+                    <table class="table table-bordered table-sm">
+                        <thead>
+                            <tr>
+                                <th rowspan="2">Paysage / ZOCA</th>
+
+                                <th colspan="5">Répartition par type de projet</th>
+
+                                <th colspan="4">Financement détaillé (MRU)</th>
+                            </tr>
+
+                            <tr>
+                                <th>AG</th>
+                                <th>EL</th>
+                                <th>SER</th>
+                                <th>ENV</th>
+                                <th>Total projets</th>
+
+                                <th>Subvention PADISAM</th>
+                                <th>Contribution promoteur</th>
+                                <th>Autre financement</th>
+                                <th>Total financement</th>
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for paysage in item.paysages %}
+                                <tr>
+                                    <td><strong>{{ paysage.paysage }}</strong></td>
+
+                                    <td>{{ paysage.types.AG }}</td>
+                                    <td>{{ paysage.types.EL }}</td>
+                                    <td>{{ paysage.types.SER }}</td>
+                                    <td>{{ paysage.types.ENV }}</td>
+                                    <td><strong>{{ paysage.total_projets }}</strong></td>
+
+                                    <td>{{ paysage.subvention|floatformat:2|intcomma }}</td>
+                                    <td>{{ paysage.contribution|floatformat:2|intcomma }}</td>
+                                    <td>{{ paysage.autre|floatformat:2|intcomma }}</td>
+                                    <td>
+                                        <strong>{{ paysage.total_financement|floatformat:2|intcomma }}</strong>
+                                    </td>
+                                </tr>
+                            {% empty %}
+                                <tr>
+                                    <td colspan="10" class="text-center">
+                                        Aucun paysage disponible pour cette Wilaya.
+                                    </td>
+                                </tr>
+                            {% endfor %}
+
+                            <tr class="total-row">
+                                <td>Total {{ item.wilaya }}</td>
+
+                                <td>{{ item.total_types.AG }}</td>
+                                <td>{{ item.total_types.EL }}</td>
+                                <td>{{ item.total_types.SER }}</td>
+                                <td>{{ item.total_types.ENV }}</td>
+                                <td>{{ item.total_projets }}</td>
+
+                                <td>{{ item.total_subvention|floatformat:2|intcomma }}</td>
+                                <td>{{ item.total_contribution|floatformat:2|intcomma }}</td>
+                                <td>{{ item.total_autre|floatformat:2|intcomma }}</td>
+                                <td>{{ item.total_financement|floatformat:2|intcomma }}</td>
+                            </tr>
+                        </tbody>
+                    </table>
+                </div>
+
+            </div>
+        </div>
+    {% empty %}
+        <div class="report-card">
+            <div class="report-card-body">
+                <div class="empty-text">
+                    Aucune donnée disponible.
+                </div>
+            </div>
+        </div>
+    {% endfor %}
+
+    <div class="report-card">
+        <div class="report-card-header">
+            Total général
+        </div>
+
+        <div class="report-card-body">
+            <div class="table-responsive">
+                <table class="table table-bordered table-sm">
+                    <thead>
+                        <tr>
+                            <th>AG</th>
+                            <th>EL</th>
+                            <th>SER</th>
+                            <th>ENV</th>
+                            <th>Total projets</th>
+                            <th>Subvention PADISAM (MRU)</th>
+                            <th>Contribution promoteur (MRU)</th>
+                            <th>Autre financement (MRU)</th>
+                            <th>Total financement (MRU)</th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        <tr class="general-total-row">
+                            <td>{{ total_general_types.AG }}</td>
+                            <td>{{ total_general_types.EL }}</td>
+                            <td>{{ total_general_types.SER }}</td>
+                            <td>{{ total_general_types.ENV }}</td>
+                            <td>{{ total_general_projets }}</td>
+                            <td>{{ total_general_subvention|floatformat:2|intcomma }}</td>
+                            <td>{{ total_general_contribution|floatformat:2|intcomma }}</td>
+                            <td>{{ total_general_autre|floatformat:2|intcomma }}</td>
+                            <td>{{ total_general_financement|floatformat:2|intcomma }}</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </div>
+    </div>
+
+</div>
+{% endblock %}

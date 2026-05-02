@@ -2394,3 +2394,192 @@ def preselection_comite_detail(request, pk):
     }
 
     return render(request, 'formulaire/preselection_comite_detail.html', context)
+@login_required
+def rapport_paysage_type_financement(request):
+    """
+    Rapport dynamique :
+    - Paysage / ZOCA par Wilaya
+    - Répartition par type de projet : AG, EL, SER, ENV
+    - Financement détaillé : Subvention, Contribution, Autre, Total
+    - Filtre dynamique par Wilaya
+    """
+    utilisateur = get_current_user(request)
+
+    sous_projets_base = get_accessible_sous_projets(utilisateur)
+
+    selected_wilaya_id = request.GET.get('wilaya') or ''
+    selected_wilaya = None
+
+    wilayas_disponibles = (
+        sous_projets_base
+        .exclude(wilaya__isnull=True)
+        .values('wilaya_id', 'wilaya__nom')
+        .distinct()
+        .order_by('wilaya__nom')
+    )
+
+    sous_projets = sous_projets_base
+
+    if selected_wilaya_id:
+        sous_projets = sous_projets_base.filter(wilaya_id=selected_wilaya_id)
+
+        try:
+            selected_wilaya = Wilaya.objects.get(id=selected_wilaya_id)
+        except Wilaya.DoesNotExist:
+            selected_wilaya = None
+
+    type_codes = ['AG', 'EL', 'SER', 'ENV']
+
+    def total_relation(queryset, relation, champ):
+        return queryset.aggregate(
+            total=Sum(f'{relation}__{champ}')
+        )['total'] or 0
+
+    rapport = []
+
+    wilayas = (
+        sous_projets
+        .exclude(wilaya__isnull=True)
+        .values('wilaya_id', 'wilaya__nom')
+        .distinct()
+        .order_by('wilaya__nom')
+    )
+
+    for wilaya in wilayas:
+        wilaya_id = wilaya['wilaya_id']
+        wilaya_nom = wilaya['wilaya__nom'] or "Non renseignée"
+
+        qs_wilaya = sous_projets.filter(wilaya_id=wilaya_id)
+
+        paysages = (
+            qs_wilaya
+            .values('paysage_id', 'paysage__nom')
+            .distinct()
+            .order_by('paysage__nom')
+        )
+
+        lignes_paysages = []
+
+        total_wilaya_types = {code: 0 for code in type_codes}
+        total_wilaya_subvention = 0
+        total_wilaya_contribution = 0
+        total_wilaya_autre = 0
+        total_wilaya_financement = 0
+        total_wilaya_projets = 0
+
+        for paysage in paysages:
+            paysage_id = paysage['paysage_id']
+            paysage_nom = paysage['paysage__nom'] or "Non renseigné"
+
+            if paysage_id:
+                qs_paysage = qs_wilaya.filter(paysage_id=paysage_id)
+            else:
+                qs_paysage = qs_wilaya.filter(paysage__isnull=True)
+
+            total_projets_paysage = qs_paysage.count()
+
+            types_count = {code: 0 for code in type_codes}
+
+            stats_types = (
+                qs_paysage
+                .values('type_projet')
+                .annotate(total=Count('id'))
+            )
+
+            for item in stats_types:
+                type_code = item['type_projet']
+                total_type = item['total']
+
+                if type_code in type_codes:
+                    types_count[type_code] = total_type
+                    total_wilaya_types[type_code] += total_type
+
+            subvention = (
+                total_relation(qs_paysage, 'infrastructures', 'subvention_padisam') +
+                total_relation(qs_paysage, 'equipements', 'subvention_padisam') +
+                total_relation(qs_paysage, 'intrants', 'subvention_padisam') +
+                total_relation(qs_paysage, 'services', 'subvention_padisam')
+            )
+
+            contribution = (
+                total_relation(qs_paysage, 'infrastructures', 'contribution_promoteur') +
+                total_relation(qs_paysage, 'equipements', 'contribution_promoteur') +
+                total_relation(qs_paysage, 'intrants', 'contribution_promoteur') +
+                total_relation(qs_paysage, 'services', 'contribution_promoteur') +
+                total_relation(qs_paysage, 'fonctionnements', 'contribution_promoteur')
+            )
+
+            autre = (
+                total_relation(qs_paysage, 'infrastructures', 'autre_financement') +
+                total_relation(qs_paysage, 'equipements', 'autre_financement') +
+                total_relation(qs_paysage, 'intrants', 'autre_financement') +
+                total_relation(qs_paysage, 'services', 'autre_financement') +
+                total_relation(qs_paysage, 'fonctionnements', 'autre_financement')
+            )
+
+            total_financement = subvention + contribution + autre
+
+            total_wilaya_subvention += subvention
+            total_wilaya_contribution += contribution
+            total_wilaya_autre += autre
+            total_wilaya_financement += total_financement
+            total_wilaya_projets += total_projets_paysage
+
+            lignes_paysages.append({
+                'paysage': paysage_nom,
+                'types': types_count,
+                'total_projets': total_projets_paysage,
+                'subvention': subvention,
+                'contribution': contribution,
+                'autre': autre,
+                'total_financement': total_financement,
+            })
+
+        rapport.append({
+            'wilaya': wilaya_nom,
+            'paysages': lignes_paysages,
+            'total_types': total_wilaya_types,
+            'total_projets': total_wilaya_projets,
+            'total_subvention': total_wilaya_subvention,
+            'total_contribution': total_wilaya_contribution,
+            'total_autre': total_wilaya_autre,
+            'total_financement': total_wilaya_financement,
+        })
+
+    total_general_projets = sum(item['total_projets'] for item in rapport)
+    total_general_subvention = sum(item['total_subvention'] for item in rapport)
+    total_general_contribution = sum(item['total_contribution'] for item in rapport)
+    total_general_autre = sum(item['total_autre'] for item in rapport)
+    total_general_financement = sum(item['total_financement'] for item in rapport)
+
+    total_general_types = {
+        'AG': sum(item['total_types']['AG'] for item in rapport),
+        'EL': sum(item['total_types']['EL'] for item in rapport),
+        'SER': sum(item['total_types']['SER'] for item in rapport),
+        'ENV': sum(item['total_types']['ENV'] for item in rapport),
+    }
+
+    context = {
+        'rapport': rapport,
+
+        'selected_wilaya_id': str(selected_wilaya_id),
+        'selected_wilaya': selected_wilaya,
+        'wilayas_disponibles': wilayas_disponibles,
+
+        'total_general_types': total_general_types,
+        'total_general_projets': total_general_projets,
+        'total_general_subvention': total_general_subvention,
+        'total_general_contribution': total_general_contribution,
+        'total_general_autre': total_general_autre,
+        'total_general_financement': total_general_financement,
+
+        'user_name': request.session.get('user_name'),
+        'user_role': request.session.get('user_role'),
+        'user_wilaya_nom': request.session.get('user_wilaya_nom'),
+    }
+
+    return render(
+        request,
+        'formulaire/rapport_paysage_type_financement.html',
+        context
+    )

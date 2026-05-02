@@ -62,4 +62,9 @@ urlpatterns = [
     path('preselection-comite/', views.preselection_comite_liste, name='preselection_comite_liste'),
     path('preselection-comite/<int:pk>/', views.preselection_comite_detail, name='preselection_comite_detail'),
     path('statistiques/', views.statistiques, name='statistiques'),
+    path(
+    'rapport-paysage-type-financement/',
+    views.rapport_paysage_type_financement,
+    name='rapport_paysage_type_financement'
+),
 ]
