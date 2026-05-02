@@ -504,8 +504,7 @@ def statistiques(request):
     Page statistiques dynamique :
     - Par défaut : statistiques globales
     - Si une wilaya est sélectionnée : statistiques filtrées par cette wilaya
-    - Ajout statistiques financement global par Wilaya
-    - Ajout données pour graphe bar financement
+    - Le total financement utilise la somme réelle des montant_total
     """
     utilisateur = get_current_user(request)
 
@@ -694,10 +693,8 @@ def statistiques(request):
 
     def total_relation(queryset, relation, champ):
         """
-        Calcule une somme sur une relation.
-        Exemple :
-        infrastructures__subvention_padisam
-        equipements__contribution_promoteur
+        Calcule une somme sur une seule relation à la fois.
+        Important : on évite les doubles comptages entre plusieurs tables liées.
         """
         return queryset.aggregate(
             total=Sum(f'{relation}__{champ}')
@@ -725,6 +722,15 @@ def statistiques(request):
 
         qs_wilaya = sous_projets.filter(wilaya_id=wilaya_id)
 
+        # Total réel du coût global = somme des montant_total
+        total_montant = (
+            total_relation(qs_wilaya, 'infrastructures', 'montant_total') +
+            total_relation(qs_wilaya, 'equipements', 'montant_total') +
+            total_relation(qs_wilaya, 'intrants', 'montant_total') +
+            total_relation(qs_wilaya, 'fonctionnements', 'montant_total') +
+            total_relation(qs_wilaya, 'services', 'montant_total')
+        )
+
         # Subvention PADISAM
         total_subvention = (
             total_relation(qs_wilaya, 'infrastructures', 'subvention_padisam') +
@@ -738,8 +744,8 @@ def statistiques(request):
             total_relation(qs_wilaya, 'infrastructures', 'contribution_promoteur') +
             total_relation(qs_wilaya, 'equipements', 'contribution_promoteur') +
             total_relation(qs_wilaya, 'intrants', 'contribution_promoteur') +
-            total_relation(qs_wilaya, 'services', 'contribution_promoteur') +
-            total_relation(qs_wilaya, 'fonctionnements', 'contribution_promoteur')
+            total_relation(qs_wilaya, 'fonctionnements', 'contribution_promoteur') +
+            total_relation(qs_wilaya, 'services', 'contribution_promoteur')
         )
 
         # Autre financement
@@ -747,14 +753,8 @@ def statistiques(request):
             total_relation(qs_wilaya, 'infrastructures', 'autre_financement') +
             total_relation(qs_wilaya, 'equipements', 'autre_financement') +
             total_relation(qs_wilaya, 'intrants', 'autre_financement') +
-            total_relation(qs_wilaya, 'services', 'autre_financement') +
-            total_relation(qs_wilaya, 'fonctionnements', 'autre_financement')
-        )
-
-        total_general_financement = (
-            total_subvention +
-            total_contribution +
-            total_autre
+            total_relation(qs_wilaya, 'fonctionnements', 'autre_financement') +
+            total_relation(qs_wilaya, 'services', 'autre_financement')
         )
 
         stats_financement_wilayas.append({
@@ -762,14 +762,14 @@ def statistiques(request):
             'subvention': total_subvention,
             'contribution': total_contribution,
             'autre': total_autre,
-            'total': total_general_financement,
+            'total': total_montant,
         })
 
         chart_financement_labels.append(wilaya_nom)
         chart_financement_subvention.append(float(total_subvention))
         chart_financement_contribution.append(float(total_contribution))
         chart_financement_autre.append(float(total_autre))
-        chart_financement_total.append(float(total_general_financement))
+        chart_financement_total.append(float(total_montant))
 
     total_financement_subvention = sum(item['subvention'] for item in stats_financement_wilayas)
     total_financement_contribution = sum(item['contribution'] for item in stats_financement_wilayas)
@@ -2402,6 +2402,7 @@ def rapport_paysage_type_financement(request):
     - Paysage / ZOCA par Wilaya
     - Répartition par type de projet : AG, EL, SER, ENV
     - Financement détaillé : Subvention, Contribution, Autre, Total
+    - Le total financement utilise la somme réelle des montant_total
     - Filtre dynamique par Wilaya
     """
     utilisateur = get_current_user(request)
@@ -2432,6 +2433,10 @@ def rapport_paysage_type_financement(request):
     type_codes = ['AG', 'EL', 'SER', 'ENV']
 
     def total_relation(queryset, relation, champ):
+        """
+        Calcule une somme sur une seule relation à la fois.
+        Important : on évite les doubles comptages entre plusieurs tables liées.
+        """
         return queryset.aggregate(
             total=Sum(f'{relation}__{champ}')
         )['total'] or 0
@@ -2495,6 +2500,16 @@ def rapport_paysage_type_financement(request):
                     types_count[type_code] = total_type
                     total_wilaya_types[type_code] += total_type
 
+            # Total réel du coût global du paysage = somme des montant_total
+            total_financement = (
+                total_relation(qs_paysage, 'infrastructures', 'montant_total') +
+                total_relation(qs_paysage, 'equipements', 'montant_total') +
+                total_relation(qs_paysage, 'intrants', 'montant_total') +
+                total_relation(qs_paysage, 'fonctionnements', 'montant_total') +
+                total_relation(qs_paysage, 'services', 'montant_total')
+            )
+
+            # Subvention PADISAM
             subvention = (
                 total_relation(qs_paysage, 'infrastructures', 'subvention_padisam') +
                 total_relation(qs_paysage, 'equipements', 'subvention_padisam') +
@@ -2502,23 +2517,23 @@ def rapport_paysage_type_financement(request):
                 total_relation(qs_paysage, 'services', 'subvention_padisam')
             )
 
+            # Contribution promoteur
             contribution = (
                 total_relation(qs_paysage, 'infrastructures', 'contribution_promoteur') +
                 total_relation(qs_paysage, 'equipements', 'contribution_promoteur') +
                 total_relation(qs_paysage, 'intrants', 'contribution_promoteur') +
-                total_relation(qs_paysage, 'services', 'contribution_promoteur') +
-                total_relation(qs_paysage, 'fonctionnements', 'contribution_promoteur')
+                total_relation(qs_paysage, 'fonctionnements', 'contribution_promoteur') +
+                total_relation(qs_paysage, 'services', 'contribution_promoteur')
             )
 
+            # Autre financement
             autre = (
                 total_relation(qs_paysage, 'infrastructures', 'autre_financement') +
                 total_relation(qs_paysage, 'equipements', 'autre_financement') +
                 total_relation(qs_paysage, 'intrants', 'autre_financement') +
-                total_relation(qs_paysage, 'services', 'autre_financement') +
-                total_relation(qs_paysage, 'fonctionnements', 'autre_financement')
+                total_relation(qs_paysage, 'fonctionnements', 'autre_financement') +
+                total_relation(qs_paysage, 'services', 'autre_financement')
             )
-
-            total_financement = subvention + contribution + autre
 
             total_wilaya_subvention += subvention
             total_wilaya_contribution += contribution

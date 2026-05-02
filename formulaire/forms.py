@@ -117,7 +117,7 @@ class SousProjetForm(forms.ModelForm):
     )
 
     telephone = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ex: 12345678'}),
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
         required=True,
         validators=[
             RegexValidator(
@@ -129,7 +129,7 @@ class SousProjetForm(forms.ModelForm):
     )
 
     fax = forms.CharField(
-        widget=forms.TextInput(attrs={'class': 'form-control', 'placeholder': 'ex: 1234'}),
+        widget=forms.TextInput(attrs={'class': 'form-control'}),
         required=False,
         validators=[
             RegexValidator(
