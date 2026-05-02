@@ -40,12 +40,12 @@
         margin-bottom: 18px;
     }
 
-    .filter-card {
+    .filter-card,
+    .summary-card {
         padding: 16px 20px;
     }
 
     .summary-card {
-        padding: 16px 20px;
         border-left: 5px solid #5dbb63;
     }
 
@@ -141,6 +141,9 @@
             {% if selected_wilaya %}
                 Rapport détaillé pour la Wilaya :
                 <strong>{{ selected_wilaya.nom }}</strong>
+            {% elif selected_paysage %}
+                Rapport détaillé pour le Paysage / ZOCA :
+                <strong>{{ selected_paysage.nom }}</strong>
             {% else %}
                 Rapport global de toutes les Wilayas
             {% endif %}
@@ -148,10 +151,27 @@
     </div>
 
     <div class="filter-card">
-        <form method="get" class="row align-items-end">
-            <div class="col-md-6">
+        <form method="get" class="row align-items-end" id="rapportFilterForm">
+
+            <div class="col-md-4">
+                <label for="filter_by" class="form-label">
+                    Filtrer par
+                </label>
+
+                <select name="filter_by" id="filter_by" class="form-select">
+                    <option value="wilaya" {% if filter_by == 'wilaya' %}selected{% endif %}>
+                        Wilaya
+                    </option>
+
+                    <option value="paysage" {% if filter_by == 'paysage' %}selected{% endif %}>
+                        Paysage / ZOCA
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-md-4 mt-3 mt-md-0" id="wilayaFilterBox">
                 <label for="wilaya" class="form-label">
-                    Filtrer par Wilaya
+                    Choisir une Wilaya
                 </label>
 
                 <select name="wilaya" id="wilaya" class="form-select">
@@ -169,7 +189,27 @@
                 </select>
             </div>
 
-            <div class="col-md-6 mt-3 mt-md-0">
+            <div class="col-md-4 mt-3 mt-md-0" id="paysageFilterBox">
+                <label for="paysage" class="form-label">
+                    Choisir un Paysage / ZOCA
+                </label>
+
+                <select name="paysage" id="paysage" class="form-select">
+                    <option value="">Tous les Paysages / ZOCA</option>
+
+                    {% for paysage in paysages_disponibles %}
+                        <option value="{{ paysage.paysage_id }}"
+                            {% if selected_paysage_id == paysage.paysage_id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ paysage.paysage__nom }} - {{ paysage.wilaya__nom }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4 mt-3">
                 <button type="submit" class="btn btn-success">
                     Appliquer
                 </button>
@@ -178,12 +218,19 @@
                     Réinitialiser
                 </a>
             </div>
+
         </form>
     </div>
 
     <div class="summary-card">
         {% if selected_wilaya %}
             Total projets pour {{ selected_wilaya.nom }} :
+            <strong>{{ total_general_projets }}</strong>
+            —
+            Financement total :
+            <strong>{{ total_general_financement|floatformat:2|intcomma }} MRU</strong>
+        {% elif selected_paysage %}
+            Total projets pour {{ selected_paysage.nom }} :
             <strong>{{ total_general_projets }}</strong>
             —
             Financement total :
@@ -204,7 +251,6 @@
             </div>
 
             <div class="report-card-body">
-
                 <div class="wilaya-title">
                     <h5>
                         Total Wilaya :
@@ -219,9 +265,7 @@
                         <thead>
                             <tr>
                                 <th rowspan="2">Paysage / ZOCA</th>
-
                                 <th colspan="5">Répartition par type de projet</th>
-
                                 <th colspan="4">Financement détaillé (MRU)</th>
                             </tr>
 
@@ -253,9 +297,7 @@
                                     <td>{{ paysage.subvention|floatformat:2|intcomma }}</td>
                                     <td>{{ paysage.contribution|floatformat:2|intcomma }}</td>
                                     <td>{{ paysage.autre|floatformat:2|intcomma }}</td>
-                                    <td>
-                                        <strong>{{ paysage.total_financement|floatformat:2|intcomma }}</strong>
-                                    </td>
+                                    <td><strong>{{ paysage.total_financement|floatformat:2|intcomma }}</strong></td>
                                 </tr>
                             {% empty %}
                                 <tr>
@@ -282,7 +324,6 @@
                         </tbody>
                     </table>
                 </div>
-
             </div>
         </div>
     {% empty %}
@@ -336,4 +377,40 @@
     </div>
 
 </div>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const filterBy = document.getElementById('filter_by');
+    const wilayaBox = document.getElementById('wilayaFilterBox');
+    const paysageBox = document.getElementById('paysageFilterBox');
+
+    const wilayaSelect = document.getElementById('wilaya');
+    const paysageSelect = document.getElementById('paysage');
+
+    function updateFilterDisplay() {
+        if (filterBy.value === 'wilaya') {
+            wilayaBox.style.display = 'block';
+            paysageBox.style.display = 'none';
+
+            wilayaSelect.disabled = false;
+            paysageSelect.disabled = true;
+            paysageSelect.value = '';
+        } else {
+            wilayaBox.style.display = 'none';
+            paysageBox.style.display = 'block';
+
+            wilayaSelect.disabled = true;
+            paysageSelect.disabled = false;
+            wilayaSelect.value = '';
+        }
+    }
+
+    if (filterBy && wilayaBox && paysageBox && wilayaSelect && paysageSelect) {
+        filterBy.addEventListener('change', updateFilterDisplay);
+        updateFilterDisplay();
+    }
+});
+</script>
 {% endblock %}

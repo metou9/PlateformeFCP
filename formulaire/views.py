@@ -503,19 +503,34 @@ def statistiques(request):
     """
     Page statistiques dynamique :
     - Par défaut : statistiques globales
-    - Si une wilaya est sélectionnée : statistiques filtrées par cette wilaya
+    - Filtre exclusif par Wilaya OU par Paysage / ZOCA
     - Le total financement utilise la somme réelle des montant_total
     """
     utilisateur = get_current_user(request)
 
-    # Tous les sous-projets accessibles selon le rôle de l'utilisateur
     sous_projets_base = get_accessible_sous_projets(utilisateur)
 
-    # Wilaya sélectionnée depuis le champ select
-    selected_wilaya_id = request.GET.get('wilaya') or ''
-    selected_wilaya = None
+    # =====================================================
+    # Choix du type de filtre : wilaya OU paysage
+    # =====================================================
+    filter_by = request.GET.get('filter_by') or 'wilaya'
 
-    # Liste des wilayas disponibles selon les projets accessibles
+    selected_wilaya_id = ''
+    selected_paysage_id = ''
+
+    if filter_by == 'wilaya':
+        selected_wilaya_id = request.GET.get('wilaya') or ''
+    elif filter_by == 'paysage':
+        selected_paysage_id = request.GET.get('paysage') or ''
+    else:
+        filter_by = 'wilaya'
+
+    selected_wilaya = None
+    selected_paysage = None
+
+    # =====================================================
+    # Listes disponibles pour les filtres
+    # =====================================================
     wilayas_disponibles = (
         sous_projets_base
         .exclude(wilaya__isnull=True)
@@ -524,20 +539,37 @@ def statistiques(request):
         .order_by('wilaya__nom')
     )
 
-    # Filtrage si l'utilisateur choisit une wilaya
+    paysages_disponibles = (
+        sous_projets_base
+        .exclude(paysage__isnull=True)
+        .values('paysage_id', 'paysage__nom', 'wilaya__nom')
+        .distinct()
+        .order_by('wilaya__nom', 'paysage__nom')
+    )
+
+    # =====================================================
+    # Application du filtre choisi
+    # =====================================================
     sous_projets = sous_projets_base
 
-    if selected_wilaya_id:
-        sous_projets = sous_projets_base.filter(wilaya_id=selected_wilaya_id)
+    if filter_by == 'wilaya' and selected_wilaya_id:
+        sous_projets = sous_projets.filter(wilaya_id=selected_wilaya_id)
 
         try:
             selected_wilaya = Wilaya.objects.get(id=selected_wilaya_id)
         except Wilaya.DoesNotExist:
             selected_wilaya = None
 
+    if filter_by == 'paysage' and selected_paysage_id:
+        sous_projets = sous_projets.filter(paysage_id=selected_paysage_id)
+
+        try:
+            selected_paysage = Paysage.objects.get(id=selected_paysage_id)
+        except Paysage.DoesNotExist:
+            selected_paysage = None
+
     total_projets = sous_projets.count()
 
-    # Ordre des types à afficher dans les tableaux
     type_codes = ['AG', 'EL', 'SER', 'ENV']
 
     type_labels_long = {
@@ -650,13 +682,11 @@ def statistiques(request):
 
     # =====================================================
     # 4. Deuxième pie chart dynamique
-    #    - Global : Répartition par Wilaya
-    #    - Si Wilaya choisie : Répartition par Paysage
     # =====================================================
     chart_second_labels = []
     chart_second_data = []
 
-    if selected_wilaya_id:
+    if filter_by == 'wilaya' and selected_wilaya_id:
         second_chart_title = "Répartition des projets par paysage"
 
         stats_paysages_chart = (
@@ -669,7 +699,6 @@ def statistiques(request):
         for item in stats_paysages_chart:
             paysage_nom = item['paysage__nom'] or "Non renseigné"
             total = item['total']
-
             pourcentage = round((total / total_projets) * 100, 2) if total_projets else 0
 
             chart_second_labels.append(f"{paysage_nom} : {total} projet(s) - {pourcentage}%")
@@ -678,10 +707,16 @@ def statistiques(request):
     else:
         second_chart_title = "Répartition des projets par Wilaya"
 
-        for item in stats_wilayas:
+        stats_wilayas_chart = (
+            sous_projets
+            .values('wilaya__nom')
+            .annotate(total=Count('id'))
+            .order_by('wilaya__nom')
+        )
+
+        for item in stats_wilayas_chart:
             wilaya_nom = item['wilaya__nom'] or "Non renseignée"
             total = item['total']
-
             pourcentage = round((total / total_projets) * 100, 2) if total_projets else 0
 
             chart_second_labels.append(f"{wilaya_nom} : {total} projet(s) - {pourcentage}%")
@@ -690,12 +725,7 @@ def statistiques(request):
     # =====================================================
     # 5. Statistiques globales des financements par Wilaya
     # =====================================================
-
     def total_relation(queryset, relation, champ):
-        """
-        Calcule une somme sur une seule relation à la fois.
-        Important : on évite les doubles comptages entre plusieurs tables liées.
-        """
         return queryset.aggregate(
             total=Sum(f'{relation}__{champ}')
         )['total'] or 0
@@ -722,7 +752,6 @@ def statistiques(request):
 
         qs_wilaya = sous_projets.filter(wilaya_id=wilaya_id)
 
-        # Total réel du coût global = somme des montant_total
         total_montant = (
             total_relation(qs_wilaya, 'infrastructures', 'montant_total') +
             total_relation(qs_wilaya, 'equipements', 'montant_total') +
@@ -731,7 +760,6 @@ def statistiques(request):
             total_relation(qs_wilaya, 'services', 'montant_total')
         )
 
-        # Subvention PADISAM
         total_subvention = (
             total_relation(qs_wilaya, 'infrastructures', 'subvention_padisam') +
             total_relation(qs_wilaya, 'equipements', 'subvention_padisam') +
@@ -739,7 +767,6 @@ def statistiques(request):
             total_relation(qs_wilaya, 'services', 'subvention_padisam')
         )
 
-        # Contribution promoteur
         total_contribution = (
             total_relation(qs_wilaya, 'infrastructures', 'contribution_promoteur') +
             total_relation(qs_wilaya, 'equipements', 'contribution_promoteur') +
@@ -748,7 +775,6 @@ def statistiques(request):
             total_relation(qs_wilaya, 'services', 'contribution_promoteur')
         )
 
-        # Autre financement
         total_autre = (
             total_relation(qs_wilaya, 'infrastructures', 'autre_financement') +
             total_relation(qs_wilaya, 'equipements', 'autre_financement') +
@@ -813,15 +839,19 @@ def statistiques(request):
             'total': item['total'],
         })
 
-    # =====================================================
-    # Context
-    # =====================================================
     context = {
+        'filter_by': filter_by,
+
         'total_projets': total_projets,
 
         'selected_wilaya_id': str(selected_wilaya_id),
+        'selected_paysage_id': str(selected_paysage_id),
+
         'selected_wilaya': selected_wilaya,
+        'selected_paysage': selected_paysage,
+
         'wilayas_disponibles': wilayas_disponibles,
+        'paysages_disponibles': paysages_disponibles,
 
         'stats_wilaya_paysages': stats_wilaya_paysages,
 
@@ -1298,17 +1328,36 @@ def liste_sous_projets(request):
     Par défaut :
     - affiche tous les sous-projets accessibles.
 
-    Si une wilaya est choisie :
-    - affiche seulement les sous-projets de cette wilaya.
+    Filtre exclusif :
+    - par Wilaya
+    OU
+    - par Paysage / ZOCA
     """
     utilisateur = get_current_user(request)
 
     sous_projets_base = get_accessible_sous_projets(utilisateur)
 
-    selected_wilaya_id = request.GET.get('wilaya') or ''
-    selected_wilaya = None
+    # =====================================================
+    # Choix du type de filtre : wilaya OU paysage
+    # =====================================================
+    filter_by = request.GET.get('filter_by') or 'wilaya'
 
-    # Liste des wilayas disponibles selon les sous-projets accessibles
+    selected_wilaya_id = ''
+    selected_paysage_id = ''
+
+    if filter_by == 'wilaya':
+        selected_wilaya_id = request.GET.get('wilaya') or ''
+    elif filter_by == 'paysage':
+        selected_paysage_id = request.GET.get('paysage') or ''
+    else:
+        filter_by = 'wilaya'
+
+    selected_wilaya = None
+    selected_paysage = None
+
+    # =====================================================
+    # Listes disponibles pour les filtres
+    # =====================================================
     wilayas_disponibles = (
         sous_projets_base
         .exclude(wilaya__isnull=True)
@@ -1317,9 +1366,20 @@ def liste_sous_projets(request):
         .order_by('wilaya__nom')
     )
 
+    paysages_disponibles = (
+        sous_projets_base
+        .exclude(paysage__isnull=True)
+        .values('paysage_id', 'paysage__nom', 'wilaya__nom')
+        .distinct()
+        .order_by('wilaya__nom', 'paysage__nom')
+    )
+
+    # =====================================================
+    # Application du filtre choisi
+    # =====================================================
     sous_projets = sous_projets_base
 
-    if selected_wilaya_id:
+    if filter_by == 'wilaya' and selected_wilaya_id:
         sous_projets = sous_projets.filter(wilaya_id=selected_wilaya_id)
 
         try:
@@ -1327,14 +1387,29 @@ def liste_sous_projets(request):
         except Wilaya.DoesNotExist:
             selected_wilaya = None
 
+    if filter_by == 'paysage' and selected_paysage_id:
+        sous_projets = sous_projets.filter(paysage_id=selected_paysage_id)
+
+        try:
+            selected_paysage = Paysage.objects.get(id=selected_paysage_id)
+        except Paysage.DoesNotExist:
+            selected_paysage = None
+
     sous_projets = sous_projets.order_by('-date_creation')
 
     return render(request, 'formulaire/liste_sous_projets.html', {
+        'filter_by': filter_by,
+
         'sous_projets': sous_projets,
 
         'wilayas_disponibles': wilayas_disponibles,
+        'paysages_disponibles': paysages_disponibles,
+
         'selected_wilaya_id': str(selected_wilaya_id),
+        'selected_paysage_id': str(selected_paysage_id),
+
         'selected_wilaya': selected_wilaya,
+        'selected_paysage': selected_paysage,
 
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
@@ -2399,19 +2474,36 @@ def preselection_comite_detail(request, pk):
 def rapport_paysage_type_financement(request):
     """
     Rapport dynamique :
-    - Paysage / ZOCA par Wilaya
+    - Filtre exclusif par Wilaya OU par Paysage / ZOCA
     - Répartition par type de projet : AG, EL, SER, ENV
     - Financement détaillé : Subvention, Contribution, Autre, Total
-    - Le total financement utilise la somme réelle des montant_total
-    - Filtre dynamique par Wilaya
+    - Total financement = somme réelle des montant_total
     """
     utilisateur = get_current_user(request)
 
     sous_projets_base = get_accessible_sous_projets(utilisateur)
 
-    selected_wilaya_id = request.GET.get('wilaya') or ''
-    selected_wilaya = None
+    # =====================================================
+    # Choix du type de filtre : wilaya OU paysage
+    # =====================================================
+    filter_by = request.GET.get('filter_by') or 'wilaya'
 
+    selected_wilaya_id = ''
+    selected_paysage_id = ''
+
+    if filter_by == 'wilaya':
+        selected_wilaya_id = request.GET.get('wilaya') or ''
+    elif filter_by == 'paysage':
+        selected_paysage_id = request.GET.get('paysage') or ''
+    else:
+        filter_by = 'wilaya'
+
+    selected_wilaya = None
+    selected_paysage = None
+
+    # =====================================================
+    # Listes disponibles pour les filtres
+    # =====================================================
     wilayas_disponibles = (
         sous_projets_base
         .exclude(wilaya__isnull=True)
@@ -2420,23 +2512,38 @@ def rapport_paysage_type_financement(request):
         .order_by('wilaya__nom')
     )
 
+    paysages_disponibles = (
+        sous_projets_base
+        .exclude(paysage__isnull=True)
+        .values('paysage_id', 'paysage__nom', 'wilaya__nom')
+        .distinct()
+        .order_by('wilaya__nom', 'paysage__nom')
+    )
+
+    # =====================================================
+    # Application du filtre choisi
+    # =====================================================
     sous_projets = sous_projets_base
 
-    if selected_wilaya_id:
-        sous_projets = sous_projets_base.filter(wilaya_id=selected_wilaya_id)
+    if filter_by == 'wilaya' and selected_wilaya_id:
+        sous_projets = sous_projets.filter(wilaya_id=selected_wilaya_id)
 
         try:
             selected_wilaya = Wilaya.objects.get(id=selected_wilaya_id)
         except Wilaya.DoesNotExist:
             selected_wilaya = None
 
+    if filter_by == 'paysage' and selected_paysage_id:
+        sous_projets = sous_projets.filter(paysage_id=selected_paysage_id)
+
+        try:
+            selected_paysage = Paysage.objects.get(id=selected_paysage_id)
+        except Paysage.DoesNotExist:
+            selected_paysage = None
+
     type_codes = ['AG', 'EL', 'SER', 'ENV']
 
     def total_relation(queryset, relation, champ):
-        """
-        Calcule une somme sur une seule relation à la fois.
-        Important : on évite les doubles comptages entre plusieurs tables liées.
-        """
         return queryset.aggregate(
             total=Sum(f'{relation}__{champ}')
         )['total'] or 0
@@ -2500,7 +2607,6 @@ def rapport_paysage_type_financement(request):
                     types_count[type_code] = total_type
                     total_wilaya_types[type_code] += total_type
 
-            # Total réel du coût global du paysage = somme des montant_total
             total_financement = (
                 total_relation(qs_paysage, 'infrastructures', 'montant_total') +
                 total_relation(qs_paysage, 'equipements', 'montant_total') +
@@ -2509,7 +2615,6 @@ def rapport_paysage_type_financement(request):
                 total_relation(qs_paysage, 'services', 'montant_total')
             )
 
-            # Subvention PADISAM
             subvention = (
                 total_relation(qs_paysage, 'infrastructures', 'subvention_padisam') +
                 total_relation(qs_paysage, 'equipements', 'subvention_padisam') +
@@ -2517,7 +2622,6 @@ def rapport_paysage_type_financement(request):
                 total_relation(qs_paysage, 'services', 'subvention_padisam')
             )
 
-            # Contribution promoteur
             contribution = (
                 total_relation(qs_paysage, 'infrastructures', 'contribution_promoteur') +
                 total_relation(qs_paysage, 'equipements', 'contribution_promoteur') +
@@ -2526,7 +2630,6 @@ def rapport_paysage_type_financement(request):
                 total_relation(qs_paysage, 'services', 'contribution_promoteur')
             )
 
-            # Autre financement
             autre = (
                 total_relation(qs_paysage, 'infrastructures', 'autre_financement') +
                 total_relation(qs_paysage, 'equipements', 'autre_financement') +
@@ -2576,11 +2679,18 @@ def rapport_paysage_type_financement(request):
     }
 
     context = {
+        'filter_by': filter_by,
+
         'rapport': rapport,
 
         'selected_wilaya_id': str(selected_wilaya_id),
+        'selected_paysage_id': str(selected_paysage_id),
+
         'selected_wilaya': selected_wilaya,
+        'selected_paysage': selected_paysage,
+
         'wilayas_disponibles': wilayas_disponibles,
+        'paysages_disponibles': paysages_disponibles,
 
         'total_general_types': total_general_types,
         'total_general_projets': total_general_projets,

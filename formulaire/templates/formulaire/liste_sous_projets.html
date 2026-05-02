@@ -14,13 +14,16 @@
 
 <div class="welcome-section">
     <div class="row align-items-center">
-        <div class="col-md-6">
+        <div class="col-md-8">
             <h1>📋 Liste des dossiers</h1>
 
             <p class="text-muted mb-0">
                 {% if selected_wilaya %}
                     Dossiers enregistrés dans la Wilaya :
                     <strong>{{ selected_wilaya.nom }}</strong>
+                {% elif selected_paysage %}
+                    Dossiers enregistrés dans le Paysage / ZOCA :
+                    <strong>{{ selected_paysage.nom }}</strong>
                 {% else %}
                     Gérez et consultez tous les dossiers enregistrés
                 {% endif %}
@@ -31,12 +34,29 @@
 
 <div class="card mb-4">
     <div class="card-header">
-        🔎 Recherche par Wilaya
+        🔎 Recherche
     </div>
 
     <div class="card-body">
-        <form method="get" class="row align-items-end">
-            <div class="col-md-6">
+        <form method="get" class="row align-items-end" id="listeFilterForm">
+
+            <div class="col-md-4">
+                <label for="filter_by" class="form-label">
+                    Filtrer par
+                </label>
+
+                <select name="filter_by" id="filter_by" class="form-select">
+                    <option value="wilaya" {% if filter_by == 'wilaya' %}selected{% endif %}>
+                        Wilaya
+                    </option>
+
+                    <option value="paysage" {% if filter_by == 'paysage' %}selected{% endif %}>
+                        Paysage / ZOCA
+                    </option>
+                </select>
+            </div>
+
+            <div class="col-md-4 mt-3 mt-md-0" id="wilayaFilterBox">
                 <label for="wilaya" class="form-label">
                     Choisir une Wilaya
                 </label>
@@ -56,7 +76,27 @@
                 </select>
             </div>
 
-            <div class="col-md-6 mt-3 mt-md-0">
+            <div class="col-md-4 mt-3 mt-md-0" id="paysageFilterBox">
+                <label for="paysage" class="form-label">
+                    Choisir un Paysage / ZOCA
+                </label>
+
+                <select name="paysage" id="paysage" class="form-select">
+                    <option value="">Tous les Paysages / ZOCA</option>
+
+                    {% for paysage in paysages_disponibles %}
+                        <option value="{{ paysage.paysage_id }}"
+                            {% if selected_paysage_id == paysage.paysage_id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ paysage.paysage__nom }} - {{ paysage.wilaya__nom }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="col-md-4 mt-3">
                 <button type="submit" class="btn btn-success">
                     Appliquer
                 </button>
@@ -65,6 +105,7 @@
                     Réinitialiser
                 </a>
             </div>
+
         </form>
     </div>
 </div>
@@ -75,6 +116,8 @@
         📌 Liste des dossiers
         {% if selected_wilaya %}
             - {{ selected_wilaya.nom }}
+        {% elif selected_paysage %}
+            - {{ selected_paysage.nom }}
         {% endif %}
     </div>
 
@@ -144,6 +187,12 @@
                             {% else %}
                                 -
                             {% endif %}
+                            /
+                            {% if projet.paysage %}
+                                {{ projet.paysage.nom|truncatechars:15 }}
+                            {% else %}
+                                -
+                            {% endif %}
                         </td>
 
                         {% if is_admin %}
@@ -192,6 +241,9 @@
         {% if selected_wilaya %}
             Affichage de {{ sous_projets|length }} sous-projet(s)
             pour la Wilaya {{ selected_wilaya.nom }}
+        {% elif selected_paysage %}
+            Affichage de {{ sous_projets|length }} sous-projet(s)
+            pour le Paysage / ZOCA {{ selected_paysage.nom }}
         {% else %}
             Affichage de {{ sous_projets|length }} sous-projet(s)
         {% endif %}
@@ -206,6 +258,15 @@
         <p class="mb-4">
             Aucun sous-projet trouvé pour la Wilaya
             <strong>{{ selected_wilaya.nom }}</strong>.
+        </p>
+
+        <a href="{% url 'formulaire:liste_sous_projets' %}" class="btn btn-outline-secondary">
+            Voir tous les sous-projets
+        </a>
+    {% elif selected_paysage %}
+        <p class="mb-4">
+            Aucun sous-projet trouvé pour le Paysage / ZOCA
+            <strong>{{ selected_paysage.nom }}</strong>.
         </p>
 
         <a href="{% url 'formulaire:liste_sous_projets' %}" class="btn btn-outline-secondary">
@@ -278,5 +339,37 @@ function confirmerSuppression(projetId, projetNom) {
     var modal = new bootstrap.Modal(document.getElementById('confirmDeleteModal'));
     modal.show();
 }
+
+document.addEventListener('DOMContentLoaded', function () {
+    const filterBy = document.getElementById('filter_by');
+    const wilayaBox = document.getElementById('wilayaFilterBox');
+    const paysageBox = document.getElementById('paysageFilterBox');
+
+    const wilayaSelect = document.getElementById('wilaya');
+    const paysageSelect = document.getElementById('paysage');
+
+    function updateFilterDisplay() {
+        if (filterBy.value === 'wilaya') {
+            wilayaBox.style.display = 'block';
+            paysageBox.style.display = 'none';
+
+            wilayaSelect.disabled = false;
+            paysageSelect.disabled = true;
+            paysageSelect.value = '';
+        } else {
+            wilayaBox.style.display = 'none';
+            paysageBox.style.display = 'block';
+
+            wilayaSelect.disabled = true;
+            paysageSelect.disabled = false;
+            wilayaSelect.value = '';
+        }
+    }
+
+    if (filterBy && wilayaBox && paysageBox && wilayaSelect && paysageSelect) {
+        filterBy.addEventListener('change', updateFilterDisplay);
+        updateFilterDisplay();
+    }
+});
 </script>
 {% endblock %}
