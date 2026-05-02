@@ -54,6 +54,7 @@
         overflow: hidden;
         box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
         margin-bottom: 18px;
+        height: auto;
     }
 
     .stat-card-header {
@@ -129,7 +130,7 @@
     }
 
     .bar-chart-box {
-        height: 360px;
+        height: 320px;
         width: 100%;
     }
 
@@ -214,6 +215,38 @@
         {% endif %}
     </div>
 
+    <!-- PIE CHARTS EN PREMIER -->
+    <div class="row compact-row">
+        <div class="col-lg-6">
+            <div class="stats-card">
+                <div class="stat-card-header">
+                    Répartition des projets par type
+                </div>
+
+                <div class="stats-card-body">
+                    <div class="chart-box">
+                        <canvas id="chartTypeProjet"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-lg-6">
+            <div class="stats-card">
+                <div class="stat-card-header">
+                    {{ second_chart_title }}
+                </div>
+
+                <div class="stats-card-body">
+                    <div class="chart-box">
+                        <canvas id="chartSecondProjet"></canvas>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- TABLEAU WILAYA / PAYSAGE / TYPE -->
     <div class="row compact-row">
         <div class="col-lg-12">
             <div class="stats-card">
@@ -238,7 +271,7 @@
                                             <th>EL</th>
                                             <th>SER</th>
                                             <th>ENV</th>
-                                            <th>Total </th>
+                                            <th>Total paysage</th>
                                         </tr>
                                     </thead>
 
@@ -284,49 +317,20 @@
         </div>
     </div>
 
+    <!-- FINANCEMENT : TABLEAU + GRAPHE SÉPARÉS -->
     <div class="row compact-row">
-        <div class="col-lg-6">
-            <div class="stats-card">
-                <div class="stat-card-header">
-                    Répartition des projets par type
-                </div>
-
-                <div class="stats-card-body">
-                    <div class="chart-box">
-                        <canvas id="chartTypeProjet"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-
-        <div class="col-lg-6">
-            <div class="stats-card">
-                <div class="stat-card-header">
-                    {{ second_chart_title }}
-                </div>
-
-                <div class="stats-card-body">
-                    <div class="chart-box">
-                        <canvas id="chartSecondProjet"></canvas>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </div>
-
-    <div class="row compact-row">
-        <div class="col-lg-12">
+        <div class="col-lg-8">
             <div class="stats-card">
                 <div class="stat-card-header">
                     {% if selected_wilaya %}
-                        Financement global - {{ selected_wilaya.nom }} (MRU)
+                        Tableau du financement global - {{ selected_wilaya.nom }} (MRU)
                     {% else %}
-                        Financement global par Wilaya (MRU)
+                        Tableau du financement global par Wilaya (MRU)
                     {% endif %}
                 </div>
 
                 <div class="stats-card-body">
-                    <div class="table-responsive mb-3">
+                    <div class="table-responsive">
                         <table class="table table-bordered">
                             <thead>
                                 <tr>
@@ -371,7 +375,21 @@
                             </tbody>
                         </table>
                     </div>
+                </div>
+            </div>
+        </div>
 
+        <div class="col-lg-4">
+            <div class="stats-card">
+                <div class="stat-card-header">
+                    {% if selected_wilaya %}
+                        Graphe financement - {{ selected_wilaya.nom }} (MRU)
+                    {% else %}
+                        Graphe financement par Wilaya (MRU)
+                    {% endif %}
+                </div>
+
+                <div class="stats-card-body">
                     <div class="bar-chart-box">
                         <canvas id="chartFinancementWilaya"></canvas>
                     </div>
@@ -380,6 +398,7 @@
         </div>
     </div>
 
+    <!-- AGENTS -->
     <div class="row compact-row">
         <div class="col-lg-12">
             <div class="stats-card">

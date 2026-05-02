@@ -1384,14 +1384,8 @@ def detail_sous_projet(request, pk):
     # Tableau récapitulatif des financements
     # =====================================================
 
+        
     recap_financement = [
-        {
-            'libelle': 'Fonctionnement',
-            'subvention': 0,
-            'contribution': fonct_contribution,
-            'autre': fonct_autre,
-            'total': total_fonctionnements,
-        },
         {
             'libelle': 'Infrastructures',
             'subvention': infra_subvention,
@@ -1407,18 +1401,25 @@ def detail_sous_projet(request, pk):
             'total': total_equipements,
         },
         {
-            'libelle': 'Services',
-            'subvention': service_subvention,
-            'contribution': service_contribution,
-            'autre': service_autre,
-            'total': total_services,
-        },
-        {
             'libelle': 'Intrants',
             'subvention': intrant_subvention,
             'contribution': intrant_contribution,
             'autre': intrant_autre,
             'total': total_intrants,
+        },
+        {
+            'libelle': 'Fonctionnement',
+            'subvention': 0,
+            'contribution': fonct_contribution,
+            'autre': fonct_autre,
+            'total': total_fonctionnements,
+        },
+        {
+            'libelle': 'Services',
+            'subvention': service_subvention,
+            'contribution': service_contribution,
+            'autre': service_autre,
+            'total': total_services,
         },
     ]
 
