@@ -6,12 +6,12 @@ services:
     environment:
       POSTGRES_DB: fcp_app_db
       POSTGRES_USER: soukeina
-      POSTGRES_PASSWORD: 'soukeina'
-      POSTGRES_HOST_AUTH_METHOD: trust 
+      POSTGRES_PASSWORD: "soukeina"
+      POSTGRES_HOST_AUTH_METHOD: trust
     volumes:
       - postgres_data:/var/lib/postgresql/data
     healthcheck:
-      test: ["CMD-SHELL", "pg_isready -U soukeina"]
+      test: ["CMD-SHELL", "pg_isready -U soukeina -d fcp_app_db"]
       interval: 10s
       timeout: 5s
       retries: 5
@@ -26,12 +26,12 @@ services:
     volumes:
       - .:/app
     ports:
-      - "8000:8000"
+      - "127.0.0.1:8000:8000"
     depends_on:
       db:
         condition: service_healthy
     environment:
-      DATABASE_URL: postgresql://soukeina@db:5432/fcp_app_db
+      DATABASE_URL: postgresql://soukeina:soukeina@db:5432/fcp_app_db
       DB_NAME: fcp_app_db
       DB_USER: soukeina
       DB_PASSWORD: soukeina
@@ -41,6 +41,39 @@ services:
       POSTGRES_USER: soukeina
       POSTGRES_PASSWORD: "soukeina"
 
+  metabase_db:
+    image: postgres:15
+    container_name: fcp_metabase_db
+    environment:
+      POSTGRES_DB: metabase_db
+      POSTGRES_USER: metabase
+      POSTGRES_PASSWORD: "metabase_password"
+    volumes:
+      - metabase_db_data:/var/lib/postgresql/data
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U metabase -d metabase_db"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  metabase:
+    image: metabase/metabase:v0.60.x
+    container_name: fcp_metabase
+    ports:
+      - "127.0.0.1:3000:3000"
+    depends_on:
+      db:
+        condition: service_healthy
+      metabase_db:
+        condition: service_healthy
+    environment:
+      MB_DB_TYPE: postgres
+      MB_DB_DBNAME: metabase_db
+      MB_DB_PORT: 5432
+      MB_DB_USER: metabase
+      MB_DB_PASS: metabase_password
+      MB_DB_HOST: metabase_db
+
 volumes:
   postgres_data:
-  
+  metabase_db_data:
