@@ -73,7 +73,7 @@ services:
       MB_DB_USER: metabase
       MB_DB_PASS: metabase_password
       MB_DB_HOST: metabase_db
-      MB_SITE_URL: https://meta.bapps.binorassocies.com
+      MB_SITE_URL: https://metabapps.binorassocies.com
 
 volumes:
   postgres_data:
