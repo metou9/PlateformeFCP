@@ -112,14 +112,16 @@ def can_view_comite_list(utilisateur):
 def get_accessible_sous_projets(utilisateur):
     """
     Sous-projets visibles selon le rôle.
-    - admin et superadmin : voient tous les sous-projets
-    - autres utilisateurs avec wilaya : voient seulement les sous-projets de leur wilaya
-    - utilisateur sans wilaya et non admin : ne voit rien
+
+    - admin, superadmin, superviseur : voient tous les sous-projets de toutes les Wilayas
+    - agent avec wilaya : voit seulement les sous-projets de sa wilaya
+    - prescomite avec wilaya : voit seulement les sous-projets de sa wilaya
+    - utilisateur sans wilaya et non autorisé : ne voit rien
     """
     if not utilisateur:
         return SousProjet.objects.none()
 
-    if can_manage_all_projects(utilisateur):
+    if utilisateur.role in ['admin', 'superadmin', 'superviseur']:
         return SousProjet.objects.all()
 
     if utilisateur.wilaya_id:
@@ -432,8 +434,10 @@ def nouveau_sous_projet(request):
     """
     utilisateur = get_current_user(request)
 
-    if utilisateur and utilisateur.role == 'prescomite':
-        messages.error(request, "❌ Le président du comité de présélection n'est pas autorisé à créer un nouveau dossier.")
+    if utilisateur and utilisateur.role in ['prescomite', 'superviseur']:
+        messages.error(request,
+        "❌ Vous n'êtes pas autorisé à créer un nouveau dossier."
+    )
         return redirect('formulaire:accueil')
 
     if is_agent_saisie(utilisateur) and not utilisateur.wilaya_id:

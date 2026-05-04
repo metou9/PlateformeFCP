@@ -274,9 +274,13 @@
                 <li class="nav-item dropdown">
                     <a class="nav-link dropdown-toggle main-nav-link" href="#" id="dossiersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Gestion des demandes</a>
                     <ul class="dropdown-menu custom-dropdown" aria-labelledby="dossiersDropdown">
- {% if request.session.user_role != 'prescomite' %}
-            <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">Dépôt de dossier</a></li>
-        {% endif %}                        
+ {% if request.session.user_role != 'prescomite' and request.session.user_role != 'superviseur' %}
+    <li>
+        <a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">
+            Dépôt de dossier
+        </a>
+    </li>
+{% endif %}                    
             <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:liste_sous_projets' %}">Liste des dossiers</a></li>
                     </ul>
                 </li>

@@ -203,6 +203,17 @@ utilisateurs = [
         'actif': True,
         'wilaya_code': 'Trarza'
     },
+
+    {
+        'nom': '1',
+        'prenom': 'Visiteur',
+        'username': 'Visiteur1',
+        'password': 'sup243412',
+        'role': 'superviseur',
+        'email': 'sup1@gmail.com',
+        'actif': True,
+        'wilaya_code': None
+    },
 ]
 
 

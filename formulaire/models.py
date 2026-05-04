@@ -548,6 +548,7 @@ class Utilisateur(models.Model):
         ('admin', 'Administrateur'),
         ('agent', 'Agent de saisie'),
         ('superadmin', 'Super Admin'),
+        ('superviseur', 'Superviseur'),
         ('prescomite', 'Président du comité de présélection'),
     ]
 
