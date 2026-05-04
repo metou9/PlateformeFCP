@@ -45,8 +45,8 @@ utilisateurs = [
     {
         'nom': 'Isselmou',
         'prenom': 'Iss',
-        'username': 'admin1',
-        'password': 'admin12',
+        'username': 'adminIss',
+        'password': 'admin2412',
         'role': 'admin',
         'email': 'admininit@fcp.com',
         'actif': True,
