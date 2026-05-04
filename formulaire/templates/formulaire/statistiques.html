@@ -364,10 +364,11 @@
                             <thead>
                                 <tr>
                                     <th>Wilaya</th>
+                                     <th>Total financement (MRU)</th>
                                     <th>Subvention PADISAM (MRU)</th>
                                     <th>Contribution promoteur (MRU)</th>
                                     <th>Autre financement (MRU)</th>
-                                    <th>Total financement (MRU)</th>
+                                   
                                 </tr>
                             </thead>
 
@@ -375,10 +376,11 @@
                                 {% for ligne in stats_financement_wilayas %}
                                 <tr>
                                     <td><strong>{{ ligne.wilaya }}</strong></td>
+                                     <td><strong>{{ ligne.total|floatformat:2|intcomma }}</strong></td>
                                     <td>{{ ligne.subvention|floatformat:2|intcomma }}</td>
                                     <td>{{ ligne.contribution|floatformat:2|intcomma }}</td>
                                     <td>{{ ligne.autre|floatformat:2|intcomma }}</td>
-                                    <td><strong>{{ ligne.total|floatformat:2|intcomma }}</strong></td>
+                                   
                                 </tr>
                                 {% empty %}
                                 <tr>

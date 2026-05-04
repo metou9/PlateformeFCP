@@ -1332,36 +1332,33 @@ def liste_sous_projets(request):
     Par défaut :
     - affiche tous les sous-projets accessibles.
 
-    Filtre exclusif :
+    Filtres disponibles :
     - par Wilaya
-    OU
     - par Paysage / ZOCA
+    - par Numéro réception formulaire
     """
     utilisateur = get_current_user(request)
 
     sous_projets_base = get_accessible_sous_projets(utilisateur)
 
-    # =====================================================
-    # Choix du type de filtre : wilaya OU paysage
-    # =====================================================
     filter_by = request.GET.get('filter_by') or 'wilaya'
 
     selected_wilaya_id = ''
     selected_paysage_id = ''
+    numero_reception = ''
 
     if filter_by == 'wilaya':
         selected_wilaya_id = request.GET.get('wilaya') or ''
     elif filter_by == 'paysage':
         selected_paysage_id = request.GET.get('paysage') or ''
+    elif filter_by == 'numero':
+        numero_reception = request.GET.get('numero_reception') or ''
     else:
         filter_by = 'wilaya'
 
     selected_wilaya = None
     selected_paysage = None
 
-    # =====================================================
-    # Listes disponibles pour les filtres
-    # =====================================================
     wilayas_disponibles = (
         sous_projets_base
         .exclude(wilaya__isnull=True)
@@ -1378,9 +1375,6 @@ def liste_sous_projets(request):
         .order_by('wilaya__nom', 'paysage__nom')
     )
 
-    # =====================================================
-    # Application du filtre choisi
-    # =====================================================
     sous_projets = sous_projets_base
 
     if filter_by == 'wilaya' and selected_wilaya_id:
@@ -1399,6 +1393,11 @@ def liste_sous_projets(request):
         except Paysage.DoesNotExist:
             selected_paysage = None
 
+    if filter_by == 'numero' and numero_reception:
+        sous_projets = sous_projets.filter(
+            numero_reception_formulaire__icontains=numero_reception
+        )
+
     sous_projets = sous_projets.order_by('-date_creation')
 
     return render(request, 'formulaire/liste_sous_projets.html', {
@@ -1411,6 +1410,7 @@ def liste_sous_projets(request):
 
         'selected_wilaya_id': str(selected_wilaya_id),
         'selected_paysage_id': str(selected_paysage_id),
+        'numero_reception': numero_reception,
 
         'selected_wilaya': selected_wilaya,
         'selected_paysage': selected_paysage,

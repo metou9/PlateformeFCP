@@ -276,10 +276,10 @@
                                 <th>ENV</th>
                                 <th>Total projets</th>
 
+                                <th>Total financement</th>
                                 <th>Subvention PADISAM</th>
                                 <th>Contribution promoteur</th>
                                 <th>Autre financement</th>
-                                <th>Total financement</th>
                             </tr>
                         </thead>
 
@@ -294,10 +294,10 @@
                                     <td>{{ paysage.types.ENV }}</td>
                                     <td><strong>{{ paysage.total_projets }}</strong></td>
 
+                                    <td><strong>{{ paysage.total_financement|floatformat:2|intcomma }}</strong></td>
                                     <td>{{ paysage.subvention|floatformat:2|intcomma }}</td>
                                     <td>{{ paysage.contribution|floatformat:2|intcomma }}</td>
                                     <td>{{ paysage.autre|floatformat:2|intcomma }}</td>
-                                    <td><strong>{{ paysage.total_financement|floatformat:2|intcomma }}</strong></td>
                                 </tr>
                             {% empty %}
                                 <tr>
@@ -316,10 +316,10 @@
                                 <td>{{ item.total_types.ENV }}</td>
                                 <td>{{ item.total_projets }}</td>
 
+                                <td><strong>{{ item.total_financement|floatformat:2|intcomma }}</strong></td>
                                 <td>{{ item.total_subvention|floatformat:2|intcomma }}</td>
                                 <td>{{ item.total_contribution|floatformat:2|intcomma }}</td>
                                 <td>{{ item.total_autre|floatformat:2|intcomma }}</td>
-                                <td>{{ item.total_financement|floatformat:2|intcomma }}</td>
                             </tr>
                         </tbody>
                     </table>
@@ -351,10 +351,10 @@
                             <th>SER</th>
                             <th>ENV</th>
                             <th>Total projets</th>
+                            <th>Total financement (MRU)</th>
                             <th>Subvention PADISAM (MRU)</th>
                             <th>Contribution promoteur (MRU)</th>
                             <th>Autre financement (MRU)</th>
-                            <th>Total financement (MRU)</th>
                         </tr>
                     </thead>
 
@@ -365,10 +365,10 @@
                             <td>{{ total_general_types.SER }}</td>
                             <td>{{ total_general_types.ENV }}</td>
                             <td>{{ total_general_projets }}</td>
+                            <td><strong>{{ total_general_financement|floatformat:2|intcomma }}</strong></td>
                             <td>{{ total_general_subvention|floatformat:2|intcomma }}</td>
                             <td>{{ total_general_contribution|floatformat:2|intcomma }}</td>
                             <td>{{ total_general_autre|floatformat:2|intcomma }}</td>
-                            <td>{{ total_general_financement|floatformat:2|intcomma }}</td>
                         </tr>
                     </tbody>
                 </table>
