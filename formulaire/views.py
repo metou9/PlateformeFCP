@@ -399,7 +399,7 @@ def accueil(request):
         elif utilisateur.role == 'prescomite':
             mode_label = "Président du comité de présélection"
         elif utilisateur.role == 'superviseur':
-            mode_label = "Superviseur"
+            mode_label = "Visiteur"
         elif utilisateur.role == 'consultant':
             mode_label = "Consultant"
         else:
