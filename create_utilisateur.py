@@ -32,6 +32,16 @@ utilisateurs = [
         'actif': True,
         'wilaya_code': None
     },
+     {
+        'nom': 'Isselmou',
+        'prenom': '',
+        'username': 'superadmin',
+        'password': 'admin1224',
+        'role': 'superadmin',
+        'email': 'admininit@fcp.com',
+        'actif': True,
+        'wilaya_code': None
+    },
     {
         'nom': 'Isselmou',
         'prenom': 'Iss',
