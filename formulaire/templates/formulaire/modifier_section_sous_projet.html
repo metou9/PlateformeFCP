@@ -1,0 +1,294 @@
+{% extends 'formulaire/base.html' %}
+{% load humanize %}
+
+{% block title %}{{ titre_section }} - PADISAM{% endblock %}
+
+{% block extra_css %}
+<link href="/static/formulaire/css/detail_sous_projet.css" rel="stylesheet">
+<style>
+    .edit-section-wrapper {
+        margin-top: 20px;
+    }
+
+    .edit-form-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 14px;
+    }
+
+    .edit-field-box {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 10px;
+        padding: 10px 12px;
+    }
+
+    .edit-field-box label {
+        display: block;
+        font-size: 13px;
+        font-weight: 700;
+        color: #374151;
+        margin-bottom: 6px;
+    }
+
+    .edit-field-box input,
+    .edit-field-box select,
+    .edit-field-box textarea,
+    .edit-field-box .form-control,
+    .edit-field-box .form-select {
+        width: 100%;
+        font-size: 13px;
+        padding: 6px 8px;
+        min-height: 34px;
+        border-radius: 7px;
+    }
+
+    .edit-field-box textarea,
+    .edit-field-box textarea.form-control {
+        min-height: 78px;
+    }
+
+    .edit-table-input label {
+        display: block;
+        font-size: 12px;
+        font-weight: 700;
+        color: #374151;
+        margin-bottom: 4px;
+    }
+
+    .edit-table-input input,
+    .edit-table-input select,
+    .edit-table-input textarea {
+        width: 100%;
+        font-size: 12px !important;
+        padding: 5px 6px !important;
+        min-height: 31px !important;
+        border-radius: 6px;
+    }
+
+    .edit-table-input textarea {
+        min-height: 58px !important;
+    }
+
+    .edit-actions {
+        display: flex;
+        justify-content: flex-end;
+        gap: 10px;
+        margin-top: 18px;
+        margin-bottom: 10px;
+    }
+
+    .edit-help {
+        background: #f8fafc;
+        border-left: 4px solid #5dbb63;
+        border-radius: 10px;
+        padding: 12px 14px;
+        margin-bottom: 16px;
+        color: #374151;
+        font-size: 14px;
+    }
+
+    .delete-cell {
+        text-align: center;
+        vertical-align: middle;
+        min-width: 90px;
+    }
+
+    .hidden-fields {
+        display: none;
+    }
+
+    @media (max-width: 992px) {
+        .edit-form-grid {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+    }
+
+    @media (max-width: 768px) {
+        .edit-form-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .edit-actions {
+            justify-content: stretch;
+            flex-direction: column;
+        }
+
+        .edit-actions .btn,
+        .edit-actions a {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block page_container_start %}
+<div class="container mt-5 mb-5">
+{% endblock %}
+
+{% block content %}
+
+<div class="welcome-section">
+    <div class="row align-items-center">
+        <div class="col-md-8">
+            <h1>✏️ {{ titre_section }}</h1>
+            <p class="text-muted mb-0">
+                Dossier #{{ sous_projet.numero_reception_formulaire }}
+                —
+                {{ sous_projet.intitule_sous_projet|default:"Sous-projet sans intitulé" }}
+            </p>
+        </div>
+
+        <div class="col-md-4 text-end">
+            <a href="{% url 'formulaire:detail_sous_projet' sous_projet.id %}" class="btn-secondary-custom">
+                ← Retour au détail
+            </a>
+        </div>
+    </div>
+</div>
+
+<div class="row mb-4 g-3">
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-number">{{ sous_projet.numero_reception_formulaire }}</div>
+            <div class="stat-label">Num réception formulaire</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-number">{{ sous_projet.date_formulaire|date:"d/m/Y" }}</div>
+            <div class="stat-label">Date formulaire</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-number">
+                {% if sous_projet.guichet == 'AGR' %}
+                    <span class="badge-agr">{{ sous_projet.guichet }}</span>
+                {% else %}
+                    <span class="badge-aci">{{ sous_projet.guichet }}</span>
+                {% endif %}
+            </div>
+            <div class="stat-label">Guichet</div>
+        </div>
+    </div>
+
+    <div class="col-md-3">
+        <div class="stat-card">
+            <div class="stat-number">
+                {% if sous_projet.type_projet == 'AG' %}
+                    <span class="badge-ag">{{ sous_projet.type_projet }}</span>
+                {% elif sous_projet.type_projet == 'EL' %}
+                    <span class="badge-el">{{ sous_projet.type_projet }}</span>
+                {% elif sous_projet.type_projet == 'SER' %}
+                    <span class="badge-aci">{{ sous_projet.type_projet }}</span>
+                {% else %}
+                    <span class="badge-env">{{ sous_projet.type_projet }}</span>
+                {% endif %}
+            </div>
+            <div class="stat-label">Type projet</div>
+        </div>
+    </div>
+</div>
+
+<div class="section-title">{{ titre_section }}</div>
+
+<div class="info-card edit-section-wrapper">
+    <div class="card-body">
+
+        <div class="edit-help">
+            Modifiez uniquement les informations nécessaires, puis cliquez sur
+            <strong>Enregistrer les modifications</strong>. Après l’enregistrement, vous serez redirigé vers la page détail du dossier.
+        </div>
+
+        <form method="post">
+            {% csrf_token %}
+
+            {% if config_type == 'form' %}
+                {{ form.non_field_errors }}
+
+                <div class="edit-form-grid">
+                    {% for field in form %}
+                        <div class="edit-field-box">
+                            <label for="{{ field.id_for_label }}">
+                                {{ field.label }}
+                            </label>
+
+                            {{ field }}
+
+                            {% if field.help_text %}
+                                <small class="text-muted">{{ field.help_text }}</small>
+                            {% endif %}
+
+                            {% if field.errors %}
+                                <div class="text-danger small mt-1">
+                                    {{ field.errors }}
+                                </div>
+                            {% endif %}
+                        </div>
+                    {% endfor %}
+                </div>
+            {% endif %}
+
+            {% if config_type == 'formset' %}
+                {{ formset.management_form }}
+
+                {% if formset.non_form_errors %}
+                    <div class="alert alert-danger">
+                        {{ formset.non_form_errors }}
+                    </div>
+                {% endif %}
+
+                <div class="table-responsive">
+                    <table class="table-detail">
+                        <thead>
+                            <tr>
+                                {% for field in formset.forms.0.visible_fields %}
+                                    <th>{{ field.label }}</th>
+                                {% endfor %}
+                            </tr>
+                        </thead>
+
+                        <tbody>
+                            {% for f in formset %}
+                                <tr>
+                                    {% for hidden in f.hidden_fields %}
+                                        {{ hidden }}
+                                    {% endfor %}
+
+                                    {% for field in f.visible_fields %}
+                                        <td>
+                                            <div class="edit-table-input">
+                                                {{ field }}
+
+                                                {% if field.errors %}
+                                                    <div class="text-danger small mt-1">
+                                                        {{ field.errors }}
+                                                    </div>
+                                                {% endif %}
+                                            </div>
+                                        </td>
+                                    {% endfor %}
+                                </tr>
+                            {% endfor %}
+                        </tbody>
+                    </table>
+                </div>
+            {% endif %}
+
+            <div class="edit-actions">
+                <a href="{% url 'formulaire:detail_sous_projet' sous_projet.id %}" class="btn btn-outline-secondary">
+                    Annuler
+                </a>
+
+                <button type="submit" class="btn btn-success">
+                    💾 Enregistrer les modifications
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+{% endblock %}

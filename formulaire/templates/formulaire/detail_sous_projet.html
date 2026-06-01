@@ -1,8 +1,49 @@
 {% extends 'formulaire/base.html' %}
 {% load humanize %}
+
 {% block title %}Détail du sous-projet #{{ sous_projet.id }} - PADISAM{% endblock %}
-{% block extra_css %}<link href="/static/formulaire/css/detail_sous_projet.css" rel="stylesheet">{% endblock %}
-{% block page_container_start %}<div class="container mt-5 mb-5">{% endblock %}
+
+{% block extra_css %}
+<link href="/static/formulaire/css/detail_sous_projet.css" rel="stylesheet">
+<style>
+    .section-title-with-action {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+
+    .section-title-with-action .section-title {
+        margin-bottom: 0;
+        flex: 1;
+    }
+
+    .btn-edit-section {
+        white-space: nowrap;
+        font-size: 13px;
+        padding: 5px 10px;
+        border-radius: 6px;
+    }
+
+    .card-header-with-action {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+    }
+
+    @media print {
+        .btn-edit-section {
+            display: none !important;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block page_container_start %}
+<div class="container mt-5 mb-5">
+{% endblock %}
+
 {% block content %}
 <div class="welcome-section">
     <div class="row align-items-center">
@@ -17,6 +58,7 @@
     </div>
 </div>
 
+
 <div class="row mb-4 g-3">
     <div class="col-md-3">
         <div class="stat-card">
@@ -24,12 +66,14 @@
             <div class="stat-label">Num réception formulaire</div>
         </div>
     </div>
+
     <div class="col-md-3">
         <div class="stat-card">
             <div class="stat-number">{{ sous_projet.date_formulaire|date:"d/m/Y" }}</div>
             <div class="stat-label">Date formulaire</div>
         </div>
     </div>
+
     <div class="col-md-3">
         <div class="stat-card">
             <div class="stat-number">
@@ -42,6 +86,7 @@
             <div class="stat-label">Guichet</div>
         </div>
     </div>
+
     <div class="col-md-3">
         <div class="stat-card">
             <div class="stat-number">
@@ -63,7 +108,16 @@
     </div>
 </div>
 
-<div class="section-title">1. Informations générales</div>
+<div class="section-title-with-action">
+    <div class="section-title">1. Informations générales</div>
+
+    {% if can_edit %}
+        <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'informations' %}" class="btn btn-sm btn-outline-success btn-edit-section">
+            ✏️ Modifier
+        </a>
+    {% endif %}
+</div>
+
 <div class="info-card">
     <div class="card-body">
         <div class="info-row"><div class="info-label">Intitulé du sous-projet :</div><div class="info-value">{% if sous_projet.intitule_sous_projet %}{{ sous_projet.intitule_sous_projet }}{% else %}<span class="non-renseigne">Non renseigné</span>{% endif %}</div></div>
@@ -74,7 +128,16 @@
     </div>
 </div>
 
-<div class="section-title">2. Identification du demandeur / bénéficiaire</div>
+<div class="section-title-with-action">
+    <div class="section-title">2. Identification du demandeur / bénéficiaire</div>
+
+    {% if can_edit %}
+        <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'informations' %}" class="btn btn-sm btn-outline-success btn-edit-section">
+            ✏️ Modifier
+        </a>
+    {% endif %}
+</div>
+
 <div class="info-card">
     <div class="card-body">
         <div class="info-row"><div class="info-label">Nom et statut juridique :</div><div class="info-value">{% if sous_projet.nom_statut_juridique %}{{ sous_projet.nom_statut_juridique }}{% else %}<span class="non-renseigne">Non renseigné</span>{% endif %}</div></div>
@@ -89,14 +152,32 @@
     </div>
 </div>
 
-<div class="section-title">3. Objectif du sous-projet</div>
+<div class="section-title-with-action">
+    <div class="section-title">3. Objectif du sous-projet</div>
+
+    {% if can_edit %}
+        <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'informations' %}" class="btn btn-sm btn-outline-success btn-edit-section">
+            ✏️ Modifier
+        </a>
+    {% endif %}
+</div>
+
 <div class="info-card">
     <div class="card-body">
         <div class="info-row"><div class="info-label">Objectif :</div><div class="info-value">{% if sous_projet.objectif_sous_projet %}{{ sous_projet.objectif_sous_projet }}{% else %}<span class="non-renseigne">Non renseigné</span>{% endif %}</div></div>
     </div>
 </div>
 
-<div class="section-title">4. Liste des principales activités</div>
+<div class="section-title-with-action">
+    <div class="section-title">4. Liste des principales activités</div>
+
+    {% if can_edit %}
+        <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'activites' %}" class="btn btn-sm btn-outline-success btn-edit-section">
+            ✏️ Modifier
+        </a>
+    {% endif %}
+</div>
+
 <div class="info-card">
     <div class="card-body">
         {% if sous_projet.activites.all %}
@@ -128,7 +209,16 @@
     </div>
 </div>
 
-<div class="section-title">5. Localisation</div>
+<div class="section-title-with-action">
+    <div class="section-title">5. Localisation</div>
+
+    {% if can_edit %}
+        <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'informations' %}" class="btn btn-sm btn-outline-success btn-edit-section">
+            ✏️ Modifier
+        </a>
+    {% endif %}
+</div>
+
 <div class="info-card">
     <div class="card-body">
         <div class="row g-3">
@@ -203,13 +293,28 @@
 <div class="section-title">6. Estimation du coût global et sources de financement</div>
 
 <div class="info-card">
-    <div class="card-header"><h5 class="mb-0">A. INFRASTRUCTURES</h5></div>
+    <div class="card-header card-header-with-action">
+        <h5 class="mb-0">A. INFRASTRUCTURES</h5>
+
+        {% if can_edit %}
+            <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'infrastructures' %}" class="btn btn-sm btn-light btn-edit-section">
+                ✏️ Modifier
+            </a>
+        {% endif %}
+    </div>
+
     <div class="card-body">
         <div class="table-responsive">
             <table class="table-detail">
                 <thead>
                     <tr>
-                        <th>Description</th><th>Quantité</th><th>Prix unitaire (MRU)</th><th>Montant total (MRU)</th><th>Subvention (MRU)</th><th>Contribution (MRU)</th><th>Autre (MRU)</th>
+                        <th>Description</th>
+                        <th>Quantité</th>
+                        <th>Prix unitaire (MRU)</th>
+                        <th>Montant total (MRU)</th>
+                        <th>Subvention (MRU)</th>
+                        <th>Contribution (MRU)</th>
+                        <th>Autre (MRU)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -226,12 +331,12 @@
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-    <td colspan="3">Somme infrastructures (MRU)</td>
-    <td class="total-amount">{{ total_infrastructures|floatformat:2|intcomma }}</td>
-    <td>{{ infra_subvention|floatformat:2|intcomma }}</td>
-    <td>{{ infra_contribution|floatformat:2|intcomma }}</td>
-    <td>{{ infra_autre|floatformat:2|intcomma }}</td>
-</tr>
+                            <td colspan="3">Somme infrastructures (MRU)</td>
+                            <td class="total-amount">{{ total_infrastructures|floatformat:2|intcomma }}</td>
+                            <td>{{ infra_subvention|floatformat:2|intcomma }}</td>
+                            <td>{{ infra_contribution|floatformat:2|intcomma }}</td>
+                            <td>{{ infra_autre|floatformat:2|intcomma }}</td>
+                        </tr>
                     {% else %}
                         <tr><td colspan="7" class="text-center"><span class="non-renseigne">Non renseigné</span></td></tr>
                     {% endif %}
@@ -242,13 +347,28 @@
 </div>
 
 <div class="info-card">
-    <div class="card-header"><h5 class="mb-0">B. ÉQUIPEMENTS</h5></div>
+    <div class="card-header card-header-with-action">
+        <h5 class="mb-0">B. ÉQUIPEMENTS</h5>
+
+        {% if can_edit %}
+            <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'equipements' %}" class="btn btn-sm btn-light btn-edit-section">
+                ✏️ Modifier
+            </a>
+        {% endif %}
+    </div>
+
     <div class="card-body">
         <div class="table-responsive">
             <table class="table-detail">
                 <thead>
                     <tr>
-                        <th>Description</th><th>Quantité</th><th>Prix unitaire (MRU)</th><th>Montant total (MRU)</th><th>Subvention (MRU)</th><th>Contribution (MRU)</th><th>Autre (MRU)</th>
+                        <th>Description</th>
+                        <th>Quantité</th>
+                        <th>Prix unitaire (MRU)</th>
+                        <th>Montant total (MRU)</th>
+                        <th>Subvention (MRU)</th>
+                        <th>Contribution (MRU)</th>
+                        <th>Autre (MRU)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -265,12 +385,12 @@
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-    <td colspan="3">Somme équipements (MRU)</td>
-    <td class="total-amount">{{ total_equipements|floatformat:2|intcomma }}</td>
-    <td>{{ equip_subvention|floatformat:2|intcomma }}</td>
-    <td>{{ equip_contribution|floatformat:2|intcomma }}</td>
-    <td>{{ equip_autre|floatformat:2|intcomma }}</td>
-</tr>
+                            <td colspan="3">Somme équipements (MRU)</td>
+                            <td class="total-amount">{{ total_equipements|floatformat:2|intcomma }}</td>
+                            <td>{{ equip_subvention|floatformat:2|intcomma }}</td>
+                            <td>{{ equip_contribution|floatformat:2|intcomma }}</td>
+                            <td>{{ equip_autre|floatformat:2|intcomma }}</td>
+                        </tr>
                     {% else %}
                         <tr><td colspan="7" class="text-center"><span class="non-renseigne">Non renseigné</span></td></tr>
                     {% endif %}
@@ -281,13 +401,28 @@
 </div>
 
 <div class="info-card">
-    <div class="card-header"><h5 class="mb-0">C. INTRANTS</h5></div>
+    <div class="card-header card-header-with-action">
+        <h5 class="mb-0">C. INTRANTS</h5>
+
+        {% if can_edit %}
+            <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'intrants' %}" class="btn btn-sm btn-light btn-edit-section">
+                ✏️ Modifier
+            </a>
+        {% endif %}
+    </div>
+
     <div class="card-body">
         <div class="table-responsive">
             <table class="table-detail">
                 <thead>
                     <tr>
-                        <th>Description</th><th>Quantité</th><th>Prix unitaire (MRU)</th><th>Montant total (MRU)</th><th>Subvention (MRU)</th><th>Contribution (MRU)</th><th>Autre (MRU)</th>
+                        <th>Description</th>
+                        <th>Quantité</th>
+                        <th>Prix unitaire (MRU)</th>
+                        <th>Montant total (MRU)</th>
+                        <th>Subvention (MRU)</th>
+                        <th>Contribution (MRU)</th>
+                        <th>Autre (MRU)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -304,12 +439,12 @@
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-    <td colspan="3">Somme intrants (MRU)</td>
-    <td class="total-amount">{{ total_intrants|floatformat:2|intcomma }}</td>
-    <td>{{ intrant_subvention|floatformat:2|intcomma }}</td>
-    <td>{{ intrant_contribution|floatformat:2|intcomma }}</td>
-    <td>{{ intrant_autre|floatformat:2|intcomma }}</td>
-</tr>
+                            <td colspan="3">Somme intrants (MRU)</td>
+                            <td class="total-amount">{{ total_intrants|floatformat:2|intcomma }}</td>
+                            <td>{{ intrant_subvention|floatformat:2|intcomma }}</td>
+                            <td>{{ intrant_contribution|floatformat:2|intcomma }}</td>
+                            <td>{{ intrant_autre|floatformat:2|intcomma }}</td>
+                        </tr>
                     {% else %}
                         <tr><td colspan="7" class="text-center"><span class="non-renseigne">Non renseigné</span></td></tr>
                     {% endif %}
@@ -320,13 +455,27 @@
 </div>
 
 <div class="info-card">
-    <div class="card-header"><h5 class="mb-0">D. FONCTIONNEMENT</h5></div>
+    <div class="card-header card-header-with-action">
+        <h5 class="mb-0">D. FONCTIONNEMENT</h5>
+
+        {% if can_edit %}
+            <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'fonctionnements' %}" class="btn btn-sm btn-light btn-edit-section">
+                ✏️ Modifier
+            </a>
+        {% endif %}
+    </div>
+
     <div class="card-body">
         <div class="table-responsive">
             <table class="table-detail">
                 <thead>
                     <tr>
-                        <th>Description</th><th>Quantité</th><th>Prix unitaire (MRU)</th><th>Montant total (MRU)</th><th>Contribution (MRU)</th><th>Autre (MRU)</th>
+                        <th>Description</th>
+                        <th>Quantité</th>
+                        <th>Prix unitaire (MRU)</th>
+                        <th>Montant total (MRU)</th>
+                        <th>Contribution (MRU)</th>
+                        <th>Autre (MRU)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -342,11 +491,11 @@
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-    <td colspan="3">Somme fonctionnement (MRU)</td>
-    <td class="total-amount">{{ total_fonctionnements|floatformat:2|intcomma }}</td>
-    <td>{{ fonct_contribution|floatformat:2|intcomma }}</td>
-    <td>{{ fonct_autre|floatformat:2|intcomma }}</td>
-</tr>
+                            <td colspan="3">Somme fonctionnement (MRU)</td>
+                            <td class="total-amount">{{ total_fonctionnements|floatformat:2|intcomma }}</td>
+                            <td>{{ fonct_contribution|floatformat:2|intcomma }}</td>
+                            <td>{{ fonct_autre|floatformat:2|intcomma }}</td>
+                        </tr>
                     {% else %}
                         <tr><td colspan="6" class="text-center"><span class="non-renseigne">Non renseigné</span></td></tr>
                     {% endif %}
@@ -357,13 +506,28 @@
 </div>
 
 <div class="info-card">
-    <div class="card-header"><h5 class="mb-0">E. SERVICES</h5></div>
+    <div class="card-header card-header-with-action">
+        <h5 class="mb-0">E. SERVICES</h5>
+
+        {% if can_edit %}
+            <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'services' %}" class="btn btn-sm btn-light btn-edit-section">
+                ✏️ Modifier
+            </a>
+        {% endif %}
+    </div>
+
     <div class="card-body">
         <div class="table-responsive">
             <table class="table-detail">
                 <thead>
                     <tr>
-                        <th>Description</th><th>Quantité</th><th>Prix unitaire (MRU)</th><th>Montant total (MRU)</th><th>Subvention (MRU)</th><th>Contribution (MRU)</th><th>Autre (MRU)</th>
+                        <th>Description</th>
+                        <th>Quantité</th>
+                        <th>Prix unitaire (MRU)</th>
+                        <th>Montant total (MRU)</th>
+                        <th>Subvention (MRU)</th>
+                        <th>Contribution (MRU)</th>
+                        <th>Autre (MRU)</th>
                     </tr>
                 </thead>
                 <tbody>
@@ -380,12 +544,12 @@
                             </tr>
                         {% endfor %}
                         <tr class="total-row">
-    <td colspan="3">Somme services (MRU)</td>
-    <td class="total-amount">{{ total_services|floatformat:2|intcomma }}</td>
-    <td>{{ service_subvention|floatformat:2|intcomma }}</td>
-    <td>{{ service_contribution|floatformat:2|intcomma }}</td>
-    <td>{{ service_autre|floatformat:2|intcomma }}</td>
-</tr>
+                            <td colspan="3">Somme services (MRU)</td>
+                            <td class="total-amount">{{ total_services|floatformat:2|intcomma }}</td>
+                            <td>{{ service_subvention|floatformat:2|intcomma }}</td>
+                            <td>{{ service_contribution|floatformat:2|intcomma }}</td>
+                            <td>{{ service_autre|floatformat:2|intcomma }}</td>
+                        </tr>
                     {% else %}
                         <tr><td colspan="7" class="text-center"><span class="non-renseigne">Non renseigné</span></td></tr>
                     {% endif %}
@@ -394,6 +558,7 @@
         </div>
     </div>
 </div>
+
 <div class="info-card">
     <div class="card-header">
         <h5 class="mb-0">F. TABLEAU RÉCAPITULATIF DES SOURCES DE FINANCEMENT</h5>
@@ -404,7 +569,6 @@
             <table class="table-detail">
                 <thead>
                     <tr>
-
                         <th>Rubrique</th>
                         <th>Total rubrique (MRU)</th>
                         <th>Subvention PADISAM (MRU)</th>
@@ -414,34 +578,43 @@
                 </thead>
 
                 <tbody>
-                 {% for ligne in recap_financement %}
-    <tr>
-        <td><strong>{{ ligne.libelle }}</strong></td>
-        <td class="amount">
-            <strong>{{ ligne.total|floatformat:2|intcomma }}</strong>
-        </td>
-        <td>{{ ligne.subvention|floatformat:2|intcomma }}</td>
-        <td>{{ ligne.contribution|floatformat:2|intcomma }}</td>
-        <td>{{ ligne.autre|floatformat:2|intcomma }}</td>
-    </tr>
-{% endfor %}
+                    {% for ligne in recap_financement %}
+                    <tr>
+                        <td><strong>{{ ligne.libelle }}</strong></td>
+                        <td class="amount">
+                            <strong>{{ ligne.total|floatformat:2|intcomma }}</strong>
+                        </td>
+                        <td>{{ ligne.subvention|floatformat:2|intcomma }}</td>
+                        <td>{{ ligne.contribution|floatformat:2|intcomma }}</td>
+                        <td>{{ ligne.autre|floatformat:2|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
 
-<tr class="total-row">
-    <td>Total général</td>
-    <td class="total-amount">
-        {{ recap_total_general|floatformat:2|intcomma }}
-    </td>
-    <td>{{ recap_total_subvention|floatformat:2|intcomma }}</td>
-    <td>{{ recap_total_contribution|floatformat:2|intcomma }}</td>
-    <td>{{ recap_total_autre|floatformat:2|intcomma }}</td>
-</tr>
+                    <tr class="total-row">
+                        <td>Total général</td>
+                        <td class="total-amount">
+                            {{ recap_total_general|floatformat:2|intcomma }}
+                        </td>
+                        <td>{{ recap_total_subvention|floatformat:2|intcomma }}</td>
+                        <td>{{ recap_total_contribution|floatformat:2|intcomma }}</td>
+                        <td>{{ recap_total_autre|floatformat:2|intcomma }}</td>
+                    </tr>
                 </tbody>
             </table>
         </div>
     </div>
 </div>
 
-<div class="section-title">7. Renseignements sur le promoteur</div>
+<div class="section-title-with-action">
+    <div class="section-title">7. Renseignements sur le promoteur</div>
+
+    {% if can_edit %}
+        <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'promoteur' %}" class="btn btn-sm btn-outline-success btn-edit-section">
+            ✏️ Modifier
+        </a>
+    {% endif %}
+</div>
+
 <div class="info-card">
     <div class="card-body">
         <div class="info-row"><div class="info-label">Année début activités :</div><div class="info-value">{% if sous_projet.annee_debut_activites %}{{ sous_projet.annee_debut_activites }}{% else %}<span class="non-renseigne">Non renseigné</span>{% endif %}</div></div>
@@ -450,6 +623,7 @@
 </div>
 
 <div class="section-title">8. Réalisations passées du promoteur</div>
+
 <div class="info-card">
     <div class="card-body">
         <div class="table-responsive">
@@ -508,7 +682,16 @@
     </div>
 </div>
 
-<div class="section-title">9. Ressources du promoteur</div>
+<div class="section-title-with-action">
+    <div class="section-title">9. Ressources du promoteur</div>
+
+    {% if can_edit %}
+        <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'promoteur' %}" class="btn btn-sm btn-outline-success btn-edit-section">
+            ✏️ Modifier
+        </a>
+    {% endif %}
+</div>
+
 <div class="info-card">
     <div class="card-body">
         <div class="info-row">
@@ -525,6 +708,7 @@
 </div>
 
 <div class="section-title">10. Passifs (emprunts)</div>
+
 <div class="info-card">
     <div class="card-body">
         <div class="table-responsive">

@@ -85,6 +85,26 @@ def is_admin_like(utilisateur):
     """
     return bool(utilisateur and utilisateur.role in ['admin', 'superadmin'])
 
+def can_modify_project(utilisateur, sous_projet):
+    """
+    Permission de modification d'un sous-projet.
+
+    - admin / superadmin : peuvent modifier tous les sous-projets
+    - agent : peut modifier seulement les sous-projets qu'il a saisis
+    - superviseur / prescomite : lecture seule
+    """
+    if not utilisateur or not sous_projet:
+        return False
+
+    if utilisateur.role in ['admin', 'superadmin']:
+        return True
+
+    if utilisateur.role == 'agent':
+        return sous_projet.createur_username == utilisateur.username
+
+    return False
+
+
 
 def is_comite(utilisateur):
     """
@@ -1552,6 +1572,7 @@ def detail_sous_projet(request, pk):
 
     context = {
         'sous_projet': sous_projet,
+        'can_edit': can_modify_project(utilisateur, sous_projet),
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
@@ -1587,7 +1608,7 @@ def detail_sous_projet(request, pk):
         'service_contribution': service_contribution,
         'service_autre': service_autre,
 
-                'service_subvention': service_subvention,
+        'service_subvention': service_subvention,
         'service_contribution': service_contribution,
         'service_autre': service_autre,
 
@@ -2713,3 +2734,169 @@ def rapport_paysage_type_financement(request):
         'formulaire/rapport_paysage_type_financement.html',
         context
     )
+
+@login_required
+def modifier_section_sous_projet(request, pk, section):
+    """
+    Modification par section depuis la page détail.
+
+    Sections possibles :
+    - informations
+    - activites
+    - infrastructures
+    - equipements
+    - intrants
+    - fonctionnements
+    - services
+    - promoteur
+    """
+    utilisateur = get_current_user(request)
+
+    sous_projet = get_object_or_404(
+        get_accessible_sous_projets(utilisateur),
+        pk=pk
+    )
+
+    if not can_modify_project(utilisateur, sous_projet):
+        messages.error(
+            request,
+            "❌ Vous n'êtes pas autorisé à modifier ce sous-projet."
+        )
+        return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
+
+    ActiviteDynamicFormSet = get_activite_formset_class(extra=1)
+
+    section_config = {
+        'informations': {
+            'titre': 'Modifier les informations générales',
+            'type': 'form',
+            'form_class': SousProjetForm,
+            'prefix': None,
+        },
+        'activites': {
+            'titre': 'Modifier les activités',
+            'type': 'formset',
+            'formset_class': ActiviteDynamicFormSet,
+            'prefix': 'activite',
+        },
+        'infrastructures': {
+            'titre': 'Modifier les infrastructures',
+            'type': 'formset',
+            'formset_class': InfrastructureFormSet,
+            'prefix': 'infra',
+        },
+        'equipements': {
+            'titre': 'Modifier les équipements',
+            'type': 'formset',
+            'formset_class': EquipementFormSet,
+            'prefix': 'equip',
+        },
+        'intrants': {
+            'titre': 'Modifier les intrants',
+            'type': 'formset',
+            'formset_class': IntrantFormSet,
+            'prefix': 'intrant',
+        },
+        'fonctionnements': {
+            'titre': 'Modifier le fonctionnement',
+            'type': 'formset',
+            'formset_class': FonctionnementFormSet,
+            'prefix': 'fonc',
+        },
+        'services': {
+            'titre': 'Modifier les services',
+            'type': 'formset',
+            'formset_class': ServiceFormSet,
+            'prefix': 'serv',
+        },
+        'promoteur': {
+            'titre': 'Modifier les renseignements promoteur',
+            'type': 'form',
+            'form_class': PromoteurFinalForm,
+            'prefix': None,
+        },
+    }
+
+    if section not in section_config:
+        messages.error(request, "❌ Section introuvable.")
+        return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
+
+    config = section_config[section]
+
+    if request.method == 'POST':
+
+        if config['type'] == 'form':
+            if section == 'informations':
+                form = config['form_class'](
+                    request.POST,
+                    instance=sous_projet,
+                    user=utilisateur
+                )
+            else:
+                form = config['form_class'](
+                    request.POST,
+                    instance=sous_projet
+                )
+
+            if form.is_valid():
+                obj = form.save(commit=False)
+
+                # Sécurité : un agent garde sa wilaya d'affectation
+                if section == 'informations':
+                    if is_agent_saisie(utilisateur) and utilisateur.wilaya_id:
+                        obj.wilaya = utilisateur.wilaya
+
+                    # Sécurité : on garde le créateur original
+                    obj.createur_username = sous_projet.createur_username
+
+                obj.save()
+
+                messages.success(request, "✅ Section modifiée avec succès.")
+                return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
+
+        else:
+            formset = config['formset_class'](
+                request.POST,
+                instance=sous_projet,
+                prefix=config['prefix']
+            )
+
+            if formset.is_valid():
+                formset.save()
+
+                messages.success(request, "✅ Section modifiée avec succès.")
+                return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
+
+    else:
+        if config['type'] == 'form':
+            if section == 'informations':
+                form = config['form_class'](
+                    instance=sous_projet,
+                    user=utilisateur
+                )
+            else:
+                form = config['form_class'](
+                    instance=sous_projet
+                )
+
+            formset = None
+
+        else:
+            form = None
+            formset = config['formset_class'](
+                instance=sous_projet,
+                prefix=config['prefix']
+            )
+
+    return render(request, 'formulaire/modifier_section_sous_projet.html', {
+        'sous_projet': sous_projet,
+        'section': section,
+        'titre_section': config['titre'],
+        'form': form,
+        'formset': formset,
+        'config_type': config['type'],
+
+        'user_name': request.session.get('user_name'),
+        'user_role': request.session.get('user_role'),
+        'user_wilaya_nom': request.session.get('user_wilaya_nom'),
+    })

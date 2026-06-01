@@ -67,4 +67,11 @@ urlpatterns = [
     views.rapport_paysage_type_financement,
     name='rapport_paysage_type_financement'
 ),
+
+path(
+    'modifier-section/<int:pk>/<str:section>/',
+    views.modifier_section_sous_projet,
+    name='modifier_section_sous_projet'
+),
+
 ]
