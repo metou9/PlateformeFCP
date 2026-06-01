@@ -134,9 +134,9 @@ def get_accessible_sous_projets(utilisateur):
     Sous-projets visibles selon le rôle.
 
     - admin, superadmin, superviseur : voient tous les sous-projets de toutes les Wilayas
-    - agent avec wilaya : voit seulement les sous-projets de sa wilaya
+    - agent : voit seulement les sous-projets qu'il a créés
     - prescomite avec wilaya : voit seulement les sous-projets de sa wilaya
-    - utilisateur sans wilaya et non autorisé : ne voit rien
+    - utilisateur sans autorisation : ne voit rien
     """
     if not utilisateur:
         return SousProjet.objects.none()
@@ -144,7 +144,11 @@ def get_accessible_sous_projets(utilisateur):
     if utilisateur.role in ['admin', 'superadmin', 'superviseur']:
         return SousProjet.objects.all()
 
-    if utilisateur.wilaya_id:
+    if utilisateur.role == 'agent':
+        username = (utilisateur.username or '').strip()
+        return SousProjet.objects.filter(createur_username__iexact=username)
+
+    if utilisateur.role == 'prescomite' and utilisateur.wilaya_id:
         return SousProjet.objects.filter(wilaya_id=utilisateur.wilaya_id)
 
     return SousProjet.objects.none()
