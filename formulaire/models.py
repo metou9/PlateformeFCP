@@ -233,6 +233,12 @@ class SousProjet(models.Model):
         verbose_name="Village"
     )
 
+    principal_domaine_activites = models.TextField(
+    "Principal domaine d’activités",
+    blank=True,
+    null=True
+)
+
     # 5. Renseignement sur le promoteur
     annee_debut_activites = models.IntegerField(
         validators=[MinValueValidator(1900), MaxValueValidator(2100)],
