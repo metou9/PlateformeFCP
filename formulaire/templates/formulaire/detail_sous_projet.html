@@ -622,8 +622,15 @@
     </div>
 </div>
 
-<div class="section-title">8. Réalisations passées du promoteur</div>
+<div class="section-title-with-action">
+    <div class="section-title">8. Réalisations passées du promoteur</div>
 
+    {% if can_edit %}
+        <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'realisations' %}" class="btn btn-sm btn-outline-success btn-edit-section">
+            ✏️ Modifier
+        </a>
+    {% endif %}
+</div>
 <div class="info-card">
     <div class="card-body">
         <div class="table-responsive">
@@ -707,8 +714,15 @@
     </div>
 </div>
 
-<div class="section-title">10. Passifs (emprunts)</div>
+<div class="section-title-with-action">
+    <div class="section-title">10. Passifs (emprunts)</div>
 
+    {% if can_edit %}
+        <a href="{% url 'formulaire:modifier_section_sous_projet' sous_projet.id 'emprunts' %}" class="btn btn-sm btn-outline-success btn-edit-section">
+            ✏️ Modifier
+        </a>
+    {% endif %}
+</div>
 <div class="info-card">
     <div class="card-body">
         <div class="table-responsive">

@@ -2743,17 +2743,8 @@ def rapport_paysage_type_financement(request):
 def modifier_section_sous_projet(request, pk, section):
     """
     Modification par section depuis la page détail.
-
-    Sections possibles :
-    - informations
-    - activites
-    - infrastructures
-    - equipements
-    - intrants
-    - fonctionnements
-    - services
-    - promoteur
     """
+
     utilisateur = get_current_user(request)
 
     sous_projet = get_object_or_404(
@@ -2770,56 +2761,71 @@ def modifier_section_sous_projet(request, pk, section):
 
     ActiviteDynamicFormSet = get_activite_formset_class(extra=1)
 
+    RealisationDynamicFormSet = clone_formset_with_extra(RealisationFormSet, 3)
+    EmpruntDynamicFormSet = clone_formset_with_extra(EmpruntFormSet, 3)
+
     section_config = {
-        'informations': {
-            'titre': 'Modifier les informations générales',
-            'type': 'form',
-            'form_class': SousProjetForm,
-            'prefix': None,
-        },
-        'activites': {
-            'titre': 'Modifier les activités',
-            'type': 'formset',
-            'formset_class': ActiviteDynamicFormSet,
-            'prefix': 'activite',
-        },
-        'infrastructures': {
-            'titre': 'Modifier les infrastructures',
-            'type': 'formset',
-            'formset_class': InfrastructureFormSet,
-            'prefix': 'infra',
-        },
-        'equipements': {
-            'titre': 'Modifier les équipements',
-            'type': 'formset',
-            'formset_class': EquipementFormSet,
-            'prefix': 'equip',
-        },
-        'intrants': {
-            'titre': 'Modifier les intrants',
-            'type': 'formset',
-            'formset_class': IntrantFormSet,
-            'prefix': 'intrant',
-        },
-        'fonctionnements': {
-            'titre': 'Modifier le fonctionnement',
-            'type': 'formset',
-            'formset_class': FonctionnementFormSet,
-            'prefix': 'fonc',
-        },
-        'services': {
-            'titre': 'Modifier les services',
-            'type': 'formset',
-            'formset_class': ServiceFormSet,
-            'prefix': 'serv',
-        },
-        'promoteur': {
-            'titre': 'Modifier les renseignements promoteur',
-            'type': 'form',
-            'form_class': PromoteurFinalForm,
-            'prefix': None,
-        },
-    }
+    'informations': {
+        'titre': 'Modifier les informations générales',
+        'type': 'form',
+        'form_class': SousProjetForm,
+        'prefix': None,
+    },
+    'activites': {
+        'titre': 'Modifier les activités',
+        'type': 'formset',
+        'formset_class': ActiviteDynamicFormSet,
+        'prefix': 'activite',
+    },
+    'infrastructures': {
+        'titre': 'Modifier les infrastructures',
+        'type': 'formset',
+        'formset_class': InfrastructureFormSet,
+        'prefix': 'infra',
+    },
+    'equipements': {
+        'titre': 'Modifier les équipements',
+        'type': 'formset',
+        'formset_class': EquipementFormSet,
+        'prefix': 'equip',
+    },
+    'intrants': {
+        'titre': 'Modifier les intrants',
+        'type': 'formset',
+        'formset_class': IntrantFormSet,
+        'prefix': 'intrant',
+    },
+    'fonctionnements': {
+        'titre': 'Modifier le fonctionnement',
+        'type': 'formset',
+        'formset_class': FonctionnementFormSet,
+        'prefix': 'fonc',
+    },
+    'services': {
+        'titre': 'Modifier les services',
+        'type': 'formset',
+        'formset_class': ServiceFormSet,
+        'prefix': 'serv',
+    },
+    'realisations': {
+        'titre': 'Modifier les réalisations passées du promoteur',
+        'type': 'manual_formset',
+        'formset_class': RealisationFormSet,
+        'prefix': 'real',
+    },
+    'emprunts': {
+        'titre': 'Modifier les passifs / emprunts',
+        'type': 'manual_formset',
+        'formset_class': EmpruntFormSet,
+        'prefix': 'emprunt',
+    },
+    'promoteur': {
+        'titre': 'Modifier les renseignements promoteur',
+        'type': 'form',
+        'form_class': PromoteurFinalForm,
+        'prefix': None,
+    },
+}
 
     if section not in section_config:
         messages.error(request, "❌ Section introuvable.")
@@ -2827,9 +2833,13 @@ def modifier_section_sous_projet(request, pk, section):
 
     config = section_config[section]
 
+    form = None
+    formset = None
+
     if request.method == 'POST':
 
         if config['type'] == 'form':
+
             if section == 'informations':
                 form = config['form_class'](
                     request.POST,
@@ -2845,12 +2855,10 @@ def modifier_section_sous_projet(request, pk, section):
             if form.is_valid():
                 obj = form.save(commit=False)
 
-                # Sécurité : un agent garde sa wilaya d'affectation
                 if section == 'informations':
                     if is_agent_saisie(utilisateur) and utilisateur.wilaya_id:
                         obj.wilaya = utilisateur.wilaya
 
-                    # Sécurité : on garde le créateur original
                     obj.createur_username = sous_projet.createur_username
 
                 obj.save()
@@ -2858,7 +2866,94 @@ def modifier_section_sous_projet(request, pk, section):
                 messages.success(request, "✅ Section modifiée avec succès.")
                 return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
 
+        elif config['type'] == 'manual_formset':
+
+            formset = config['formset_class'](
+                request.POST,
+                prefix=config['prefix']
+            )
+
+            if formset.is_valid():
+
+                if section == 'realisations':
+
+                    sous_projet.realisations.all().delete()
+
+                    for f in formset:
+                        data = getattr(f, 'cleaned_data', None)
+
+                        if not data:
+                            continue
+
+                        has_data = any([
+                            data.get('produit'),
+                            data.get('annee_1'),
+                            data.get('volume_annee_1'),
+                            data.get('ventes_usd_annee_1'),
+                            data.get('prix_vente_mru_annee_1'),
+                            data.get('annee_2'),
+                            data.get('volume_annee_2'),
+                            data.get('ventes_usd_annee_2'),
+                            data.get('prix_vente_mru_annee_2'),
+                            data.get('annee_3'),
+                            data.get('volume_annee_3'),
+                            data.get('ventes_usd_annee_3'),
+                            data.get('prix_vente_mru_annee_3'),
+                        ])
+
+                        if not has_data:
+                            continue
+
+                        RealisationPassee.objects.create(
+                            sous_projet=sous_projet,
+                            produit=data.get('produit'),
+                            annee_1=data.get('annee_1'),
+                            volume_annee_1=data.get('volume_annee_1'),
+                            ventes_usd_annee_1=data.get('ventes_usd_annee_1'),
+                            prix_vente_mru_annee_1=data.get('prix_vente_mru_annee_1'),
+                            annee_2=data.get('annee_2'),
+                            volume_annee_2=data.get('volume_annee_2'),
+                            ventes_usd_annee_2=data.get('ventes_usd_annee_2'),
+                            prix_vente_mru_annee_2=data.get('prix_vente_mru_annee_2'),
+                            annee_3=data.get('annee_3'),
+                            volume_annee_3=data.get('volume_annee_3'),
+                            ventes_usd_annee_3=data.get('ventes_usd_annee_3'),
+                            prix_vente_mru_annee_3=data.get('prix_vente_mru_annee_3'),
+                        )
+
+                elif section == 'emprunts':
+
+                    sous_projet.emprunts.all().delete()
+
+                    for f in formset:
+                        data = getattr(f, 'cleaned_data', None)
+
+                        if not data:
+                            continue
+
+                        has_data = any([
+                            data.get('annee'),
+                            data.get('institution_financiere'),
+                            data.get('montant_emprunte'),
+                            data.get('montant_rembourse'),
+                        ])
+
+                        if not has_data:
+                            continue
+
+                        PassifEmprunt.objects.create(
+                            sous_projet=sous_projet,
+                            annee=data.get('annee'),
+                            institution_financiere=data.get('institution_financiere'),
+                            montant_emprunte=data.get('montant_emprunte'),
+                            montant_rembourse=data.get('montant_rembourse'),
+                        )
+
+                messages.success(request, "✅ Section modifiée avec succès.")
+                return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
+
         else:
+
             formset = config['formset_class'](
                 request.POST,
                 instance=sous_projet,
@@ -2872,7 +2967,9 @@ def modifier_section_sous_projet(request, pk, section):
                 return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
 
     else:
+
         if config['type'] == 'form':
+
             if section == 'informations':
                 form = config['form_class'](
                     instance=sous_projet,
@@ -2883,10 +2980,44 @@ def modifier_section_sous_projet(request, pk, section):
                     instance=sous_projet
                 )
 
-            formset = None
+        elif config['type'] == 'manual_formset':
+
+            if section == 'realisations':
+                initial = list(
+                    sous_projet.realisations.values(
+                        'produit',
+                        'annee_1',
+                        'volume_annee_1',
+                        'ventes_usd_annee_1',
+                        'prix_vente_mru_annee_1',
+                        'annee_2',
+                        'volume_annee_2',
+                        'ventes_usd_annee_2',
+                        'prix_vente_mru_annee_2',
+                        'annee_3',
+                        'volume_annee_3',
+                        'ventes_usd_annee_3',
+                        'prix_vente_mru_annee_3',
+                    )
+                )
+
+            elif section == 'emprunts':
+                initial = list(
+                    sous_projet.emprunts.values(
+                        'annee',
+                        'institution_financiere',
+                        'montant_emprunte',
+                        'montant_rembourse',
+                    )
+                )
+
+            formset = config['formset_class'](
+                initial=initial,
+                prefix=config['prefix']
+            )
 
         else:
-            form = None
+
             formset = config['formset_class'](
                 instance=sous_projet,
                 prefix=config['prefix']
@@ -2898,8 +3029,7 @@ def modifier_section_sous_projet(request, pk, section):
         'titre_section': config['titre'],
         'form': form,
         'formset': formset,
-        'config_type': config['type'],
-
+        'config_type': 'formset' if config['type'] == 'manual_formset' else config['type'],
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
