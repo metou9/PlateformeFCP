@@ -1,14 +1,19 @@
 {% extends 'formulaire/base.html' %}
 
 {% block title %}Présélection automatique - PADISAM{% endblock %}
+
 {% block extra_css %}
 <link href="/static/formulaire/css/formulaire.css" rel="stylesheet">
+
 <style>
     .preselection-page {
         padding-top: 10px;
         padding-bottom: 30px;
     }
 
+    /* =====================================================
+       EN-TÊTE
+    ===================================================== */
     .preselection-header {
         background: linear-gradient(135deg, #5dbb63 0%, #3f9142 100%);
         color: white;
@@ -30,19 +35,169 @@
         opacity: 0.95;
     }
 
-    .stats-card {
+    /* =====================================================
+       FILTRES
+    ===================================================== */
+    .filters-card {
         background: #fff;
         border-radius: 16px;
-        padding: 18px 22px;
-        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+        padding: 20px 22px;
         margin-bottom: 22px;
-        border-left: 5px solid #5dbb63;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+        border: 1px solid #e5e7eb;
     }
 
-    .stats-card strong {
-        color: #1d4f2a;
+    .filters-title {
+        margin-bottom: 16px;
+        color: #1f2937;
+        font-size: 17px;
+        font-weight: 700;
     }
 
+    .filters-form {
+        display: grid;
+        grid-template-columns: minmax(220px, 1.4fr) minmax(200px, 1fr) auto;
+        gap: 16px;
+        align-items: end;
+    }
+
+    .filter-group {
+        display: flex;
+        flex-direction: column;
+        gap: 7px;
+    }
+
+    .filter-group label {
+        color: #374151;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .filter-control {
+        width: 100%;
+        min-height: 44px;
+        padding: 10px 12px;
+        background: #fff;
+        color: #111827;
+        border: 1px solid #d1d5db;
+        border-radius: 10px;
+        font-size: 14px;
+        outline: none;
+        transition: all 0.2s ease;
+        box-sizing: border-box;
+    }
+
+    .filter-control:focus {
+        border-color: #5dbb63;
+        box-shadow: 0 0 0 3px rgba(93, 187, 99, 0.15);
+    }
+
+    .filter-actions {
+        display: flex;
+        gap: 10px;
+        align-items: center;
+    }
+
+    .search-btn,
+    .reset-btn {
+        min-height: 44px;
+        padding: 10px 17px;
+        border-radius: 10px;
+        font-size: 14px;
+        font-weight: 700;
+        text-decoration: none;
+        cursor: pointer;
+        white-space: nowrap;
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+        transition: all 0.2s ease;
+    }
+
+    .search-btn {
+        color: #fff;
+        background: #3f9142;
+        border: 1px solid #3f9142;
+    }
+
+    .search-btn:hover {
+        background: #327936;
+        border-color: #327936;
+    }
+
+    .reset-btn {
+        color: #374151;
+        background: #f3f4f6;
+        border: 1px solid #d1d5db;
+    }
+
+    .reset-btn:hover {
+        color: #111827;
+        background: #e5e7eb;
+        text-decoration: none;
+    }
+
+    /* =====================================================
+       STATISTIQUES
+    ===================================================== */
+    .stats-grid {
+        display: grid;
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+        gap: 16px;
+        margin-bottom: 18px;
+    }
+
+    .stat-item {
+        background: #fff;
+        border-radius: 15px;
+        padding: 18px 20px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+        border-left: 5px solid #9ca3af;
+    }
+
+    .stat-label {
+        display: block;
+        margin-bottom: 8px;
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 700;
+    }
+
+    .stat-item strong {
+        color: #111827;
+        font-size: 27px;
+        line-height: 1;
+    }
+
+    .stat-total {
+        border-left-color: #2563eb;
+    }
+
+    .stat-review {
+        border-left-color: #f59e0b;
+    }
+
+    .stat-no {
+        border-left-color: #ef4444;
+    }
+
+    .active-filter-box {
+        margin-bottom: 22px;
+        padding: 13px 18px;
+        background: #ecfdf3;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+        border-radius: 12px;
+        font-size: 14px;
+    }
+
+    .active-filter-box strong {
+        color: #14532d;
+    }
+
+    /* =====================================================
+       TABLEAU
+    ===================================================== */
     .preselection-table-card {
         background: #fff;
         border-radius: 18px;
@@ -51,8 +206,12 @@
     }
 
     .preselection-table-card .card-header-custom {
-        background: #f8fafc;
+        display: flex;
+        align-items: center;
+        justify-content: space-between;
+        gap: 15px;
         padding: 18px 22px;
+        background: #f8fafc;
         border-bottom: 1px solid #e5e7eb;
     }
 
@@ -62,6 +221,12 @@
         font-weight: 700;
     }
 
+    .result-count {
+        color: #6b7280;
+        font-size: 13px;
+        font-weight: 600;
+    }
+
     .table-responsive {
         width: 100%;
         overflow-x: auto;
@@ -69,6 +234,7 @@
 
     .preselection-table {
         width: 100%;
+        min-width: 1050px;
         border-collapse: collapse;
     }
 
@@ -93,6 +259,31 @@
 
     .preselection-table tbody tr:hover {
         background: #f9fafb;
+    }
+
+    .numero-cell {
+        color: #1f2937;
+        font-weight: 700;
+        white-space: nowrap;
+    }
+
+    .paysage-name {
+        display: block;
+        color: #1f2937;
+        font-weight: 700;
+    }
+
+    .wilaya-name {
+        display: block;
+        margin-top: 4px;
+        color: #6b7280;
+        font-size: 12px;
+    }
+
+    .project-title {
+        color: #1f2937;
+        line-height: 1.5;
+        font-weight: 600;
     }
 
     .decision-badge {
@@ -120,97 +311,303 @@
     }
 
     .motif-text {
+        min-width: 280px;
         color: #374151;
         line-height: 1.5;
     }
 
+    .detail-btn {
+        display: inline-block;
+        padding: 8px 14px;
+        border-radius: 10px;
+        background: #ecfdf3;
+        color: #166534;
+        border: 1px solid #bbf7d0;
+        font-size: 13px;
+        font-weight: 700;
+        text-decoration: none;
+        transition: all 0.2s ease;
+        white-space: nowrap;
+    }
+
+    .detail-btn:hover {
+        background: #d1fae5;
+        color: #14532d;
+        border-color: #86efac;
+        text-decoration: none;
+    }
+
     .empty-box {
-        padding: 30px;
+        padding: 40px 25px;
         text-align: center;
         color: #6b7280;
     }
-    .detail-btn {
-    display: inline-block;
-    padding: 8px 14px;
-    border-radius: 10px;
-    background: #ecfdf3;
-    color: #166534;
-    border: 1px solid #bbf7d0;
-    font-size: 13px;
-    font-weight: 700;
-    text-decoration: none;
-    transition: all 0.2s ease;
-    white-space: nowrap;
-}
 
-.detail-btn:hover {
-    background: #d1fae5;
-    color: #14532d;
-    border-color: #86efac;
-    text-decoration: none;
-}
+    .empty-box strong {
+        display: block;
+        margin-bottom: 7px;
+        color: #374151;
+        font-size: 16px;
+    }
+
+    /* =====================================================
+       RESPONSIVE
+    ===================================================== */
+    @media (max-width: 1000px) {
+        .filters-form {
+            grid-template-columns: repeat(2, minmax(0, 1fr));
+        }
+
+        .filter-actions {
+            grid-column: 1 / -1;
+        }
+    }
+
+    @media (max-width: 760px) {
+        .preselection-header {
+            padding: 20px;
+        }
+
+        .preselection-header h1 {
+            font-size: 24px;
+        }
+
+        .filters-form {
+            grid-template-columns: 1fr;
+        }
+
+        .filter-actions {
+            grid-column: auto;
+            flex-wrap: wrap;
+        }
+
+        .search-btn,
+        .reset-btn {
+            flex: 1;
+        }
+
+        .stats-grid {
+            grid-template-columns: 1fr;
+        }
+
+        .preselection-table-card .card-header-custom {
+            align-items: flex-start;
+            flex-direction: column;
+        }
+    }
 </style>
 {% endblock %}
 
+
 {% block content %}
 <div class="container preselection-page">
+
+    <!-- En-tête -->
     <div class="preselection-header">
         <h1>Présélection automatique</h1>
-        <p>Analyse simplifiée des sous-projets déjà inscrits</p>
+        <p>
+            Analyse automatique des sous-projets déjà enregistrés,
+            avec filtrage par paysage / ZOCA et numéro de réception.
+        </p>
     </div>
 
-    <div class="stats-card">
-        Nombre total de dossiers : <strong>{{ total_dossiers }}</strong>
+
+    <!-- Filtres -->
+    <div class="filters-card">
+        <div class="filters-title">
+            Rechercher et filtrer les dossiers
+        </div>
+
+        <form method="get" class="filters-form">
+
+            <div class="filter-group">
+                <label for="paysage">
+                    Paysage / ZOCA
+                </label>
+
+                <select
+                    name="paysage"
+                    id="paysage"
+                    class="filter-control"
+                >
+                    <option value="">
+                        Tous les paysages / ZOCA
+                    </option>
+
+                    {% for paysage in paysages_disponibles %}
+                        <option
+                            value="{{ paysage.paysage_id }}"
+                            {% if selected_paysage_id == paysage.paysage_id|stringformat:"s" %}
+                                selected
+                            {% endif %}
+                        >
+                            {{ paysage.paysage__nom }}
+
+                            {% if paysage.wilaya__nom %}
+                                — {{ paysage.wilaya__nom }}
+                            {% endif %}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="numero_reception">
+                    N° de réception
+                </label>
+
+                <input
+                    type="text"
+                    name="numero_reception"
+                    id="numero_reception"
+                    class="filter-control"
+                    value="{{ numero_reception }}"
+                    placeholder="Exemple : 12"
+                    autocomplete="off"
+                >
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="search-btn">
+                    Rechercher
+                </button>
+
+                <a
+                    href="{% url 'formulaire:preselection_automatique' %}"
+                    class="reset-btn"
+                >
+                    Réinitialiser
+                </a>
+            </div>
+
+        </form>
     </div>
 
+
+    <!-- Statistiques -->
+    <div class="stats-grid">
+
+        <div class="stat-item stat-total">
+            <span class="stat-label">
+                Dossiers affichés
+            </span>
+            <strong>{{ total_dossiers }}</strong>
+        </div>
+
+        <div class="stat-item stat-review">
+            <span class="stat-label">
+                À examiner
+            </span>
+            <strong>{{ nb_a_examiner }}</strong>
+        </div>
+
+        <div class="stat-item stat-no">
+            <span class="stat-label">
+                Rejetés automatiquement
+            </span>
+            <strong>{{ nb_rejetes }}</strong>
+        </div>
+
+    </div>
+
+
+    <!-- Information sur le filtre actif -->
+    {% if selected_paysage %}
+        <div class="active-filter-box">
+            Paysage / ZOCA sélectionné :
+            <strong>{{ selected_paysage.nom }}</strong>
+
+            {% if selected_paysage.wilaya %}
+                — Wilaya de {{ selected_paysage.wilaya.nom }}
+            {% endif %}
+        </div>
+    {% endif %}
+
+
+    <!-- Tableau -->
     <div class="preselection-table-card">
+
         <div class="card-header-custom">
             <h5>Liste des sous-projets</h5>
+
+            <span class="result-count">
+                {{ total_dossiers }} dossier{{ total_dossiers|pluralize }} affiché{{ total_dossiers|pluralize }}
+            </span>
         </div>
 
         {% if lignes %}
-         {% if lignes %}
-<div class="table-responsive">
-    <table class="preselection-table">
-        <thead>
-            <tr>
-                <th>N° réception</th>
-                <th>Intitulé du sous-projet</th>
-                <th>Décision</th>
-                <th>Motif</th>
-            </tr>
-        </thead>
+            <div class="table-responsive">
 
-        <tbody>
-            {% for ligne in lignes %}
-            <tr>
-                <td>{{ ligne.numero_reception }}</td>
-                <td>{{ ligne.intitule }}</td>
+                <table class="preselection-table">
 
-                <td>
-                    <span class="decision-badge {{ ligne.badge_class }}">
-                        {{ ligne.decision }}
-                    </span>
-                </td>
+                    <thead>
+                        <tr>
+                            <th>N° réception</th>
+                            <th>Paysage / ZOCA</th>
+                            <th>Intitulé du sous-projet</th>
+                            <th>Décision automatique</th>
+                            <th>Motif</th>
 
-                <td class="motif-text">
-                    {{ ligne.motif }}
-                </td>
-            </tr>
-            {% endfor %}
-        </tbody>
-    </table>
-</div>
-{% else %}
-<div class="empty-box">
-    Aucun sous-projet trouvé.
-</div>
-{% endif %}
+                        
+                        </tr>
+                    </thead>
+
+                    <tbody>
+                        {% for ligne in lignes %}
+                            <tr>
+
+                                <td class="numero-cell">
+                                    {{ ligne.numero_reception }}
+                                </td>
+
+                                <td>
+                                    <span class="paysage-name">
+                                        {{ ligne.paysage }}
+                                    </span>
+
+                                    {% if ligne.wilaya %}
+                                        <span class="wilaya-name">
+                                            Wilaya : {{ ligne.wilaya }}
+                                        </span>
+                                    {% endif %}
+                                </td>
+
+                                <td class="project-title">
+                                    {{ ligne.intitule }}
+                                </td>
+
+                                <td>
+                                    <span class="decision-badge {{ ligne.badge_class }}">
+                                        {{ ligne.decision }}
+                                    </span>
+                                </td>
+
+                                <td class="motif-text">
+                                    {{ ligne.motif }}
+                                </td>
+
+
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+
+                </table>
+
+            </div>
+
         {% else %}
             <div class="empty-box">
-                Aucun sous-projet trouvé.
+                <strong>Aucun dossier trouvé</strong>
+
+                {% if selected_paysage_id or numero_reception %}
+                    Aucun sous-projet ne correspond aux critères de recherche.
+                {% else %}
+                    Aucun sous-projet n’est actuellement disponible.
+                {% endif %}
             </div>
         {% endif %}
+
     </div>
+
 </div>
 {% endblock %}

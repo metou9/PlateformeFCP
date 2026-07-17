@@ -1,4 +1,3 @@
-```django
 {% extends 'formulaire/base.html' %}
 
 {% block title %}Présélection Comité régional - PADISAM{% endblock %}
@@ -12,6 +11,9 @@
     padding-bottom: 30px;
 }
 
+/* =====================================================
+   EN-TÊTE
+===================================================== */
 .preselection-header {
     background: linear-gradient(135deg, #5dbb63 0%, #3f9142 100%);
     color: white;
@@ -29,25 +31,20 @@
 
 .preselection-header p {
     margin: 0;
+    font-size: 15px;
+    opacity: 0.95;
 }
 
-/* STATISTIQUES */
-.stats-card {
-    background: #fff;
-    border-radius: 16px;
-    padding: 18px 22px;
-    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
-    margin-bottom: 22px;
-    border-left: 5px solid #5dbb63;
-}
-
-/* FILTRES */
+/* =====================================================
+   FILTRES
+===================================================== */
 .filters-card {
     background: #fff;
     border-radius: 16px;
     padding: 20px 22px;
     margin-bottom: 22px;
     box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    border: 1px solid #e5e7eb;
 }
 
 .filters-title {
@@ -59,7 +56,7 @@
 
 .filters-form {
     display: grid;
-    grid-template-columns: 1.3fr 1fr auto;
+    grid-template-columns: minmax(230px, 1.3fr) minmax(200px, 1fr) auto;
     gap: 16px;
     align-items: end;
 }
@@ -86,6 +83,7 @@
     color: #111827;
     font-size: 14px;
     outline: none;
+    box-sizing: border-box;
 }
 
 .filter-control:focus {
@@ -109,16 +107,20 @@
     text-decoration: none;
     white-space: nowrap;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
 }
 
 .search-btn {
-    border: none;
+    border: 1px solid #3f9142;
     background: #3f9142;
     color: white;
 }
 
 .search-btn:hover {
     background: #347a37;
+    border-color: #347a37;
 }
 
 .reset-btn {
@@ -129,9 +131,75 @@
 
 .reset-btn:hover {
     background: #f3f4f6;
+    color: #111827;
+    text-decoration: none;
 }
 
-/* TABLE */
+/* =====================================================
+   STATISTIQUES
+===================================================== */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+    gap: 16px;
+    margin-bottom: 18px;
+}
+
+.stat-item {
+    background: #fff;
+    border-radius: 15px;
+    padding: 18px 20px;
+    box-shadow: 0 4px 14px rgba(0, 0, 0, 0.06);
+    border-left: 5px solid #9ca3af;
+}
+
+.stat-label {
+    display: block;
+    margin-bottom: 8px;
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 700;
+}
+
+.stat-item strong {
+    color: #111827;
+    font-size: 27px;
+    line-height: 1;
+}
+
+.stat-total {
+    border-left-color: #2563eb;
+}
+
+.stat-ok {
+    border-left-color: #22c55e;
+}
+
+.stat-review {
+    border-left-color: #f59e0b;
+}
+
+.stat-no {
+    border-left-color: #ef4444;
+}
+
+.active-filter-box {
+    margin-bottom: 22px;
+    padding: 13px 18px;
+    background: #ecfdf3;
+    color: #166534;
+    border: 1px solid #bbf7d0;
+    border-radius: 12px;
+    font-size: 14px;
+}
+
+.active-filter-box strong {
+    color: #14532d;
+}
+
+/* =====================================================
+   TABLEAU
+===================================================== */
 .preselection-table-card {
     background: #fff;
     border-radius: 18px;
@@ -140,6 +208,10 @@
 }
 
 .card-header-custom {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 15px;
     background: #f8fafc;
     padding: 18px 22px;
     border-bottom: 1px solid #e5e7eb;
@@ -147,12 +219,25 @@
 
 .card-header-custom h5 {
     margin: 0;
+    color: #1f2937;
+    font-weight: 700;
+}
+
+.result-count {
+    color: #6b7280;
+    font-size: 13px;
+    font-weight: 600;
+}
+
+.table-responsive {
+    width: 100%;
+    overflow-x: auto;
 }
 
 .preselection-table {
     width: 100%;
+    min-width: 1250px;
     border-collapse: collapse;
-    table-layout: fixed;
 }
 
 .preselection-table thead {
@@ -165,27 +250,47 @@
     padding: 14px 16px;
     border-bottom: 1px solid #e5e7eb;
     font-size: 14px;
-    vertical-align: middle;
+    vertical-align: top;
+    text-align: left;
 }
 
-/* Largeurs avec colonne détail */
-.preselection-table.with-detail th:nth-child(1) { width: 9%; }
-.preselection-table.with-detail th:nth-child(2) { width: 15%; }
-.preselection-table.with-detail th:nth-child(3) { width: 15%; }
-.preselection-table.with-detail th:nth-child(4) { width: 27%; }
-.preselection-table.with-detail th:nth-child(5) { width: 13%; }
-.preselection-table.with-detail th:nth-child(6) { width: 15%; }
-.preselection-table.with-detail th:nth-child(7) { width: 6%; }
+.preselection-table th {
+    white-space: nowrap;
+    font-weight: 700;
+}
 
-/* Largeurs sans colonne détail */
-.preselection-table.without-detail th:nth-child(1) { width: 10%; }
-.preselection-table.without-detail th:nth-child(2) { width: 17%; }
-.preselection-table.without-detail th:nth-child(3) { width: 17%; }
-.preselection-table.without-detail th:nth-child(4) { width: 28%; }
-.preselection-table.without-detail th:nth-child(5) { width: 13%; }
-.preselection-table.without-detail th:nth-child(6) { width: 15%; }
+.preselection-table tbody tr:hover {
+    background: #f9fafb;
+}
 
-/* BADGES */
+.numero-cell {
+    color: #1f2937;
+    font-weight: 700;
+    white-space: nowrap;
+}
+
+.paysage-name {
+    display: block;
+    color: #1f2937;
+    font-weight: 700;
+}
+
+.wilaya-name {
+    display: block;
+    margin-top: 4px;
+    color: #6b7280;
+    font-size: 12px;
+}
+
+.project-title {
+    color: #1f2937;
+    font-weight: 600;
+    line-height: 1.5;
+}
+
+/* =====================================================
+   BADGES
+===================================================== */
 .decision-badge {
     display: inline-block;
     padding: 7px 12px;
@@ -210,15 +315,17 @@
     color: #991b1b;
 }
 
-/* MOTIFS */
+/* =====================================================
+   MOTIFS ET ACTIONS
+===================================================== */
 .motif-text {
+    min-width: 220px;
     color: #374151;
     line-height: 1.5;
     white-space: normal;
-    word-break: break-word;
+    overflow-wrap: anywhere;
 }
 
-/* BOUTON DÉTAIL */
 .detail-btn {
     display: inline-block;
     padding: 8px 14px;
@@ -230,31 +337,47 @@
     font-weight: 700;
     text-decoration: none;
     white-space: nowrap;
+    transition: all 0.2s ease;
 }
 
 .detail-btn:hover {
     background: #d1fae5;
+    color: #14532d;
+    border-color: #86efac;
+    text-decoration: none;
 }
 
-/* AUCUN RÉSULTAT */
 .empty-box {
-    padding: 30px;
+    padding: 40px 25px;
     text-align: center;
     color: #6b7280;
 }
 
-/* RESPONSIVE */
-@media (max-width: 992px) {
+.empty-box strong {
+    display: block;
+    margin-bottom: 7px;
+    color: #374151;
+    font-size: 16px;
+}
+
+/* =====================================================
+   RESPONSIVE
+===================================================== */
+@media (max-width: 1050px) {
     .filters-form {
-        grid-template-columns: 1fr;
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 
     .filter-actions {
-        justify-content: flex-start;
+        grid-column: 1 / -1;
+    }
+
+    .stats-grid {
+        grid-template-columns: repeat(2, minmax(0, 1fr));
     }
 }
 
-@media (max-width: 576px) {
+@media (max-width: 650px) {
     .preselection-header {
         padding: 20px;
     }
@@ -263,7 +386,12 @@
         font-size: 24px;
     }
 
+    .filters-form {
+        grid-template-columns: 1fr;
+    }
+
     .filter-actions {
+        grid-column: auto;
         flex-direction: column;
         align-items: stretch;
     }
@@ -271,34 +399,41 @@
     .search-btn,
     .reset-btn {
         width: 100%;
-        text-align: center;
+    }
+
+    .stats-grid {
+        grid-template-columns: 1fr;
+    }
+
+    .card-header-custom {
+        flex-direction: column;
+        align-items: flex-start;
     }
 }
 </style>
 {% endblock %}
 
+
 {% block content %}
 <div class="container preselection-page">
 
+    <!-- En-tête -->
     <div class="preselection-header">
         <h1>Présélection du comité régional</h1>
-        <p>Analyse des dossiers par le comité</p>
+        <p>
+            Analyse et décision du comité sur les dossiers accessibles.
+        </p>
     </div>
 
-    <div class="stats-card">
-        Nombre de dossiers affichés :
-        <strong>{{ total_dossiers }}</strong>
-    </div>
 
-    <!-- FILTRES -->
+    <!-- Filtres -->
     <div class="filters-card">
         <div class="filters-title">
-            Rechercher un dossier
+            Rechercher et filtrer les dossiers
         </div>
 
         <form method="get" class="filters-form">
 
-            <!-- Paysage / ZOCA -->
             <div class="filter-group">
                 <label for="paysage">
                     Paysage / ZOCA
@@ -330,7 +465,6 @@
                 </select>
             </div>
 
-            <!-- N° réception -->
             <div class="filter-group">
                 <label for="numero_reception">
                     N° de réception
@@ -343,15 +477,12 @@
                     class="filter-control"
                     value="{{ numero_reception }}"
                     placeholder="Exemple : 12"
+                    autocomplete="off"
                 >
             </div>
 
-            <!-- Boutons -->
             <div class="filter-actions">
-                <button
-                    type="submit"
-                    class="search-btn"
-                >
+                <button type="submit" class="search-btn">
                     Rechercher
                 </button>
 
@@ -366,17 +497,70 @@
         </form>
     </div>
 
-    <!-- TABLEAU -->
+
+    <!-- Statistiques -->
+    <div class="stats-grid">
+
+        <div class="stat-item stat-total">
+            <span class="stat-label">
+                Dossiers affichés
+            </span>
+            <strong>{{ total_dossiers }}</strong>
+        </div>
+
+        <div class="stat-item stat-ok">
+            <span class="stat-label">
+                Présélectionnés
+            </span>
+            <strong>{{ nb_preselectionnes }}</strong>
+        </div>
+
+        <div class="stat-item stat-review">
+            <span class="stat-label">
+                À examiner
+            </span>
+            <strong>{{ nb_a_examiner }}</strong>
+        </div>
+
+        <div class="stat-item stat-no">
+            <span class="stat-label">
+                Rejetés
+            </span>
+            <strong>{{ nb_rejetes }}</strong>
+        </div>
+
+    </div>
+
+
+    <!-- Paysage actif -->
+    {% if selected_paysage %}
+        <div class="active-filter-box">
+            Paysage / ZOCA sélectionné :
+            <strong>{{ selected_paysage.nom }}</strong>
+
+            {% if selected_paysage.wilaya %}
+                — Wilaya de {{ selected_paysage.wilaya.nom }}
+            {% endif %}
+        </div>
+    {% endif %}
+
+
+    <!-- Tableau -->
     <div class="preselection-table-card">
 
         <div class="card-header-custom">
             <h5>Liste des sous-projets</h5>
+
+            <span class="result-count">
+                {{ total_dossiers }} dossier{{ total_dossiers|pluralize }}
+                affiché{{ total_dossiers|pluralize }}
+            </span>
         </div>
 
         {% if lignes %}
             <div class="table-responsive">
 
-                <table class="preselection-table {% if can_validate_comite %}with-detail{% else %}without-detail{% endif %}">
+                <table class="preselection-table">
 
                     <thead>
                         <tr>
@@ -397,13 +581,13 @@
                         {% for ligne in lignes %}
                             <tr>
 
-                                <td>
-                                    <strong>
-                                        {{ ligne.numero_reception }}
-                                    </strong>
+                                <td class="numero-cell">
+                                    {{ ligne.numero_reception }}
                                 </td>
 
-                                <td>
+                              
+
+                                <td class="project-title">
                                     {{ ligne.intitule }}
                                 </td>
 
@@ -442,7 +626,7 @@
                                 {% if can_validate_comite %}
                                     <td>
                                         <a
-                                            href="{% url 'formulaire:preselection_comite_detail' ligne.sous_projet.id %}"
+                                            href="{% url 'formulaire:preselection_comite_detail' ligne.sous_projet.id %}?next={{ current_list_url|urlencode }}"
                                             class="detail-btn"
                                         >
                                             Détail
@@ -455,11 +639,18 @@
                     </tbody>
 
                 </table>
+
             </div>
 
         {% else %}
             <div class="empty-box">
-                Aucun sous-projet ne correspond aux critères de recherche.
+                <strong>Aucun dossier trouvé</strong>
+
+                {% if selected_paysage_id or numero_reception %}
+                    Aucun sous-projet ne correspond aux critères de recherche.
+                {% else %}
+                    Aucun dossier n’est actuellement disponible.
+                {% endif %}
             </div>
         {% endif %}
 
@@ -467,4 +658,3 @@
 
 </div>
 {% endblock %}
-```

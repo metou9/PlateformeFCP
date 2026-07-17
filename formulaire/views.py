@@ -11,7 +11,9 @@ from django.contrib.auth import logout
 from django.forms import inlineformset_factory
 from django.http import JsonResponse, QueryDict
 from django.shortcuts import get_object_or_404, redirect, render
+from django.urls import reverse
 from django.utils import timezone
+from django.utils.http import url_has_allowed_host_and_scheme
 from django.db import transaction
 from django.db.models import Sum, Count, Case, When, IntegerField, Value
 from django.db.models.functions import Cast
@@ -1785,26 +1787,123 @@ def appliquer_preselection_automatique(sp):
         'bloque_comite': False,
     }
 
+
+def filtrer_et_trier_preselection(request, sous_projets_base):
+    """
+    Applique les filtres communs aux pages de présélection :
+    - Paysage / ZOCA
+    - Numéro de réception
+    - Tri numérique croissant du numéro de réception
+    """
+    selected_paysage_id = request.GET.get('paysage') or ''
+    numero_reception = (request.GET.get('numero_reception') or '').strip()
+
+    paysages_disponibles = (
+        sous_projets_base
+        .exclude(paysage__isnull=True)
+        .values('paysage_id', 'paysage__nom', 'wilaya__nom')
+        .distinct()
+        .order_by('wilaya__nom', 'paysage__nom')
+    )
+
+    sous_projets = sous_projets_base
+    selected_paysage = None
+
+    if selected_paysage_id:
+        sous_projets = sous_projets.filter(paysage_id=selected_paysage_id)
+        try:
+            selected_paysage = Paysage.objects.select_related(
+                'commune__moughataa__wilaya'
+            ).get(pk=selected_paysage_id)
+        except Paysage.DoesNotExist:
+            selected_paysage = None
+
+    if numero_reception:
+        sous_projets = sous_projets.filter(
+            numero_reception_formulaire__icontains=numero_reception
+        )
+
+    sous_projets = (
+        sous_projets
+        .select_related('wilaya', 'moughataa', 'commune', 'paysage')
+        .annotate(
+            numero_reception_numerique=Case(
+                When(
+                    numero_reception_formulaire__regex=r'^[0-9]+$',
+                    then=Cast('numero_reception_formulaire', IntegerField())
+                ),
+                default=Value(None),
+                output_field=IntegerField()
+            )
+        )
+        .order_by(
+            'numero_reception_numerique',
+            'numero_reception_formulaire',
+            'id'
+        )
+    )
+
+    return {
+        'sous_projets': sous_projets,
+        'paysages_disponibles': paysages_disponibles,
+        'selected_paysage_id': str(selected_paysage_id),
+        'selected_paysage': selected_paysage,
+        'numero_reception': numero_reception,
+    }
+
+
 @login_required
 def preselection_automatique(request):
     """
-    Page simple de démonstration de la présélection automatique.
+    Présélection automatique avec filtres, tri numérique,
+    colonne Paysage / ZOCA et statistiques dynamiques.
     """
     utilisateur = get_current_user(request)
-    sous_projets = get_accessible_sous_projets(utilisateur).order_by("-id")
+    sous_projets_base = get_accessible_sous_projets(utilisateur)
 
-    lignes = [evaluer_preselection(sp) for sp in sous_projets]
+    filtre = filtrer_et_trier_preselection(request, sous_projets_base)
+    sous_projets = filtre['sous_projets']
+
+    lignes = []
+    nb_rejetes = 0
+    nb_a_examiner = 0
+
+    for sp in sous_projets:
+        evaluation = evaluer_preselection(sp)
+
+        lignes.append({
+            **evaluation,
+            'paysage': sp.paysage.nom if sp.paysage else 'Non renseigné',
+            'wilaya': sp.wilaya.nom if sp.wilaya else 'Non renseignée',
+        })
+
+        if evaluation['decision'] == 'Rejeté':
+            nb_rejetes += 1
+        else:
+            nb_a_examiner += 1
 
     can_view_preselection_detail = bool(
-        utilisateur and utilisateur.role in ['admin', 'superadmin', 'prescomite']
+        utilisateur
+        and utilisateur.role in ['admin', 'superadmin', 'prescomite']
     )
 
     context = {
-        "lignes": lignes,
-        "total_dossiers": sous_projets.count(),
-        "can_view_preselection_detail": can_view_preselection_detail,
+        'lignes': lignes,
+        'total_dossiers': len(lignes),
+        'nb_rejetes': nb_rejetes,
+        'nb_a_examiner': nb_a_examiner,
+        'paysages_disponibles': filtre['paysages_disponibles'],
+        'selected_paysage_id': filtre['selected_paysage_id'],
+        'selected_paysage': filtre['selected_paysage'],
+        'numero_reception': filtre['numero_reception'],
+        'can_view_preselection_detail': can_view_preselection_detail,
     }
-    return render(request, "formulaire/preselection_automatique.html", context)
+
+    return render(
+        request,
+        'formulaire/preselection_automatique.html',
+        context
+    )
 
 def evaluer_criteres_preselection(sp):
     """
@@ -2290,13 +2389,12 @@ def preselection_detail(request, pk):
 @login_required
 def preselection_comite_liste(request):
     """
-    Liste des dossiers pour la présélection comité.
-
-    Fonctionnalités :
-    - tri par N° de réception, du plus petit au plus grand ;
-    - filtre par paysage / ZOCA ;
+    Liste des dossiers pour la présélection comité avec :
+    - droits d'accès selon le rôle ;
+    - filtre Paysage / ZOCA ;
     - recherche par N° de réception ;
-    - respect des droits d'accès selon le rôle.
+    - tri numérique croissant ;
+    - statistiques dynamiques.
     """
     utilisateur = get_current_user(request)
 
@@ -2307,103 +2405,48 @@ def preselection_comite_liste(request):
         )
         return redirect('formulaire:accueil')
 
-    # Tous les sous-projets accessibles selon le rôle
     sous_projets_base = get_accessible_sous_projets(utilisateur)
-
-    # Valeurs des filtres
-    selected_paysage_id = request.GET.get('paysage') or ''
-    numero_reception = (
-        request.GET.get('numero_reception') or ''
-    ).strip()
-
-    # Paysages disponibles selon les dossiers accessibles
-    paysages_disponibles = (
-        sous_projets_base
-        .exclude(paysage__isnull=True)
-        .values(
-            'paysage_id',
-            'paysage__nom',
-            'wilaya__nom'
-        )
-        .distinct()
-        .order_by(
-            'wilaya__nom',
-            'paysage__nom'
-        )
-    )
-
-    sous_projets = sous_projets_base
-
-    # Filtre par paysage / ZOCA
-    if selected_paysage_id:
-        sous_projets = sous_projets.filter(
-            paysage_id=selected_paysage_id
-        )
-
-    # Recherche par N° de réception
-    if numero_reception:
-        sous_projets = sous_projets.filter(
-            numero_reception_formulaire__icontains=numero_reception
-        )
-
-    # Conversion numérique sécurisée du N° de réception
-    # Les valeurs non numériques sont placées à la fin.
-    sous_projets = (
-        sous_projets
-        .annotate(
-            numero_reception_numerique=Case(
-                When(
-                    numero_reception_formulaire__regex=r'^[0-9]+$',
-                    then=Cast(
-                        'numero_reception_formulaire',
-                        IntegerField()
-                    )
-                ),
-                default=Value(None),
-                output_field=IntegerField()
-            )
-        )
-        .order_by(
-            'numero_reception_numerique',
-            'numero_reception_formulaire',
-            'id'
-        )
-    )
+    filtre = filtrer_et_trier_preselection(request, sous_projets_base)
+    sous_projets = filtre['sous_projets']
 
     lignes = []
+    nb_preselectionnes = 0
+    nb_rejetes = 0
+    nb_a_examiner = 0
 
     for sp in sous_projets:
         auto = appliquer_preselection_automatique(sp)
+        decision_comite = sp.decision_comite or 'a_examiner'
+
+        if decision_comite == 'preselectionne':
+            nb_preselectionnes += 1
+        elif decision_comite == 'rejete':
+            nb_rejetes += 1
+        else:
+            nb_a_examiner += 1
 
         lignes.append({
             'sous_projet': sp,
-
             'numero_reception': (
-                sp.numero_reception_formulaire
-                or "Non renseigné"
+                sp.numero_reception_formulaire or 'Non renseigné'
             ),
-
+            'paysage': (
+                sp.paysage.nom if sp.paysage else 'Non renseigné'
+            ),
+            'wilaya': (
+                sp.wilaya.nom if sp.wilaya else 'Non renseignée'
+            ),
             'intitule': (
-                sp.intitule_sous_projet
-                or "Non renseigné"
+                sp.intitule_sous_projet or 'Non renseigné'
             ),
-
             'decision_automatique': auto['decision'],
             'motif_automatique': auto['motif'],
             'badge_class': auto['badge_class'],
             'bloque_comite': auto['bloque_comite'],
-
-            'decision_comite': sp.decision_comite,
+            'decision_comite': decision_comite,
             'motif_comite': sp.motif_comite,
-
             'status': sp.status,
-
-            'score_comite': getattr(
-                sp,
-                'score_comite',
-                0
-            ),
-
+            'score_comite': getattr(sp, 'score_comite', 0),
             'evaluation_comite_terminee': getattr(
                 sp,
                 'evaluation_comite_terminee',
@@ -2413,14 +2456,15 @@ def preselection_comite_liste(request):
 
     context = {
         'lignes': lignes,
-        'total_dossiers': sous_projets.count(),
-
-        # Filtres
-        'paysages_disponibles': paysages_disponibles,
-        'selected_paysage_id': str(selected_paysage_id),
-        'numero_reception': numero_reception,
-
-        # Permissions
+        'total_dossiers': len(lignes),
+        'nb_preselectionnes': nb_preselectionnes,
+        'nb_rejetes': nb_rejetes,
+        'nb_a_examiner': nb_a_examiner,
+        'paysages_disponibles': filtre['paysages_disponibles'],
+        'selected_paysage_id': filtre['selected_paysage_id'],
+        'selected_paysage': filtre['selected_paysage'],
+        'numero_reception': filtre['numero_reception'],
+        'current_list_url': request.get_full_path(),
         'can_validate_comite': can_validate_comite(utilisateur),
         'can_view_comite_list': True,
         'is_superadmin': is_superadmin(utilisateur),
@@ -2437,13 +2481,27 @@ def preselection_comite_detail(request, pk):
     utilisateur = get_current_user(request)
 
     if not can_validate_comite(utilisateur):
-        messages.error(request, "❌ Vous n'êtes pas autorisé à accéder au détail de la présélection comité.")
+        messages.error(
+            request,
+            "❌ Vous n'êtes pas autorisé à accéder au détail de la présélection comité."
+        )
         return redirect('formulaire:liste_sous_projets')
 
-    sous_projet = get_object_or_404(get_accessible_sous_projets(utilisateur), pk=pk)
+    liste_retour = request.GET.get('next') or request.POST.get('next')
+
+    if not liste_retour or not url_has_allowed_host_and_scheme(
+        url=liste_retour,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        liste_retour = reverse('formulaire:preselection_comite_liste')
+
+    sous_projet = get_object_or_404(
+        get_accessible_sous_projets(utilisateur),
+        pk=pk
+    )
     auto = appliquer_preselection_automatique(sous_projet)
 
-    # Si décision finale déjà faite, la page devient lecture seule
     readonly_mode = sous_projet.status in ['preselectionne', 'rejete']
 
     if not sous_projet.resultats_preselection.exists():
@@ -2469,12 +2527,20 @@ def preselection_comite_detail(request, pk):
                 motif_automatique=item.get('motif'),
             )
 
-    queryset = sous_projet.resultats_preselection.all().order_by('numero_critere')
+    queryset = sous_projet.resultats_preselection.all().order_by(
+        'numero_critere'
+    )
 
     if request.method == 'POST':
         if readonly_mode:
-            messages.warning(request, "⚠️ Ce dossier a déjà une décision finale et n'est plus modifiable.")
-            return redirect('formulaire:preselection_comite_detail', pk=sous_projet.pk)
+            messages.warning(
+                request,
+                "⚠️ Ce dossier a déjà une décision finale et n'est plus modifiable."
+            )
+            return redirect(
+                f"{reverse('formulaire:preselection_comite_detail', kwargs={'pk': sous_projet.pk})}"
+                f"?next={liste_retour}"
+            )
 
         formset = ResultatPreselectionFormSet(
             request.POST,
@@ -2491,13 +2557,24 @@ def preselection_comite_detail(request, pk):
         decision_globale = request.POST.get('global-decision_comite')
         motif_global = request.POST.get('global-motif_comite')
 
-        decision_finale = decision_globale in ['preselectionne', 'rejete']
-        decision_attente = decision_globale in ['', None, 'a_examiner']
+        decision_finale = decision_globale in [
+            'preselectionne',
+            'rejete'
+        ]
+        decision_attente = decision_globale in [
+            '',
+            None,
+            'a_examiner'
+        ]
 
         if decision_finale:
             for form in formset.forms:
-                decision = form.data.get(form.add_prefix('decision_comite'))
-                motif = form.data.get(form.add_prefix('motif_comite'))
+                decision = form.data.get(
+                    form.add_prefix('decision_comite')
+                )
+                motif = form.data.get(
+                    form.add_prefix('motif_comite')
+                )
 
                 if not decision:
                     form.add_error(
@@ -2519,7 +2596,6 @@ def preselection_comite_detail(request, pk):
 
         if formset.is_valid() and decision_form.is_valid():
             formset.save()
-
             sous_projet = decision_form.save(commit=False)
 
             if decision_finale:
@@ -2545,7 +2621,7 @@ def preselection_comite_detail(request, pk):
                     request,
                     f"✅ Décision finale du comité enregistrée avec succès. Score : {score}/20."
                 )
-                return redirect('formulaire:preselection_comite_liste')
+                return redirect(liste_retour)
 
             if decision_attente:
                 sous_projet.status = 'etude'
@@ -2559,9 +2635,12 @@ def preselection_comite_detail(request, pk):
                     request,
                     "✅ Travail du comité enregistré. Le dossier reste à examiner."
                 )
-                return redirect('formulaire:preselection_comite_liste')
+                return redirect(liste_retour)
 
-        messages.error(request, "❌ Veuillez corriger les erreurs du formulaire.")
+        messages.error(
+            request,
+            "❌ Veuillez corriger les erreurs du formulaire."
+        )
 
     else:
         formset = ResultatPreselectionFormSet(
@@ -2577,9 +2656,18 @@ def preselection_comite_detail(request, pk):
 
     criteres = list(queryset)
 
-    nb_eligibles = sum(1 for c in criteres if c.decision_automatique == 'eligible')
-    nb_non_eligibles = sum(1 for c in criteres if c.decision_automatique == 'non_eligible')
-    nb_a_examiner = sum(1 for c in criteres if c.decision_automatique == 'a_examiner')
+    nb_eligibles = sum(
+        1 for c in criteres
+        if c.decision_automatique == 'eligible'
+    )
+    nb_non_eligibles = sum(
+        1 for c in criteres
+        if c.decision_automatique == 'non_eligible'
+    )
+    nb_a_examiner = sum(
+        1 for c in criteres
+        if c.decision_automatique == 'a_examiner'
+    )
 
     context = {
         'sous_projet': sous_projet,
@@ -2591,9 +2679,15 @@ def preselection_comite_detail(request, pk):
         'nb_a_examiner': nb_a_examiner,
         'auto': auto,
         'readonly_mode': readonly_mode,
+        'liste_retour': liste_retour,
     }
 
-    return render(request, 'formulaire/preselection_comite_detail.html', context)
+    return render(
+        request,
+        'formulaire/preselection_comite_detail.html',
+        context
+    )
+
 @login_required
 def rapport_paysage_type_financement(request):
     """
