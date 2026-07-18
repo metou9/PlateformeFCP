@@ -15,11 +15,21 @@ from pathlib import Path
 # Build paths inside the project like this: BASE_DIR / 'subdir'.
 BASE_DIR = Path(__file__).resolve().parent.parent
 
-# Durée de vie de la session (ex: 30 minutes)
-SESSION_COOKIE_AGE = 1200
+# =========================================================
+# GESTION DES SESSIONS
+# =========================================================
+
+# Session conservée pendant 1 an
+SESSION_COOKIE_AGE = 60 * 60 * 24 * 365
+
+# À chaque activité de l'utilisateur, la durée repart pour 1 an
 SESSION_SAVE_EVERY_REQUEST = True
-# Expire la session à la fermeture du navigateur si False
+
+# La session reste active après fermeture du navigateur
 SESSION_EXPIRE_AT_BROWSER_CLOSE = False
+
+# Stockage des sessions dans la base de données
+SESSION_ENGINE = "django.contrib.sessions.backends.db"
 
 # Quick-start development settings - unsuitable for production
 # See https://docs.djangoproject.com/en/4.2/howto/deployment/checklist/
