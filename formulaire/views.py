@@ -2614,6 +2614,15 @@ def preselection_comite_detail(request, pk):
                 if hasattr(sous_projet, 'date_evaluation_comite'):
                     sous_projet.date_evaluation_comite = timezone.now()
 
+                # Traçabilité du président ayant enregistré la décision finale
+                sous_projet.president_comite = utilisateur
+                sous_projet.president_username = utilisateur.username
+                sous_projet.president_nom_complet = (
+                    f"{utilisateur.prenom or ''} {utilisateur.nom or ''}".strip()
+                    or utilisateur.username
+                )
+                sous_projet.date_decision_comite = timezone.now()
+
                 sous_projet.status = decision_globale
                 sous_projet.save()
 

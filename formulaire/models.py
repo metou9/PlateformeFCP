@@ -280,6 +280,37 @@ class SousProjet(models.Model):
     null=True,
     verbose_name="Motif global du comité"
     )
+
+    # Traçabilité de la validation par le président du comité
+    president_comite = models.ForeignKey(
+        'Utilisateur',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='sous_projets_valides',
+        verbose_name="Président du comité ayant validé"
+    )
+
+    president_username = models.CharField(
+        max_length=50,
+        blank=True,
+        null=True,
+        verbose_name="Nom d'utilisateur du président"
+    )
+
+    president_nom_complet = models.CharField(
+        max_length=255,
+        blank=True,
+        null=True,
+        verbose_name="Nom complet du président"
+    )
+
+    date_decision_comite = models.DateTimeField(
+        null=True,
+        blank=True,
+        verbose_name="Date de décision du comité"
+    )
+
     # Métadonnées
     date_creation = models.DateTimeField(auto_now_add=True, verbose_name="Date de création")
     date_modification = models.DateTimeField(auto_now=True, verbose_name="Date de modification")
