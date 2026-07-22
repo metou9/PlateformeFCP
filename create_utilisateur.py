@@ -102,6 +102,16 @@ utilisateurs = [
         'actif': True,
         'wilaya_code': 'Brakna'
     },
+    {
+        'nom': 'Sidi Med',
+        'prenom': 'Président',
+        'username': 'sidmed',
+        'password': 'sdfg7865',
+        'role': 'prescomite',
+        'email': 'presidBrakna@fcp.com',
+        'actif': True,
+        'wilaya_code': 'Brakna'
+    },
      {
         'nom': 'Taleb',
         'prenom': 'Président',
