@@ -142,6 +142,26 @@ utilisateurs = [
         'actif': True,
         'wilaya_code': 'Trarza'
     },
+      {
+        'nom': 'Sy',
+        'prenom': 'Moctar',
+        'username': 'moctarsy',
+        'password': 'mctrs8765',
+        'role': 'prescomite',
+        'email': 'presidTrarza@fcp.com',
+        'actif': True,
+        'wilaya_code': 'Trarza'
+    },
+      {
+        'nom': '',
+        'prenom': 'Mohamedou',
+        'username': 'mohamedou',
+        'password': 'mhmd9021',
+        'role': 'prescomite',
+        'email': 'presidTrarza@fcp.com',
+        'actif': True,
+        'wilaya_code': 'Trarza'
+    },
     {
         'nom': 'Comité',
         'prenom': 'Président',
