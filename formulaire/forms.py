@@ -993,15 +993,16 @@ class ResultatPreselectionForm(forms.ModelForm):
 
 class DecisionComiteSousProjetForm(forms.ModelForm):
     decision_comite = forms.ChoiceField(
-        choices=[
-            ('', '---------'),
-            ('a_examiner', 'À examiner'),
-            ('preselectionne', 'Présélectionné'),
-            ('rejete', 'Rejeté'),
-        ],
-        required=False,
-        widget=forms.Select(attrs={'class': 'form-control'})
-    )
+    choices=[
+        ('', '---------'),
+        ('a_examiner', 'À examiner'),
+        ('reexaminer', 'À réexaminer'),
+        ('preselectionne', 'Présélectionné'),
+        ('rejete', 'Rejeté'),
+    ],
+    required=False,
+    widget=forms.Select(attrs={'class': 'form-control'})
+)
 
     class Meta:
         model = SousProjet

@@ -2413,17 +2413,20 @@ def preselection_comite_liste(request):
     nb_preselectionnes = 0
     nb_rejetes = 0
     nb_a_examiner = 0
+    nb_reexaminer = 0
 
     for sp in sous_projets:
         auto = appliquer_preselection_automatique(sp)
         decision_comite = sp.decision_comite or 'a_examiner'
 
         if decision_comite == 'preselectionne':
-            nb_preselectionnes += 1
+          nb_preselectionnes += 1
         elif decision_comite == 'rejete':
-            nb_rejetes += 1
+          nb_rejetes += 1
+        elif decision_comite == 'reexaminer':
+         nb_reexaminer += 1
         else:
-            nb_a_examiner += 1
+         nb_a_examiner += 1
 
         lignes.append({
             'sous_projet': sp,
@@ -2460,6 +2463,7 @@ def preselection_comite_liste(request):
         'nb_preselectionnes': nb_preselectionnes,
         'nb_rejetes': nb_rejetes,
         'nb_a_examiner': nb_a_examiner,
+        'nb_reexaminer': nb_reexaminer,
         'paysages_disponibles': filtre['paysages_disponibles'],
         'selected_paysage_id': filtre['selected_paysage_id'],
         'selected_paysage': filtre['selected_paysage'],
@@ -2494,21 +2498,34 @@ def preselection_comite_detail(request, pk):
         allowed_hosts={request.get_host()},
         require_https=request.is_secure(),
     ):
-        liste_retour = reverse('formulaire:preselection_comite_liste')
+        liste_retour = reverse(
+            'formulaire:preselection_comite_liste'
+        )
 
     sous_projet = get_object_or_404(
         get_accessible_sous_projets(utilisateur),
         pk=pk
     )
+
     auto = appliquer_preselection_automatique(sous_projet)
 
-    readonly_mode = sous_projet.status in ['preselectionne', 'rejete']
+    # Seules les décisions finales verrouillent le dossier.
+    # "À examiner" et "À réexaminer" restent modifiables.
+    readonly_mode = sous_projet.status in [
+        'preselectionne',
+        'rejete',
+    ]
 
     if not sous_projet.resultats_preselection.exists():
-        criteres_auto = evaluer_criteres_preselection(sous_projet)
+        criteres_auto = evaluer_criteres_preselection(
+            sous_projet
+        )
 
         for item in criteres_auto:
-            decision_auto = item.get('decision', 'À examiner')
+            decision_auto = item.get(
+                'decision',
+                'À examiner'
+            )
 
             if decision_auto == 'Éligible':
                 decision_auto_db = 'eligible'
@@ -2527,19 +2544,28 @@ def preselection_comite_detail(request, pk):
                 motif_automatique=item.get('motif'),
             )
 
-    queryset = sous_projet.resultats_preselection.all().order_by(
-        'numero_critere'
+    queryset = (
+        sous_projet
+        .resultats_preselection
+        .all()
+        .order_by('numero_critere')
     )
 
     if request.method == 'POST':
         if readonly_mode:
             messages.warning(
                 request,
-                "⚠️ Ce dossier a déjà une décision finale et n'est plus modifiable."
+                "⚠️ Ce dossier a déjà une décision finale "
+                "et n'est plus modifiable."
             )
+
+            url_detail = reverse(
+                'formulaire:preselection_comite_detail',
+                kwargs={'pk': sous_projet.pk}
+            )
+
             return redirect(
-                f"{reverse('formulaire:preselection_comite_detail', kwargs={'pk': sous_projet.pk})}"
-                f"?next={liste_retour}"
+                f"{url_detail}?next={liste_retour}"
             )
 
         formset = ResultatPreselectionFormSet(
@@ -2554,96 +2580,189 @@ def preselection_comite_detail(request, pk):
             prefix='global'
         )
 
-        decision_globale = request.POST.get('global-decision_comite')
-        motif_global = request.POST.get('global-motif_comite')
+        decision_globale = request.POST.get(
+            'global-decision_comite'
+        )
 
+        motif_global = request.POST.get(
+            'global-motif_comite'
+        )
+
+        # Décisions finales : le dossier sera verrouillé.
         decision_finale = decision_globale in [
             'preselectionne',
-            'rejete'
+            'rejete',
         ]
+
+        # Décisions provisoires : le dossier reste modifiable.
         decision_attente = decision_globale in [
             '',
             None,
-            'a_examiner'
+            'a_examiner',
+            'reexaminer',
         ]
 
         if decision_finale:
             for form in formset.forms:
                 decision = form.data.get(
-                    form.add_prefix('decision_comite')
+                    form.add_prefix(
+                        'decision_comite'
+                    )
                 )
+
                 motif = form.data.get(
-                    form.add_prefix('motif_comite')
+                    form.add_prefix(
+                        'motif_comite'
+                    )
                 )
 
                 if not decision:
                     form.add_error(
                         'decision_comite',
-                        "La décision est obligatoire pour valider définitivement le dossier."
+                        (
+                            "La décision est obligatoire "
+                            "pour valider définitivement "
+                            "le dossier."
+                        )
                     )
 
                 if not motif:
                     form.add_error(
                         'motif_comite',
-                        "Le motif est obligatoire pour valider définitivement le dossier."
+                        (
+                            "Le motif est obligatoire "
+                            "pour valider définitivement "
+                            "le dossier."
+                        )
                     )
 
             if not motif_global:
                 decision_form.add_error(
                     'motif_comite',
-                    "Le motif global est obligatoire pour valider définitivement le dossier."
+                    (
+                        "Le motif global est obligatoire "
+                        "pour valider définitivement "
+                        "le dossier."
+                    )
                 )
 
         if formset.is_valid() and decision_form.is_valid():
             formset.save()
-            sous_projet = decision_form.save(commit=False)
+
+            sous_projet = decision_form.save(
+                commit=False
+            )
 
             if decision_finale:
                 score = 0
 
-                for resultat in sous_projet.resultats_preselection.all():
-                    if resultat.decision_comite == 'preselectionne':
+                for resultat in (
+                    sous_projet
+                    .resultats_preselection
+                    .all()
+                ):
+                    if (
+                        resultat.decision_comite
+                        == 'preselectionne'
+                    ):
                         score += 1
 
-                if hasattr(sous_projet, 'score_comite'):
+                if hasattr(
+                    sous_projet,
+                    'score_comite'
+                ):
                     sous_projet.score_comite = score
 
-                if hasattr(sous_projet, 'evaluation_comite_terminee'):
+                if hasattr(
+                    sous_projet,
+                    'evaluation_comite_terminee'
+                ):
                     sous_projet.evaluation_comite_terminee = True
 
-                if hasattr(sous_projet, 'date_evaluation_comite'):
-                    sous_projet.date_evaluation_comite = timezone.now()
+                if hasattr(
+                    sous_projet,
+                    'date_evaluation_comite'
+                ):
+                    sous_projet.date_evaluation_comite = (
+                        timezone.now()
+                    )
 
-                # Traçabilité du président ayant enregistré la décision finale
+                # Traçabilité du président ayant
+                # enregistré la décision finale.
                 sous_projet.president_comite = utilisateur
-                sous_projet.president_username = utilisateur.username
-                sous_projet.president_nom_complet = (
-                    f"{utilisateur.prenom or ''} {utilisateur.nom or ''}".strip()
-                    or utilisateur.username
-                )
-                sous_projet.date_decision_comite = timezone.now()
 
+                sous_projet.president_username = (
+                    utilisateur.username
+                )
+
+                sous_projet.president_nom_complet = (
+                    f"{utilisateur.prenom or ''} "
+                    f"{utilisateur.nom or ''}"
+                ).strip() or utilisateur.username
+
+                sous_projet.date_decision_comite = (
+                    timezone.now()
+                )
+
+                # Préselectionné ou rejeté :
+                # le statut devient final et verrouillé.
                 sous_projet.status = decision_globale
+
                 sous_projet.save()
 
                 messages.success(
                     request,
-                    f"✅ Décision finale du comité enregistrée avec succès. Score : {score}/20."
+                    (
+                        "✅ Décision finale du comité "
+                        "enregistrée avec succès. "
+                        f"Score : {score}/20."
+                    )
                 )
+
                 return redirect(liste_retour)
 
             if decision_attente:
+                # Le statut reste non final pour permettre
+                # la modification du dossier.
                 sous_projet.status = 'etude'
 
-                if hasattr(sous_projet, 'evaluation_comite_terminee'):
+                if hasattr(
+                    sous_projet,
+                    'evaluation_comite_terminee'
+                ):
                     sous_projet.evaluation_comite_terminee = False
 
                 sous_projet.save()
 
-                messages.success(
-                    request,
-                    "✅ Travail du comité enregistré. Le dossier reste à examiner."
-                )
+                if decision_globale == 'reexaminer':
+                    messages.success(
+                        request,
+                        (
+                            "✅ Décision enregistrée : "
+                            "le dossier est à réexaminer "
+                            "et reste modifiable."
+                        )
+                    )
+
+                elif decision_globale == 'a_examiner':
+                    messages.success(
+                        request,
+                        (
+                            "✅ Décision enregistrée : "
+                            "le dossier est à examiner "
+                            "et reste modifiable."
+                        )
+                    )
+
+                else:
+                    messages.success(
+                        request,
+                        (
+                            "✅ Travail du comité enregistré. "
+                            "Le dossier reste modifiable."
+                        )
+                    )
+
                 return redirect(liste_retour)
 
         messages.error(
@@ -2666,16 +2785,21 @@ def preselection_comite_detail(request, pk):
     criteres = list(queryset)
 
     nb_eligibles = sum(
-        1 for c in criteres
-        if c.decision_automatique == 'eligible'
+        1
+        for critere in criteres
+        if critere.decision_automatique == 'eligible'
     )
+
     nb_non_eligibles = sum(
-        1 for c in criteres
-        if c.decision_automatique == 'non_eligible'
+        1
+        for critere in criteres
+        if critere.decision_automatique == 'non_eligible'
     )
+
     nb_a_examiner = sum(
-        1 for c in criteres
-        if c.decision_automatique == 'a_examiner'
+        1
+        for critere in criteres
+        if critere.decision_automatique == 'a_examiner'
     )
 
     context = {

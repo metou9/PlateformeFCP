@@ -140,7 +140,7 @@
 ===================================================== */
 .stats-grid {
     display: grid;
-    grid-template-columns: repeat(4, minmax(0, 1fr));
+    grid-template-columns: repeat(5, minmax(0, 1fr));
     gap: 16px;
     margin-bottom: 18px;
 }
@@ -177,6 +177,10 @@
 
 .stat-review {
     border-left-color: #f59e0b;
+}
+
+.stat-reexaminer {
+    border-left-color: #8b5cf6;
 }
 
 .stat-no {
@@ -310,6 +314,11 @@
     color: #92400e;
 }
 
+.badge-reexaminer {
+    background: #ede9fe;
+    color: #6d28d9;
+}
+
 .badge-no {
     background: #fee2e2;
     color: #991b1b;
@@ -363,6 +372,12 @@
 /* =====================================================
    RESPONSIVE
 ===================================================== */
+@media (max-width: 1200px) {
+    .stats-grid {
+        grid-template-columns: repeat(3, minmax(0, 1fr));
+    }
+}
+
 @media (max-width: 1050px) {
     .filters-form {
         grid-template-columns: repeat(2, minmax(0, 1fr));
@@ -522,6 +537,13 @@
             <strong>{{ nb_a_examiner }}</strong>
         </div>
 
+        <div class="stat-item stat-reexaminer">
+            <span class="stat-label">
+                À réexaminer
+            </span>
+            <strong>{{ nb_reexaminer }}</strong>
+        </div>
+
         <div class="stat-item stat-no">
             <span class="stat-label">
                 Rejetés
@@ -585,8 +607,6 @@
                                     {{ ligne.numero_reception }}
                                 </td>
 
-                              
-
                                 <td class="project-title">
                                     {{ ligne.intitule }}
                                 </td>
@@ -610,6 +630,11 @@
                                     {% elif ligne.decision_comite == 'rejete' %}
                                         <span class="decision-badge badge-no">
                                             Rejeté
+                                        </span>
+
+                                    {% elif ligne.decision_comite == 'reexaminer' %}
+                                        <span class="decision-badge badge-reexaminer">
+                                            À réexaminer
                                         </span>
 
                                     {% else %}

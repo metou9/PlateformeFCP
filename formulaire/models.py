@@ -134,6 +134,7 @@ class SousProjet(models.Model):
     ('preselectionne', 'Présélectionné'),
     ('rejete', 'Rejeté'),
     ('a_examiner', 'À examiner'),
+    ('reexaminer', 'À réexaminer'),
 ]
 
     # 1. Informations générales
@@ -632,10 +633,11 @@ class ResultatPreselection(models.Model):
     ]
 
     DECISION_COMITE_CHOICES = [
-        ('preselectionne', 'Présélectionné'),
-        ('rejete', 'Rejeté'),
-        ('a_examiner', 'À examiner'),
-    ]
+    ('preselectionne', 'Présélectionné'),
+    ('rejete', 'Rejeté'),
+    ('a_examiner', 'À examiner'),
+    ('reexaminer', 'À réexaminer'),
+]
 
     sous_projet = models.ForeignKey(
         SousProjet,
