@@ -975,40 +975,78 @@ EmpruntFormSet = formset_factory(
 )
 
 class ResultatPreselectionForm(forms.ModelForm):
+    """
+    Décision du comité pour chaque critère.
+
+    "À examiner" n'est pas proposé dans la liste :
+    une décision vide signifie que le critère n'a pas encore été examiné.
+    """
+
+    decision_comite = forms.ChoiceField(
+        choices=[
+            ('', '---------'),
+            ('preselectionne', 'Présélectionné'),
+            ('rejete', 'Rejeté'),
+            ('reexaminer', 'À réexaminer'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
+
     class Meta:
         model = ResultatPreselection
         fields = ['decision_comite', 'motif_comite']
         widgets = {
-            'decision_comite': forms.Select(attrs={'class': 'form-control'}),
-            'motif_comite': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'motif_comite': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'rows': 2,
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
 
-        # Pas obligatoire au départ : on autorise l'enregistrement partiel
+        # Enregistrement partiel autorisé.
+        # Une valeur vide correspond à « À examiner » dans l'affichage.
         self.fields['decision_comite'].required = False
         self.fields['motif_comite'].required = False
 
 
 class DecisionComiteSousProjetForm(forms.ModelForm):
+    """
+    Décision globale du comité.
+
+    Les choix proposés sont uniquement :
+    - Présélectionné
+    - Rejeté
+    - À réexaminer
+
+    Une décision vide signifie que le dossier n'a pas encore été examiné.
+    """
+
     decision_comite = forms.ChoiceField(
-    choices=[
-        ('', '---------'),
-        ('a_examiner', 'À examiner'),
-        ('reexaminer', 'À réexaminer'),
-        ('preselectionne', 'Présélectionné'),
-        ('rejete', 'Rejeté'),
-    ],
-    required=False,
-    widget=forms.Select(attrs={'class': 'form-control'})
-)
+        choices=[
+            ('', '---------'),
+            ('preselectionne', 'Présélectionné'),
+            ('rejete', 'Rejeté'),
+            ('reexaminer', 'À réexaminer'),
+        ],
+        required=False,
+        widget=forms.Select(attrs={'class': 'form-control'})
+    )
 
     class Meta:
         model = SousProjet
         fields = ['decision_comite', 'motif_comite']
         widgets = {
-            'motif_comite': forms.Textarea(attrs={'class': 'form-control', 'rows': 2}),
+            'motif_comite': forms.Textarea(
+                attrs={
+                    'class': 'form-control',
+                    'rows': 2,
+                }
+            ),
         }
 
     def __init__(self, *args, **kwargs):
@@ -1022,8 +1060,11 @@ class DecisionComiteSousProjetForm(forms.ModelForm):
             self.fields['decision_comite'].widget.attrs['disabled'] = 'disabled'
             self.fields['motif_comite'].widget.attrs['readonly'] = 'readonly'
 
+
 ResultatPreselectionFormSet = modelformset_factory(
     ResultatPreselection,
     form=ResultatPreselectionForm,
-    extra=0
+    extra=0,
+    can_delete=False
 )
+
