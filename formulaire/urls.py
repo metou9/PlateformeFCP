@@ -67,6 +67,11 @@ urlpatterns = [
     views.rapport_paysage_type_financement,
     name='rapport_paysage_type_financement'
 ),
+path(
+    'rapport-preselection-comite/',
+    views.rapport_preselection_comite,
+    name='rapport_preselection_comite'
+),
 
 path(
     'modifier-section/<int:pk>/<str:section>/',

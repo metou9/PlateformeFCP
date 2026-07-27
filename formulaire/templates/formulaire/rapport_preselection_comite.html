@@ -1,0 +1,710 @@
+{% extends 'formulaire/base.html' %}
+
+{% load humanize %}
+
+{% block title %}
+Résultats de présélection du comité
+{% endblock %}
+
+{% block content %}
+
+<div class="container-fluid py-4">
+
+    <!-- =================================================
+         TITRE
+    ================================================== -->
+
+    <div class="d-flex justify-content-between align-items-center mb-4">
+
+        <div>
+            <h2 class="mb-1">
+                Résultats de présélection du comité
+            </h2>
+
+            <p class="text-muted mb-0">
+                Rapport par Wilaya et Paysage / ZOCA
+            </p>
+        </div>
+
+        <button type="button"
+                class="btn btn-outline-secondary"
+                onclick="window.print();">
+            Imprimer
+        </button>
+
+    </div>
+
+    <!-- =================================================
+         FILTRES
+    ================================================== -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-header">
+            <strong>Filtres du rapport</strong>
+        </div>
+
+        <div class="card-body">
+
+            <form method="get"
+                  action="{% url 'formulaire:rapport_preselection_comite' %}">
+
+                <div class="row g-3">
+
+                    <!-- Wilaya -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Wilaya
+                        </label>
+
+                        <select name="wilaya"
+                                class="form-select">
+
+                            <option value="">
+                                Toutes les Wilayas
+                            </option>
+
+                            {% for wilaya in wilayas_disponibles %}
+
+                                <option
+                                    value="{{ wilaya.wilaya_id }}"
+                                    {% if selected_wilaya_id == wilaya.wilaya_id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ wilaya.wilaya__nom }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+                    <!-- Paysage -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Paysage / ZOCA
+                        </label>
+
+                        <select name="paysage"
+                                class="form-select">
+
+                            <option value="">
+                                Tous les paysages
+                            </option>
+
+                            {% for paysage in paysages_disponibles %}
+
+                                <option
+                                    value="{{ paysage.paysage_id }}"
+                                    {% if selected_paysage_id == paysage.paysage_id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ paysage.paysage__nom }}
+                                    — {{ paysage.wilaya__nom }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+                    <!-- Type de projet -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Type de projet
+                        </label>
+
+                        <select name="type_projet"
+                                class="form-select">
+
+                            <option value="">
+                                Tous les types
+                            </option>
+
+                            {% for code, label in type_projet_choices %}
+
+                                <option
+                                    value="{{ code }}"
+                                    {% if selected_type_projet == code %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ label }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+                    <!-- Décision -->
+
+                    <div class="col-md-3">
+
+                        <label class="form-label">
+                            Décision du comité
+                        </label>
+
+                        <select name="decision"
+                                class="form-select">
+
+                            <option value="">
+                                Toutes les décisions
+                            </option>
+
+                            <option value="a_examiner"
+                                {% if selected_decision == 'a_examiner' %}
+                                    selected
+                                {% endif %}
+                            >
+                                À examiner
+                            </option>
+
+                            <option value="reexaminer"
+                                {% if selected_decision == 'reexaminer' %}
+                                    selected
+                                {% endif %}
+                            >
+                                À réexaminer
+                            </option>
+
+                            <option value="preselectionne"
+                                {% if selected_decision == 'preselectionne' %}
+                                    selected
+                                {% endif %}
+                            >
+                                Présélectionné
+                            </option>
+
+                            <option value="rejete"
+                                {% if selected_decision == 'rejete' %}
+                                    selected
+                                {% endif %}
+                            >
+                                Rejeté
+                            </option>
+
+                        </select>
+
+                    </div>
+
+                    <!-- Numéro de réception -->
+
+                    <div class="col-md-4">
+
+                        <label class="form-label">
+                            Numéro de réception
+                        </label>
+
+                        <input type="text"
+                               name="numero_reception"
+                               value="{{ numero_reception }}"
+                               class="form-control"
+                               placeholder="Rechercher un numéro">
+
+                    </div>
+
+                    <!-- Boutons -->
+
+                    <div class="col-md-8 d-flex align-items-end gap-2">
+
+                        <button type="submit"
+                                class="btn btn-primary">
+                            Appliquer les filtres
+                        </button>
+
+                        <a href="{% url 'formulaire:rapport_preselection_comite' %}"
+                           class="btn btn-outline-secondary">
+                            Réinitialiser
+                        </a>
+
+                    </div>
+
+                </div>
+
+            </form>
+
+        </div>
+
+    </div>
+
+    <!-- =================================================
+         INFORMATIONS SUR LA SÉLECTION
+    ================================================== -->
+
+    <div class="card shadow-sm mb-4">
+
+        <div class="card-body text-center">
+
+            <h5 class="mb-2">
+                PADISAM
+            </h5>
+
+            <div>
+                Comité de présélection régional de :
+                <strong>
+                    {% if selected_wilaya %}
+                        {{ selected_wilaya.nom }}
+                    {% else %}
+                        Toutes les Wilayas
+                    {% endif %}
+                </strong>
+            </div>
+
+            <div>
+                Paysage / ZOCA :
+                <strong>
+                    {% if selected_paysage %}
+                        {{ selected_paysage.nom }}
+                    {% else %}
+                        Tous les paysages
+                    {% endif %}
+                </strong>
+            </div>
+
+            <h4 class="mt-3 mb-0">
+                Résultat de la présélection
+            </h4>
+
+        </div>
+
+    </div>
+
+    <!-- =================================================
+         CARTES STATISTIQUES
+    ================================================== -->
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-md-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Total dossiers
+                    </div>
+                    <h3 class="mb-0">
+                        {{ total_dossiers }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Présélectionnés
+                    </div>
+                    <h3 class="mb-0">
+                        {{ nb_preselectionnes }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Rejetés
+                    </div>
+                    <h3 class="mb-0">
+                        {{ nb_rejetes }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        À réexaminer
+                    </div>
+                    <h3 class="mb-0">
+                        {{ nb_reexaminer }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        À examiner
+                    </div>
+                    <h3 class="mb-0">
+                        {{ nb_a_examiner }}
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-2">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Taux de traitement
+                    </div>
+                    <h3 class="mb-0">
+                        {{ taux_traitement }} %
+                    </h3>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- =================================================
+         TAUX ET MONTANTS
+    ================================================== -->
+
+    <div class="row g-3 mb-4">
+
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Taux de présélection
+                    </div>
+                    <h4>
+                        {{ taux_preselection }} %
+                    </h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Taux de rejet
+                    </div>
+                    <h4>
+                        {{ taux_rejet }} %
+                    </h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Coût total des dossiers
+                    </div>
+                    <h4>
+                        {{ total_couts|floatformat:2|intcomma }}
+                    </h4>
+                </div>
+            </div>
+        </div>
+
+        <div class="col-md-3">
+            <div class="card shadow-sm h-100">
+                <div class="card-body">
+                    <div class="text-muted">
+                        Subventions demandées
+                    </div>
+                    <h4>
+                        {{ total_subventions|floatformat:2|intcomma }}
+                    </h4>
+                </div>
+            </div>
+        </div>
+
+    </div>
+
+    <!-- =================================================
+         TABLEAU CONFORME À LA SORTIE EXCEL
+    ================================================== -->
+
+    <div class="card shadow-sm">
+
+        <div class="card-header d-flex justify-content-between align-items-center">
+
+            <strong>
+                Liste détaillée des dossiers
+            </strong>
+
+            <span class="badge bg-secondary">
+                {{ total_dossiers }} dossier{{ total_dossiers|pluralize }}
+            </span>
+
+        </div>
+
+        <div class="card-body p-0">
+
+            <div class="table-responsive">
+
+                <table class="table table-bordered table-hover align-middle mb-0">
+
+                    <thead class="table-light text-center">
+
+                        <tr>
+
+                            <th rowspan="2">
+                                N°
+                            </th>
+
+                            <th rowspan="2">
+                                Intitulé du sous-projet
+                            </th>
+
+                            <th rowspan="2">
+                                Village
+                            </th>
+
+                            <th rowspan="2">
+                                Nom et statut juridique
+                            </th>
+
+                            <th rowspan="2">
+                                Principal domaine d’activité
+                            </th>
+
+                            <th rowspan="2">
+                                Personne contact
+                            </th>
+
+                            <th rowspan="2">
+                                Téléphone
+                            </th>
+
+                            <th colspan="2">
+                                Coûts
+                            </th>
+
+                            <th colspan="2">
+                                Nombre de critères rejetés
+                            </th>
+
+                            <th colspan="2">
+                                Décision
+                            </th>
+
+                        </tr>
+
+                        <tr>
+
+                            <th>
+                                Total
+                            </th>
+
+                            <th>
+                                Subvention
+                            </th>
+
+                            <th>
+                                Automatique
+                            </th>
+
+                            <th>
+                                CPR
+                            </th>
+
+                            <th>
+                                P/R
+                            </th>
+
+                            <th>
+                                Motif
+                            </th>
+
+                        </tr>
+
+                    </thead>
+
+                    <tbody>
+
+                        {% for ligne in lignes %}
+
+                            <tr>
+
+                                <td class="text-center">
+
+                                    <a href="{% url 'formulaire:detail_sous_projet' ligne.sous_projet.pk %}">
+                                        {{ ligne.numero }}
+                                    </a>
+
+                                </td>
+
+                                <td>
+                                    {{ ligne.intitule }}
+                                </td>
+
+                                <td>
+                                    {{ ligne.village }}
+                                </td>
+
+                                <td>
+                                    {{ ligne.nom_statut_juridique }}
+                                </td>
+
+                                <td>
+                                    {{ ligne.domaine_activite }}
+                                </td>
+
+                                <td>
+                                    {{ ligne.personne_contact }}
+                                </td>
+
+                                <td>
+                                    {{ ligne.telephone }}
+                                </td>
+
+                                <td class="text-end">
+                                    {{ ligne.cout_total|floatformat:2|intcomma }}
+                                </td>
+
+                                <td class="text-end">
+                                    {{ ligne.subvention|floatformat:2|intcomma }}
+                                </td>
+
+                                <td class="text-center">
+                                    {{ ligne.nb_rejets_automatiques }}
+                                </td>
+
+                                <td class="text-center">
+                                    {{ ligne.nb_rejets_comite }}
+                                </td>
+
+                                <td class="text-center">
+
+                                    {% if ligne.decision_code == 'preselectionne' %}
+
+                                        <span class="badge bg-success">
+                                            Présélectionné
+                                        </span>
+
+                                    {% elif ligne.decision_code == 'rejete' %}
+
+                                        <span class="badge bg-danger">
+                                            Rejeté
+                                        </span>
+
+                                    {% elif ligne.decision_code == 'reexaminer' %}
+
+                                        <span class="badge bg-warning text-dark">
+                                            À réexaminer
+                                        </span>
+
+                                    {% else %}
+
+                                        <span class="badge bg-secondary">
+                                            À examiner
+                                        </span>
+
+                                    {% endif %}
+
+                                </td>
+
+                                <td>
+                                    {{ ligne.motif }}
+                                </td>
+
+                            </tr>
+
+                        {% empty %}
+
+                            <tr>
+
+                                <td colspan="13"
+                                    class="text-center py-4 text-muted">
+
+                                    Aucun dossier ne correspond aux filtres sélectionnés.
+
+                                </td>
+
+                            </tr>
+
+                        {% endfor %}
+
+                    </tbody>
+
+                    {% if lignes %}
+
+                        <tfoot class="table-light">
+
+                            <tr>
+
+                                <th colspan="7"
+                                    class="text-end">
+
+                                    Total général
+
+                                </th>
+
+                                <th class="text-end">
+                                    {{ total_couts|floatformat:2|intcomma }}
+                                </th>
+
+                                <th class="text-end">
+                                    {{ total_subventions|floatformat:2|intcomma }}
+                                </th>
+
+                                <th colspan="4"></th>
+
+                            </tr>
+
+                        </tfoot>
+
+                    {% endif %}
+
+                </table>
+
+            </div>
+
+        </div>
+
+    </div>
+
+</div>
+
+<style>
+
+    @media print {
+
+        nav,
+        .navbar,
+        .btn,
+        form {
+            display: none !important;
+        }
+
+        .container-fluid {
+            width: 100%;
+            max-width: 100%;
+            padding: 0;
+        }
+
+        .card {
+            border: 1px solid #000;
+            box-shadow: none !important;
+        }
+
+        table {
+            font-size: 9px;
+        }
+
+        th,
+        td {
+            padding: 4px !important;
+        }
+    }
+
+</style>
+
+{% endblock %}

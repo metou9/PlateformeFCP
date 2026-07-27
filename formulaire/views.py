@@ -15,7 +15,7 @@ from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db import transaction
-from django.db.models import Sum, Count, Case, When, IntegerField, Value
+from django.db.models import Sum, Count, Case, When, IntegerField, Value, Q
 from django.db.models.functions import Cast
 from django.contrib.auth.decorators import login_required
 
@@ -2598,7 +2598,6 @@ def preselection_comite_detail(request, pk):
         decision_attente = decision_globale in [
             '',
             None,
-            'a_examiner',
             'reexaminer',
         ]
 
@@ -2740,16 +2739,6 @@ def preselection_comite_detail(request, pk):
                         (
                             "✅ Décision enregistrée : "
                             "le dossier est à réexaminer "
-                            "et reste modifiable."
-                        )
-                    )
-
-                elif decision_globale == 'a_examiner':
-                    messages.success(
-                        request,
-                        (
-                            "✅ Décision enregistrée : "
-                            "le dossier est à examiner "
                             "et reste modifiable."
                         )
                     )
@@ -3058,6 +3047,390 @@ def rapport_paysage_type_financement(request):
     return render(
         request,
         'formulaire/rapport_paysage_type_financement.html',
+        context
+    )
+
+
+# =========================================================
+# REPORTING : RÉSULTATS DE PRÉSÉLECTION DU COMITÉ
+# =========================================================
+
+@login_required
+def rapport_preselection_comite(request):
+    """
+    Rapport détaillé des résultats de présélection du comité.
+
+    Filtres :
+    - Wilaya
+    - Paysage / ZOCA
+    - Type de projet
+    - Décision du comité
+    - Numéro de réception
+
+    Une décision vide ou NULL est affichée comme « À examiner ».
+    L'ancienne valeur « a_examiner » reste prise en charge pour
+    la compatibilité avec les données existantes.
+    """
+    utilisateur = get_current_user(request)
+
+    if not can_view_comite_list(utilisateur):
+        messages.error(
+            request,
+            "❌ Vous n'êtes pas autorisé à consulter ce rapport."
+        )
+        return redirect('formulaire:accueil')
+
+    sous_projets_base = get_accessible_sous_projets(utilisateur)
+
+    selected_wilaya_id = (request.GET.get('wilaya') or '').strip()
+    selected_paysage_id = (request.GET.get('paysage') or '').strip()
+    selected_type_projet = (request.GET.get('type_projet') or '').strip()
+    selected_decision = (request.GET.get('decision') or '').strip()
+    numero_reception = (
+        request.GET.get('numero_reception') or ''
+    ).strip()
+
+    wilayas_disponibles = (
+        sous_projets_base
+        .exclude(wilaya__isnull=True)
+        .values('wilaya_id', 'wilaya__nom')
+        .distinct()
+        .order_by('wilaya__nom')
+    )
+
+    paysages_base = sous_projets_base
+    if selected_wilaya_id:
+        paysages_base = paysages_base.filter(
+            wilaya_id=selected_wilaya_id
+        )
+
+    paysages_disponibles = (
+        paysages_base
+        .exclude(paysage__isnull=True)
+        .values(
+            'paysage_id',
+            'paysage__nom',
+            'wilaya__nom',
+        )
+        .distinct()
+        .order_by(
+            'wilaya__nom',
+            'paysage__nom',
+        )
+    )
+
+    sous_projets = sous_projets_base
+
+    if selected_wilaya_id:
+        sous_projets = sous_projets.filter(
+            wilaya_id=selected_wilaya_id
+        )
+
+    if selected_paysage_id:
+        sous_projets = sous_projets.filter(
+            paysage_id=selected_paysage_id
+        )
+
+    if selected_type_projet:
+        sous_projets = sous_projets.filter(
+            type_projet=selected_type_projet
+        )
+
+    if numero_reception:
+        sous_projets = sous_projets.filter(
+            numero_reception_formulaire__icontains=numero_reception
+        )
+
+    if selected_decision == 'a_examiner':
+        sous_projets = sous_projets.filter(
+            Q(decision_comite__isnull=True)
+            | Q(decision_comite='')
+            | Q(decision_comite='a_examiner')
+        )
+    elif selected_decision:
+        sous_projets = sous_projets.filter(
+            decision_comite=selected_decision
+        )
+
+    sous_projets = (
+        sous_projets
+        .select_related(
+            'wilaya',
+            'moughataa',
+            'commune',
+            'paysage',
+        )
+        .prefetch_related(
+            'infrastructures',
+            'equipements',
+            'intrants',
+            'fonctionnements',
+            'services',
+            'resultats_preselection',
+        )
+        .annotate(
+            numero_reception_numerique=Case(
+                When(
+                    numero_reception_formulaire__regex=r'^[0-9]+$',
+                    then=Cast(
+                        'numero_reception_formulaire',
+                        IntegerField()
+                    )
+                ),
+                default=Value(None),
+                output_field=IntegerField()
+            )
+        )
+        .order_by(
+            'numero_reception_numerique',
+            'numero_reception_formulaire',
+            'id',
+        )
+    )
+
+    lignes = []
+
+    nb_preselectionnes = 0
+    nb_rejetes = 0
+    nb_reexaminer = 0
+    nb_a_examiner = 0
+
+    total_couts = 0
+    total_subventions = 0
+    total_criteres_rejetes_automatiques = 0
+    total_criteres_rejetes_comite = 0
+
+    decision_labels = {
+        'preselectionne': 'Présélectionné',
+        'rejete': 'Rejeté',
+        'reexaminer': 'À réexaminer',
+        'a_examiner': 'À examiner',
+        '': 'À examiner',
+        None: 'À examiner',
+    }
+
+    for sp in sous_projets:
+        decision_code = sp.decision_comite or 'a_examiner'
+
+        if decision_code == 'preselectionne':
+            nb_preselectionnes += 1
+        elif decision_code == 'rejete':
+            nb_rejetes += 1
+        elif decision_code == 'reexaminer':
+            nb_reexaminer += 1
+        else:
+            nb_a_examiner += 1
+
+        infra_totaux = compute_financement_totals(
+            sp.infrastructures.all(),
+            include_subvention=True
+        )
+        equip_totaux = compute_financement_totals(
+            sp.equipements.all(),
+            include_subvention=True
+        )
+        intrant_totaux = compute_financement_totals(
+            sp.intrants.all(),
+            include_subvention=True
+        )
+        fonctionnement_totaux = compute_financement_totals(
+            sp.fonctionnements.all(),
+            include_subvention=False
+        )
+        service_totaux = compute_financement_totals(
+            sp.services.all(),
+            include_subvention=True
+        )
+
+        cout_total = (
+            infra_totaux['total_montant']
+            + equip_totaux['total_montant']
+            + intrant_totaux['total_montant']
+            + fonctionnement_totaux['total_montant']
+            + service_totaux['total_montant']
+        )
+
+        total_subvention = (
+            infra_totaux['total_subvention']
+            + equip_totaux['total_subvention']
+            + intrant_totaux['total_subvention']
+            + service_totaux['total_subvention']
+        )
+
+        resultats = list(sp.resultats_preselection.all())
+
+        nb_rejets_automatiques = sum(
+            1
+            for resultat in resultats
+            if resultat.decision_automatique == 'non_eligible'
+        )
+
+        nb_rejets_comite = sum(
+            1
+            for resultat in resultats
+            if resultat.decision_comite == 'rejete'
+        )
+
+        total_couts += cout_total
+        total_subventions += total_subvention
+        total_criteres_rejetes_automatiques += nb_rejets_automatiques
+        total_criteres_rejetes_comite += nb_rejets_comite
+
+        domaine_activite = (
+            getattr(sp, 'principal_domaine_activites', None)
+            or (
+                sp.get_type_projet_display()
+                if sp.type_projet
+                else '-'
+            )
+        )
+
+        lignes.append({
+            'sous_projet': sp,
+            'numero': sp.numero_reception_formulaire or '-',
+            'intitule': sp.intitule_sous_projet or '-',
+            'village': sp.village or '-',
+            'nom_statut_juridique': sp.nom_statut_juridique or '-',
+            'domaine_activite': domaine_activite,
+            'personne_contact': sp.personne_contact_nom or '-',
+            'telephone': sp.telephone or '-',
+            'cout_total': cout_total,
+            'subvention': total_subvention,
+            'nb_rejets_automatiques': nb_rejets_automatiques,
+            'nb_rejets_comite': nb_rejets_comite,
+            'decision_code': decision_code,
+            'decision': decision_labels.get(
+                decision_code,
+                'À examiner'
+            ),
+            'motif': sp.motif_comite or '-',
+        })
+
+    total_dossiers = len(lignes)
+
+    nb_dossiers_traites = (
+        nb_preselectionnes
+        + nb_rejetes
+        + nb_reexaminer
+    )
+
+    taux_preselection = (
+        round(
+            nb_preselectionnes * 100 / total_dossiers,
+            2
+        )
+        if total_dossiers
+        else 0
+    )
+
+    taux_rejet = (
+        round(
+            nb_rejetes * 100 / total_dossiers,
+            2
+        )
+        if total_dossiers
+        else 0
+    )
+
+    taux_traitement = (
+        round(
+            nb_dossiers_traites * 100 / total_dossiers,
+            2
+        )
+        if total_dossiers
+        else 0
+    )
+
+    chart_decision_labels = [
+        'Présélectionnés',
+        'Rejetés',
+        'À réexaminer',
+        'À examiner',
+    ]
+    chart_decision_data = [
+        nb_preselectionnes,
+        nb_rejetes,
+        nb_reexaminer,
+        nb_a_examiner,
+    ]
+
+    selected_wilaya = None
+    selected_paysage = None
+
+    if selected_wilaya_id:
+        try:
+            selected_wilaya = Wilaya.objects.get(
+                pk=selected_wilaya_id
+            )
+        except (Wilaya.DoesNotExist, ValueError):
+            selected_wilaya = None
+
+    if selected_paysage_id:
+        try:
+            selected_paysage = Paysage.objects.get(
+                pk=selected_paysage_id
+            )
+        except (Paysage.DoesNotExist, ValueError):
+            selected_paysage = None
+
+    type_projet_choices = [
+        ('AG', 'Agriculture'),
+        ('EL', 'Élevage'),
+        ('SER', 'Service'),
+        ('ENV', 'Environnement'),
+    ]
+
+    context = {
+        'lignes': lignes,
+
+        'total_dossiers': total_dossiers,
+        'nb_preselectionnes': nb_preselectionnes,
+        'nb_rejetes': nb_rejetes,
+        'nb_reexaminer': nb_reexaminer,
+        'nb_a_examiner': nb_a_examiner,
+        'nb_dossiers_traites': nb_dossiers_traites,
+
+        'taux_preselection': taux_preselection,
+        'taux_rejet': taux_rejet,
+        'taux_traitement': taux_traitement,
+
+        'total_couts': total_couts,
+        'total_subventions': total_subventions,
+        'total_criteres_rejetes_automatiques': (
+            total_criteres_rejetes_automatiques
+        ),
+        'total_criteres_rejetes_comite': (
+            total_criteres_rejetes_comite
+        ),
+
+        'chart_decision_labels': json.dumps(
+            chart_decision_labels
+        ),
+        'chart_decision_data': json.dumps(
+            chart_decision_data
+        ),
+
+        'wilayas_disponibles': wilayas_disponibles,
+        'paysages_disponibles': paysages_disponibles,
+        'type_projet_choices': type_projet_choices,
+
+        'selected_wilaya_id': str(selected_wilaya_id),
+        'selected_paysage_id': str(selected_paysage_id),
+        'selected_type_projet': selected_type_projet,
+        'selected_decision': selected_decision,
+        'numero_reception': numero_reception,
+
+        'selected_wilaya': selected_wilaya,
+        'selected_paysage': selected_paysage,
+
+        'user_name': request.session.get('user_name'),
+        'user_role': request.session.get('user_role'),
+        'user_wilaya_nom': request.session.get('user_wilaya_nom'),
+    }
+
+    return render(
+        request,
+        'formulaire/rapport_preselection_comite.html',
         context
     )
 
