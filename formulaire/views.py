@@ -1424,7 +1424,33 @@ def liste_sous_projets(request):
             numero_reception_formulaire__icontains=numero_reception
         )
 
-    sous_projets = sous_projets.order_by('-date_creation')
+    sous_projets = (
+    sous_projets
+    .select_related(
+        'wilaya',
+        'moughataa',
+        'commune',
+        'paysage'
+    )
+    .annotate(
+        numero_reception_numerique=Case(
+            When(
+                numero_reception_formulaire__regex=r'^[0-9]+$',
+                then=Cast(
+                    'numero_reception_formulaire',
+                    IntegerField()
+                )
+            ),
+            default=Value(None),
+            output_field=IntegerField()
+        )
+    )
+    .order_by(
+        'numero_reception_numerique',
+        'numero_reception_formulaire',
+        'id'
+    )
+)
 
     return render(request, 'formulaire/liste_sous_projets.html', {
         'filter_by': filter_by,
