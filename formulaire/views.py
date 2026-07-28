@@ -91,21 +91,20 @@ def can_modify_project(utilisateur, sous_projet):
     """
     Permission de modification d'un sous-projet.
 
-    - admin / superadmin : peuvent modifier tous les sous-projets
+    - admin / superadmin / correction : peuvent modifier tous les sous-projets
     - agent : peut modifier seulement les sous-projets qu'il a saisis
     - superviseur / prescomite : lecture seule
     """
     if not utilisateur or not sous_projet:
         return False
 
-    if utilisateur.role in ['admin', 'superadmin']:
+    if utilisateur.role in ['admin', 'superadmin', 'correction']:
         return True
 
     if utilisateur.role == 'agent':
         return sous_projet.createur_username == utilisateur.username
 
     return False
-
 
 
 def is_comite(utilisateur):
@@ -135,15 +134,14 @@ def get_accessible_sous_projets(utilisateur):
     """
     Sous-projets visibles selon le rôle.
 
-    - admin, superadmin, superviseur : voient tous les sous-projets de toutes les Wilayas
+    - admin, superadmin, superviseur, correction : voient tous les sous-projets
     - agent : voit seulement les sous-projets qu'il a créés
     - prescomite avec wilaya : voit seulement les sous-projets de sa wilaya
-    - utilisateur sans autorisation : ne voit rien
     """
     if not utilisateur:
         return SousProjet.objects.none()
 
-    if utilisateur.role in ['admin', 'superadmin', 'superviseur']:
+    if utilisateur.role in ['admin', 'superadmin', 'superviseur', 'correction']:
         return SousProjet.objects.all()
 
     if utilisateur.role == 'agent':
@@ -154,6 +152,7 @@ def get_accessible_sous_projets(utilisateur):
         return SousProjet.objects.filter(wilaya_id=utilisateur.wilaya_id)
 
     return SousProjet.objects.none()
+
 
 def get_current_sous_projet(request):
     """
@@ -426,6 +425,8 @@ def accueil(request):
             mode_label = "Président du comité de présélection"
         elif utilisateur.role == 'superviseur':
             mode_label = "Visiteur"
+        elif utilisateur.role == 'correction':
+            mode_label = "Correction des dossiers"
         elif utilisateur.role == 'consultant':
             mode_label = "Consultant"
         else:
@@ -460,7 +461,7 @@ def nouveau_sous_projet(request):
     """
     utilisateur = get_current_user(request)
 
-    if utilisateur and utilisateur.role in ['prescomite', 'superviseur']:
+    if utilisateur and utilisateur.role in ['prescomite', 'superviseur', 'correction']:
         messages.error(request,
         "❌ Vous n'êtes pas autorisé à créer un nouveau dossier."
     )
@@ -1472,6 +1473,8 @@ def liste_sous_projets(request):
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
         'is_admin': is_admin_like(utilisateur),
         'is_superadmin': is_superadmin(utilisateur),
+        'can_edit_all': bool(utilisateur and utilisateur.role in ['admin', 'superadmin', 'correction']),
+        'is_correction': bool(utilisateur and utilisateur.role == 'correction'),
     })
 
 @login_required
@@ -3460,6 +3463,18 @@ def rapport_preselection_comite(request):
         context
     )
 
+def enregistrer_derniere_modification(sous_projet, utilisateur):
+    """Enregistre le dernier modificateur et actualise date_modification."""
+    if not sous_projet or not utilisateur:
+        return
+
+    sous_projet.dernier_modificateur_username = utilisateur.username
+    sous_projet.save(update_fields=[
+        'dernier_modificateur_username',
+        'date_modification',
+    ])
+
+
 @login_required
 def modifier_section_sous_projet(request, pk, section):
     """
@@ -3582,6 +3597,7 @@ def modifier_section_sous_projet(request, pk, section):
 
                     obj.createur_username = sous_projet.createur_username
 
+                obj.dernier_modificateur_username = utilisateur.username
                 obj.save()
 
                 messages.success(request, "✅ Section modifiée avec succès.")
@@ -3670,6 +3686,8 @@ def modifier_section_sous_projet(request, pk, section):
                             montant_rembourse=data.get('montant_rembourse'),
                         )
 
+                enregistrer_derniere_modification(sous_projet, utilisateur)
+
                 messages.success(request, "✅ Section modifiée avec succès.")
                 return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
 
@@ -3683,6 +3701,7 @@ def modifier_section_sous_projet(request, pk, section):
 
             if formset.is_valid():
                 formset.save()
+                enregistrer_derniere_modification(sous_projet, utilisateur)
 
                 messages.success(request, "✅ Section modifiée avec succès.")
                 return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)

@@ -284,6 +284,16 @@ utilisateurs = [
         'actif': True,
         'wilaya_code': None
     },
+     {
+        'nom': 'Nedhirou',
+        'prenom': '',
+        'username': 'Nedhirou',
+        'password': 'nedh@5678',
+        'role': 'correction',
+        'email': 'Nedh@gmail.com',
+        'actif': True,
+        'wilaya_code': None
+    },
 ]
 
 

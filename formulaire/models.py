@@ -260,6 +260,12 @@ class SousProjet(models.Model):
     null=True,
     verbose_name="Nom d'utilisateur du créateur"
     )
+    dernier_modificateur_username = models.CharField(
+    max_length=50,
+    blank=True,
+    null=True,
+    verbose_name="Dernier utilisateur ayant modifié le dossier"
+)
 
     status = models.CharField(
     max_length=30,
@@ -588,6 +594,7 @@ class Utilisateur(models.Model):
         ('superadmin', 'Super Admin'),
         ('superviseur', 'Superviseur'),
         ('prescomite', 'Président du comité de présélection'),
+        ('correction', 'Correction'),
     ]
 
     nom = models.CharField(max_length=100, verbose_name="Nom")
