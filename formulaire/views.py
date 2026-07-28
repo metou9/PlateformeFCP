@@ -3478,7 +3478,15 @@ def enregistrer_derniere_modification(sous_projet, utilisateur):
 @login_required
 def modifier_section_sous_projet(request, pk, section):
     """
-    Modification par section depuis la page détail.
+    Modification d'une section depuis la page de détail.
+
+    Pour les formsets, on utilise toujours extra=0 :
+    - seules les lignes déjà enregistrées sont affichées ;
+    - une nouvelle ligne apparaît uniquement après un clic sur
+      « + Ajouter une ligne » ;
+    - TOTAL_FORMS indique à Django le nombre réel de lignes envoyées.
+
+    Le management_form du formset doit rester présent dans le template.
     """
 
     utilisateur = get_current_user(request)
@@ -3493,89 +3501,111 @@ def modifier_section_sous_projet(request, pk, section):
             request,
             "❌ Vous n'êtes pas autorisé à modifier ce sous-projet."
         )
-        return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
-
-    ActiviteDynamicFormSet = get_activite_formset_class(extra=1)
-
-    RealisationDynamicFormSet = clone_formset_with_extra(RealisationFormSet, 3)
-    EmpruntDynamicFormSet = clone_formset_with_extra(EmpruntFormSet, 3)
+        return redirect(
+            'formulaire:detail_sous_projet',
+            pk=sous_projet.pk
+        )
 
     section_config = {
-    'informations': {
-        'titre': 'Modifier les informations générales',
-        'type': 'form',
-        'form_class': SousProjetForm,
-        'prefix': None,
-    },
-    'activites': {
-        'titre': 'Modifier les activités',
-        'type': 'formset',
-        'formset_class': ActiviteDynamicFormSet,
-        'prefix': 'activite',
-    },
-    'infrastructures': {
-        'titre': 'Modifier les infrastructures',
-        'type': 'formset',
-        'formset_class': InfrastructureFormSet,
-        'prefix': 'infra',
-    },
-    'equipements': {
-        'titre': 'Modifier les équipements',
-        'type': 'formset',
-        'formset_class': EquipementFormSet,
-        'prefix': 'equip',
-    },
-    'intrants': {
-        'titre': 'Modifier les intrants',
-        'type': 'formset',
-        'formset_class': IntrantFormSet,
-        'prefix': 'intrant',
-    },
-    'fonctionnements': {
-        'titre': 'Modifier le fonctionnement',
-        'type': 'formset',
-        'formset_class': FonctionnementFormSet,
-        'prefix': 'fonc',
-    },
-    'services': {
-        'titre': 'Modifier les services',
-        'type': 'formset',
-        'formset_class': ServiceFormSet,
-        'prefix': 'serv',
-    },
-    'realisations': {
-        'titre': 'Modifier les réalisations passées du promoteur',
-        'type': 'manual_formset',
-        'formset_class': RealisationFormSet,
-        'prefix': 'real',
-    },
-    'emprunts': {
-        'titre': 'Modifier les passifs / emprunts',
-        'type': 'manual_formset',
-        'formset_class': EmpruntFormSet,
-        'prefix': 'emprunt',
-    },
-    'promoteur': {
-        'titre': 'Modifier les renseignements promoteur',
-        'type': 'form',
-        'form_class': PromoteurFinalForm,
-        'prefix': None,
-    },
-}
+        'informations': {
+            'titre': 'Modifier les informations générales',
+            'type': 'form',
+            'form_class': SousProjetForm,
+            'prefix': None,
+        },
+        'activites': {
+            'titre': 'Modifier les activités',
+            'type': 'inline_formset',
+            'formset_class': None,
+            'prefix': 'activite',
+        },
+        'infrastructures': {
+            'titre': 'Modifier les infrastructures',
+            'type': 'inline_formset',
+            'formset_class': InfrastructureFormSet,
+            'prefix': 'infra',
+        },
+        'equipements': {
+            'titre': 'Modifier les équipements',
+            'type': 'inline_formset',
+            'formset_class': EquipementFormSet,
+            'prefix': 'equip',
+        },
+        'intrants': {
+            'titre': 'Modifier les intrants',
+            'type': 'inline_formset',
+            'formset_class': IntrantFormSet,
+            'prefix': 'intrant',
+        },
+        'fonctionnements': {
+            'titre': 'Modifier le fonctionnement',
+            'type': 'inline_formset',
+            'formset_class': FonctionnementFormSet,
+            'prefix': 'fonc',
+        },
+        'services': {
+            'titre': 'Modifier les services',
+            'type': 'inline_formset',
+            'formset_class': ServiceFormSet,
+            'prefix': 'serv',
+        },
+        'realisations': {
+            'titre': 'Modifier les réalisations passées du promoteur',
+            'type': 'manual_formset',
+            'formset_class': RealisationFormSet,
+            'prefix': 'real',
+        },
+        'emprunts': {
+            'titre': 'Modifier les passifs / emprunts',
+            'type': 'manual_formset',
+            'formset_class': EmpruntFormSet,
+            'prefix': 'emprunt',
+        },
+        'promoteur': {
+            'titre': 'Modifier les renseignements promoteur',
+            'type': 'form',
+            'form_class': PromoteurFinalForm,
+            'prefix': None,
+        },
+    }
 
     if section not in section_config:
         messages.error(request, "❌ Section introuvable.")
-        return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
+        return redirect(
+            'formulaire:detail_sous_projet',
+            pk=sous_projet.pk
+        )
 
     config = section_config[section]
-
     form = None
     formset = None
+
+    # Aucune ligne vide n'est affichée automatiquement.
+    # Une nouvelle ligne est créée uniquement lorsque l'utilisateur
+    # clique sur le bouton « + Ajouter une ligne » dans le template.
+    # En POST, le nombre réel de lignes est fourni par TOTAL_FORMS.
+    extra_value = 0
+
+    if config['type'] == 'inline_formset':
+        if section == 'activites':
+            DynamicFormSet = get_activite_formset_class(
+                extra=extra_value
+            )
+        else:
+            DynamicFormSet = clone_formset_with_extra(
+                config['formset_class'],
+                extra_value
+            )
+
+    elif config['type'] == 'manual_formset':
+        DynamicFormSet = clone_formset_with_extra(
+            config['formset_class'],
+            extra_value
+        )
 
     if request.method == 'POST':
 
         if config['type'] == 'form':
-
             if section == 'informations':
                 form = config['form_class'](
                     request.POST,
@@ -3592,124 +3622,208 @@ def modifier_section_sous_projet(request, pk, section):
                 obj = form.save(commit=False)
 
                 if section == 'informations':
-                    if is_agent_saisie(utilisateur) and utilisateur.wilaya_id:
+                    if (
+                        is_agent_saisie(utilisateur)
+                        and utilisateur.wilaya_id
+                    ):
                         obj.wilaya = utilisateur.wilaya
 
-                    obj.createur_username = sous_projet.createur_username
+                    # Le créateur initial du dossier ne doit pas changer.
+                    obj.createur_username = (
+                        sous_projet.createur_username
+                    )
 
-                obj.dernier_modificateur_username = utilisateur.username
+                obj.dernier_modificateur_username = (
+                    utilisateur.username
+                )
                 obj.save()
 
-                messages.success(request, "✅ Section modifiée avec succès.")
-                return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
+                messages.success(
+                    request,
+                    "✅ Section modifiée avec succès."
+                )
+                return redirect(
+                    'formulaire:detail_sous_projet',
+                    pk=sous_projet.pk
+                )
 
         elif config['type'] == 'manual_formset':
-
-            formset = config['formset_class'](
+            formset = DynamicFormSet(
                 request.POST,
                 prefix=config['prefix']
             )
 
             if formset.is_valid():
+                try:
+                    with transaction.atomic():
 
-                if section == 'realisations':
+                        if section == 'realisations':
+                            sous_projet.realisations.all().delete()
 
-                    sous_projet.realisations.all().delete()
+                            for current_form in formset.forms:
+                                data = (
+                                    getattr(
+                                        current_form,
+                                        'cleaned_data',
+                                        None
+                                    )
+                                    or {}
+                                )
 
-                    for f in formset:
-                        data = getattr(f, 'cleaned_data', None)
+                                if data.get('DELETE'):
+                                    continue
 
-                        if not data:
-                            continue
+                                has_data = any([
+                                    data.get('produit'),
+                                    data.get('annee_1'),
+                                    data.get('volume_annee_1'),
+                                    data.get('ventes_usd_annee_1'),
+                                    data.get('prix_vente_mru_annee_1'),
+                                    data.get('annee_2'),
+                                    data.get('volume_annee_2'),
+                                    data.get('ventes_usd_annee_2'),
+                                    data.get('prix_vente_mru_annee_2'),
+                                    data.get('annee_3'),
+                                    data.get('volume_annee_3'),
+                                    data.get('ventes_usd_annee_3'),
+                                    data.get('prix_vente_mru_annee_3'),
+                                ])
 
-                        has_data = any([
-                            data.get('produit'),
-                            data.get('annee_1'),
-                            data.get('volume_annee_1'),
-                            data.get('ventes_usd_annee_1'),
-                            data.get('prix_vente_mru_annee_1'),
-                            data.get('annee_2'),
-                            data.get('volume_annee_2'),
-                            data.get('ventes_usd_annee_2'),
-                            data.get('prix_vente_mru_annee_2'),
-                            data.get('annee_3'),
-                            data.get('volume_annee_3'),
-                            data.get('ventes_usd_annee_3'),
-                            data.get('prix_vente_mru_annee_3'),
-                        ])
+                                if not has_data:
+                                    continue
 
-                        if not has_data:
-                            continue
+                                RealisationPassee.objects.create(
+                                    sous_projet=sous_projet,
+                                    produit=data.get('produit'),
+                                    annee_1=data.get('annee_1'),
+                                    volume_annee_1=data.get(
+                                        'volume_annee_1'
+                                    ),
+                                    ventes_usd_annee_1=data.get(
+                                        'ventes_usd_annee_1'
+                                    ),
+                                    prix_vente_mru_annee_1=data.get(
+                                        'prix_vente_mru_annee_1'
+                                    ),
+                                    annee_2=data.get('annee_2'),
+                                    volume_annee_2=data.get(
+                                        'volume_annee_2'
+                                    ),
+                                    ventes_usd_annee_2=data.get(
+                                        'ventes_usd_annee_2'
+                                    ),
+                                    prix_vente_mru_annee_2=data.get(
+                                        'prix_vente_mru_annee_2'
+                                    ),
+                                    annee_3=data.get('annee_3'),
+                                    volume_annee_3=data.get(
+                                        'volume_annee_3'
+                                    ),
+                                    ventes_usd_annee_3=data.get(
+                                        'ventes_usd_annee_3'
+                                    ),
+                                    prix_vente_mru_annee_3=data.get(
+                                        'prix_vente_mru_annee_3'
+                                    ),
+                                )
 
-                        RealisationPassee.objects.create(
-                            sous_projet=sous_projet,
-                            produit=data.get('produit'),
-                            annee_1=data.get('annee_1'),
-                            volume_annee_1=data.get('volume_annee_1'),
-                            ventes_usd_annee_1=data.get('ventes_usd_annee_1'),
-                            prix_vente_mru_annee_1=data.get('prix_vente_mru_annee_1'),
-                            annee_2=data.get('annee_2'),
-                            volume_annee_2=data.get('volume_annee_2'),
-                            ventes_usd_annee_2=data.get('ventes_usd_annee_2'),
-                            prix_vente_mru_annee_2=data.get('prix_vente_mru_annee_2'),
-                            annee_3=data.get('annee_3'),
-                            volume_annee_3=data.get('volume_annee_3'),
-                            ventes_usd_annee_3=data.get('ventes_usd_annee_3'),
-                            prix_vente_mru_annee_3=data.get('prix_vente_mru_annee_3'),
+                        elif section == 'emprunts':
+                            sous_projet.emprunts.all().delete()
+
+                            for current_form in formset.forms:
+                                data = (
+                                    getattr(
+                                        current_form,
+                                        'cleaned_data',
+                                        None
+                                    )
+                                    or {}
+                                )
+
+                                if data.get('DELETE'):
+                                    continue
+
+                                has_data = any([
+                                    data.get('annee'),
+                                    data.get(
+                                        'institution_financiere'
+                                    ),
+                                    data.get('montant_emprunte'),
+                                    data.get('montant_rembourse'),
+                                ])
+
+                                if not has_data:
+                                    continue
+
+                                PassifEmprunt.objects.create(
+                                    sous_projet=sous_projet,
+                                    annee=data.get('annee'),
+                                    institution_financiere=data.get(
+                                        'institution_financiere'
+                                    ),
+                                    montant_emprunte=data.get(
+                                        'montant_emprunte'
+                                    ),
+                                    montant_rembourse=data.get(
+                                        'montant_rembourse'
+                                    ),
+                                )
+
+                        enregistrer_derniere_modification(
+                            sous_projet,
+                            utilisateur
                         )
 
-                elif section == 'emprunts':
+                    messages.success(
+                        request,
+                        "✅ Section modifiée avec succès."
+                    )
+                    return redirect(
+                        'formulaire:detail_sous_projet',
+                        pk=sous_projet.pk
+                    )
 
-                    sous_projet.emprunts.all().delete()
+                except Exception as exc:
+                    messages.error(
+                        request,
+                        "❌ La modification a été annulée : "
+                        f"{exc}"
+                    )
 
-                    for f in formset:
-                        data = getattr(f, 'cleaned_data', None)
-
-                        if not data:
-                            continue
-
-                        has_data = any([
-                            data.get('annee'),
-                            data.get('institution_financiere'),
-                            data.get('montant_emprunte'),
-                            data.get('montant_rembourse'),
-                        ])
-
-                        if not has_data:
-                            continue
-
-                        PassifEmprunt.objects.create(
-                            sous_projet=sous_projet,
-                            annee=data.get('annee'),
-                            institution_financiere=data.get('institution_financiere'),
-                            montant_emprunte=data.get('montant_emprunte'),
-                            montant_rembourse=data.get('montant_rembourse'),
-                        )
-
-                enregistrer_derniere_modification(sous_projet, utilisateur)
-
-                messages.success(request, "✅ Section modifiée avec succès.")
-                return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
-
-        else:
-
-            formset = config['formset_class'](
+        elif config['type'] == 'inline_formset':
+            formset = DynamicFormSet(
                 request.POST,
                 instance=sous_projet,
                 prefix=config['prefix']
             )
 
             if formset.is_valid():
-                formset.save()
-                enregistrer_derniere_modification(sous_projet, utilisateur)
+                try:
+                    with transaction.atomic():
+                        formset.save()
+                        enregistrer_derniere_modification(
+                            sous_projet,
+                            utilisateur
+                        )
 
-                messages.success(request, "✅ Section modifiée avec succès.")
-                return redirect('formulaire:detail_sous_projet', pk=sous_projet.pk)
+                    messages.success(
+                        request,
+                        "✅ Section modifiée avec succès."
+                    )
+                    return redirect(
+                        'formulaire:detail_sous_projet',
+                        pk=sous_projet.pk
+                    )
+
+                except Exception as exc:
+                    messages.error(
+                        request,
+                        "❌ La modification a été annulée : "
+                        f"{exc}"
+                    )
 
     else:
-
         if config['type'] == 'form':
-
             if section == 'informations':
                 form = config['form_class'](
                     instance=sous_projet,
@@ -3720,8 +3834,13 @@ def modifier_section_sous_projet(request, pk, section):
                     instance=sous_projet
                 )
 
-        elif config['type'] == 'manual_formset':
+        elif config['type'] == 'inline_formset':
+            formset = DynamicFormSet(
+                instance=sous_projet,
+                prefix=config['prefix']
+            )
 
+        elif config['type'] == 'manual_formset':
             if section == 'realisations':
                 initial = list(
                     sous_projet.realisations.values(
@@ -3740,8 +3859,7 @@ def modifier_section_sous_projet(request, pk, section):
                         'prix_vente_mru_annee_3',
                     )
                 )
-
-            elif section == 'emprunts':
+            else:
                 initial = list(
                     sous_projet.emprunts.values(
                         'annee',
@@ -3751,26 +3869,40 @@ def modifier_section_sous_projet(request, pk, section):
                     )
                 )
 
-            formset = config['formset_class'](
+            formset = DynamicFormSet(
                 initial=initial,
                 prefix=config['prefix']
             )
 
-        else:
+    return render(
+        request,
+        'formulaire/modifier_section_sous_projet.html',
+        {
+            'sous_projet': sous_projet,
+            'section': section,
+            'titre_section': config['titre'],
+            'form': form,
+            'formset': formset,
+            'config_type': (
+                'formset'
+                if config['type'] in [
+                    'inline_formset',
+                    'manual_formset',
+                ]
+                else config['type']
+            ),
+            # Informations utilisées par le JavaScript du template
+            # pour cloner formset.empty_form et augmenter TOTAL_FORMS.
+            'can_add_line': config['type'] in [
+                'inline_formset',
+                'manual_formset',
+            ],
+            'formset_prefix': config.get('prefix') or '',
+            'user_name': request.session.get('user_name'),
+            'user_role': request.session.get('user_role'),
+            'user_wilaya_nom': request.session.get(
+                'user_wilaya_nom'
+            ),
+        }
+    )
 
-            formset = config['formset_class'](
-                instance=sous_projet,
-                prefix=config['prefix']
-            )
-
-    return render(request, 'formulaire/modifier_section_sous_projet.html', {
-        'sous_projet': sous_projet,
-        'section': section,
-        'titre_section': config['titre'],
-        'form': form,
-        'formset': formset,
-        'config_type': 'formset' if config['type'] == 'manual_formset' else config['type'],
-        'user_name': request.session.get('user_name'),
-        'user_role': request.session.get('user_role'),
-        'user_wilaya_nom': request.session.get('user_wilaya_nom'),
-    })

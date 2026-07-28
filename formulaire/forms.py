@@ -589,16 +589,12 @@ class BaseFinancementForm(forms.ModelForm):
         cleaned_data['montant_total'] = montant_total_decimal
         cleaned_data['prix_unit'] = montant_total_decimal / quantite_decimal
 
-        # Détection de saisie des sources via le POST brut
-        source_fields_touched = False
+        # Calcul des sources de financement.
+        # Une valeur vide ou égale à zéro est considérée comme non renseignée.
         total_sources = Decimal('0')
+        source_positive_saisie = False
 
         for field in self.source_fields:
-            raw_post_value = self.data.get(self.add_prefix(field))
-
-            if raw_post_value not in (None, ''):
-                source_fields_touched = True
-
             value = cleaned_data.get(field)
 
             if value in (None, ''):
@@ -611,20 +607,38 @@ class BaseFinancementForm(forms.ModelForm):
                     continue
 
             if value_decimal < 0:
-                self.add_error(field, "Le montant doit être supérieur ou égal à zéro.")
+                self.add_error(
+                    field,
+                    "Le montant doit être supérieur ou égal à zéro."
+                )
                 continue
 
             cleaned_data[field] = value_decimal
             total_sources += value_decimal
 
+            # La répartition est considérée comme saisie uniquement
+            # si au moins une source contient un montant positif.
+            if value_decimal > Decimal('0'):
+                source_positive_saisie = True
+
         if self.errors:
             return cleaned_data
 
-        # Si au moins une source est saisie, la somme doit être égale au montant total
-        if source_fields_touched and total_sources != montant_total_decimal:
+        # Le montant total seul est autorisé lorsque toutes les sources
+        # sont vides ou égales à zéro.
+        # Si une ou plusieurs sources positives sont saisies, leur somme
+        # doit être exactement égale au montant total.
+        if (
+            source_positive_saisie
+            and total_sources != montant_total_decimal
+        ):
             self.add_error(
                 'montant_total',
-                f"La somme des sources de financement ({total_sources}) doit être égale au montant total ({montant_total_decimal})."
+                (
+                    "La somme des sources de financement "
+                    f"({total_sources}) doit être égale au montant total "
+                    f"({montant_total_decimal})."
+                )
             )
 
         return cleaned_data

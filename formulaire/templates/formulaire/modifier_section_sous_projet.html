@@ -88,13 +88,27 @@
         font-size: 14px;
     }
 
+    .formset-toolbar {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 10px;
+        margin: 0 0 14px;
+    }
+
+    .formset-row.is-deleted {
+        opacity: 0.5;
+        background: #f8d7da;
+    }
+
     .delete-cell {
         text-align: center;
         vertical-align: middle;
         min-width: 90px;
     }
 
-    .hidden-fields {
+    .hidden-fields,
+    .empty-form-template {
         display: none;
     }
 
@@ -109,13 +123,15 @@
             grid-template-columns: 1fr;
         }
 
-        .edit-actions {
+        .edit-actions,
+        .formset-toolbar {
             justify-content: stretch;
             flex-direction: column;
         }
 
         .edit-actions .btn,
-        .edit-actions a {
+        .edit-actions a,
+        .formset-toolbar .btn {
             width: 100%;
         }
     }
@@ -200,10 +216,12 @@
 
         <div class="edit-help">
             Modifiez uniquement les informations nécessaires, puis cliquez sur
-            <strong>Enregistrer les modifications</strong>. Après l’enregistrement, vous serez redirigé vers la page détail du dossier.
+            <strong>Enregistrer les modifications</strong>.
+            Pour les tableaux, utilisez le bouton
+            <strong>+ Ajouter une ligne</strong>.
         </div>
 
-        <form method="post">
+        <form method="post" id="edit-section-form">
             {% csrf_token %}
 
             {% if config_type == 'form' %}
@@ -241,25 +259,35 @@
                     </div>
                 {% endif %}
 
+                {% if can_add_line %}
+                    <div class="formset-toolbar">
+                        <button type="button"
+                                class="btn btn-primary"
+                                id="add-formset-row">
+                            + Ajouter une ligne
+                        </button>
+                    </div>
+                {% endif %}
+
                 <div class="table-responsive">
                     <table class="table-detail">
                         <thead>
                             <tr>
-                                {% for field in formset.forms.0.visible_fields %}
+                                {% for field in formset.empty_form.visible_fields %}
                                     <th>{{ field.label }}</th>
                                 {% endfor %}
                             </tr>
                         </thead>
 
-                        <tbody>
+                        <tbody id="formset-body">
                             {% for f in formset %}
-                                <tr>
+                                <tr class="formset-row">
                                     {% for hidden in f.hidden_fields %}
                                         {{ hidden }}
                                     {% endfor %}
 
                                     {% for field in f.visible_fields %}
-                                        <td>
+                                        <td {% if field.name == 'DELETE' %}class="delete-cell"{% endif %}>
                                             <div class="edit-table-input">
                                                 {{ field }}
 
@@ -276,6 +304,22 @@
                         </tbody>
                     </table>
                 </div>
+
+                <template id="empty-form-template">
+                    <tr class="formset-row">
+                        {% for hidden in formset.empty_form.hidden_fields %}
+                            {{ hidden }}
+                        {% endfor %}
+
+                        {% for field in formset.empty_form.visible_fields %}
+                            <td {% if field.name == 'DELETE' %}class="delete-cell"{% endif %}>
+                                <div class="edit-table-input">
+                                    {{ field }}
+                                </div>
+                            </td>
+                        {% endfor %}
+                    </tr>
+                </template>
             {% endif %}
 
             <div class="edit-actions">
@@ -291,4 +335,83 @@
     </div>
 </div>
 
+{% endblock %}
+
+{% block extra_js %}
+{{ block.super }}
+
+{% if config_type == 'formset' and can_add_line %}
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+    const prefix = '{{ formset_prefix|escapejs }}';
+    const addButton = document.getElementById('add-formset-row');
+    const formsetBody = document.getElementById('formset-body');
+    const emptyTemplate = document.getElementById('empty-form-template');
+    const totalFormsInput = document.getElementById(`id_${prefix}-TOTAL_FORMS`);
+
+    if (!addButton || !formsetBody || !emptyTemplate || !totalFormsInput) {
+        return;
+    }
+
+    function refreshDeleteStyles() {
+        formsetBody.querySelectorAll('.formset-row').forEach(function (row) {
+            const deleteInput = row.querySelector(
+                `input[name$="-DELETE"]`
+            );
+
+            if (!deleteInput) {
+                return;
+            }
+
+            const updateStyle = function () {
+                row.classList.toggle('is-deleted', deleteInput.checked);
+            };
+
+            deleteInput.removeEventListener('change', updateStyle);
+            deleteInput.addEventListener('change', updateStyle);
+            updateStyle();
+        });
+    }
+
+    addButton.addEventListener('click', function () {
+        const formIndex = parseInt(totalFormsInput.value, 10);
+        const html = emptyTemplate.innerHTML.replace(
+            /__prefix__/g,
+            formIndex
+        );
+
+        formsetBody.insertAdjacentHTML('beforeend', html);
+        totalFormsInput.value = formIndex + 1;
+
+        const newRow = formsetBody.lastElementChild;
+
+        if (newRow) {
+            newRow.querySelectorAll('input, select, textarea').forEach(
+                function (field) {
+                    if (field.type !== 'hidden' && field.type !== 'checkbox') {
+                        field.value = '';
+                    }
+
+                    if (field.type === 'checkbox') {
+                        field.checked = false;
+                    }
+                }
+            );
+
+            const firstEditableField = newRow.querySelector(
+                'input:not([type="hidden"]):not([type="checkbox"]), select, textarea'
+            );
+
+            if (firstEditableField) {
+                firstEditableField.focus();
+            }
+        }
+
+        refreshDeleteStyles();
+    });
+
+    refreshDeleteStyles();
+});
+</script>
+{% endif %}
 {% endblock %}
