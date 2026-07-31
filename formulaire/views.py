@@ -2538,12 +2538,10 @@ def preselection_comite_detail(request, pk):
 
     auto = appliquer_preselection_automatique(sous_projet)
 
-    # Seules les décisions finales verrouillent le dossier.
-    # "À examiner" et "À réexaminer" restent modifiables.
-    readonly_mode = sous_projet.status in [
-        'preselectionne',
-        'rejete',
-    ]
+    # Aucun verrouillage après une décision du comité.
+    # Le comité peut toujours rouvrir et modifier une présélection,
+    # même si le dossier est déjà présélectionné ou rejeté.
+    readonly_mode = False
 
     if not sous_projet.resultats_preselection.exists():
         criteres_auto = evaluer_criteres_preselection(
@@ -2581,22 +2579,6 @@ def preselection_comite_detail(request, pk):
     )
 
     if request.method == 'POST':
-        if readonly_mode:
-            messages.warning(
-                request,
-                "⚠️ Ce dossier a déjà une décision finale "
-                "et n'est plus modifiable."
-            )
-
-            url_detail = reverse(
-                'formulaire:preselection_comite_detail',
-                kwargs={'pk': sous_projet.pk}
-            )
-
-            return redirect(
-                f"{url_detail}?next={liste_retour}"
-            )
-
         formset = ResultatPreselectionFormSet(
             request.POST,
             queryset=queryset,
@@ -2617,7 +2599,8 @@ def preselection_comite_detail(request, pk):
             'global-motif_comite'
         )
 
-        # Décisions finales : le dossier sera verrouillé.
+        # Décisions complètes : elles exigent une décision et un motif
+        # pour chaque critère, mais elles ne verrouillent plus le dossier.
         decision_finale = decision_globale in [
             'preselectionne',
             'rejete',
@@ -2732,8 +2715,8 @@ def preselection_comite_detail(request, pk):
                     timezone.now()
                 )
 
-                # Préselectionné ou rejeté :
-                # le statut devient final et verrouillé.
+                # Le statut reflète la décision globale, sans verrouiller
+                # la possibilité de la modifier ultérieurement.
                 sous_projet.status = decision_globale
 
                 sous_projet.save()
@@ -2741,8 +2724,8 @@ def preselection_comite_detail(request, pk):
                 messages.success(
                     request,
                     (
-                        "✅ Décision finale du comité "
-                        "enregistrée avec succès. "
+                        "✅ Décision du comité enregistrée avec succès. "
+                        "Elle reste modifiable ultérieurement. "
                         f"Score : {score}/20."
                     )
                 )
@@ -2797,7 +2780,7 @@ def preselection_comite_detail(request, pk):
         decision_form = DecisionComiteSousProjetForm(
             instance=sous_projet,
             prefix='global',
-            readonly=readonly_mode
+            readonly=False
         )
 
     criteres = list(queryset)
@@ -2829,7 +2812,7 @@ def preselection_comite_detail(request, pk):
         'nb_non_eligibles': nb_non_eligibles,
         'nb_a_examiner': nb_a_examiner,
         'auto': auto,
-        'readonly_mode': readonly_mode,
+        'readonly_mode': False,
         'liste_retour': liste_retour,
     }
 
