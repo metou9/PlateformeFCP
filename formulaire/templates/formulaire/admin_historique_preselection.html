@@ -1,0 +1,187 @@
+{% extends 'formulaire/base.html' %}
+{% load static %}
+
+{% block title %}Historique des décisions - PADISAM{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'formulaire/css/formulaire.css' %}" rel="stylesheet">
+<link href="{% static 'formulaire/css/statistics.css' %}" rel="stylesheet">
+<link href="{% static 'formulaire/css/historique.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container historique-page">
+
+    <div class="historique-header preselection">
+        <h1>Historique des décisions du comité</h1>
+        <p>Suivi de tous les changements de statut appliqués aux dossiers de sous-projets.</p>
+    </div>
+
+    <div class="filters-card">
+        <div class="filters-title">Rechercher et filtrer les décisions</div>
+
+        <form method="get" class="filters-form">
+            <div class="filter-group">
+                <label for="numero_reception">N° de réception</label>
+                <input type="text" name="numero_reception" id="numero_reception"
+                       class="filter-control" value="{{ numero_reception }}"
+                       placeholder="Exemple : 12" autocomplete="off">
+            </div>
+
+            <div class="filter-group">
+                <label for="username">Utilisateur</label>
+                <input type="text" name="username" id="username"
+                       class="filter-control" value="{{ username }}"
+                       placeholder="Nom d’utilisateur" autocomplete="off">
+            </div>
+
+            <div class="filter-group">
+                <label for="ancien_statut">Ancien statut</label>
+                <select name="ancien_statut" id="ancien_statut" class="filter-control">
+                    <option value="">Tous les statuts</option>
+                    {% for value, label in statut_choices %}
+                        <option value="{{ value }}" {% if selected_ancien_statut == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="nouveau_statut">Nouveau statut</label>
+                <select name="nouveau_statut" id="nouveau_statut" class="filter-control">
+                    <option value="">Tous les statuts</option>
+                    {% for value, label in statut_choices %}
+                        <option value="{{ value }}" {% if selected_nouveau_statut == value %}selected{% endif %}>{{ label }}</option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="date_debut">Date de début</label>
+                <input type="date" name="date_debut" id="date_debut"
+                       class="filter-control" value="{{ date_debut }}">
+            </div>
+
+            <div class="filter-group">
+                <label for="date_fin">Date de fin</label>
+                <input type="date" name="date_fin" id="date_fin"
+                       class="filter-control" value="{{ date_fin }}">
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="search-btn">Rechercher</button>
+                <a href="{% url 'formulaire:admin_historique_preselection' %}" class="reset-btn">Réinitialiser</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-item">
+            <span class="stat-label">Résultats trouvés</span>
+            <strong>{{ total_resultats }}</strong>
+        </div>
+        <div class="stat-item secondary">
+            <span class="stat-label">Éléments sur cette page</span>
+            <strong>{{ historiques|length }}</strong>
+        </div>
+    </div>
+
+    <div class="historique-table-card">
+        <div class="card-header-custom">
+            <h5>Liste des changements de statut</h5>
+            <span class="result-count">
+                {{ total_resultats }} changement{{ total_resultats|pluralize }} trouvé{{ total_resultats|pluralize }}
+            </span>
+        </div>
+
+        {% if historiques %}
+            <div class="table-responsive">
+                <table class="historique-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Utilisateur</th>
+                            <th>N° réception</th>
+                            <th>Paysage / ZOCA</th>
+                            <th>Intitulé du sous-projet</th>
+                            <th>Ancien statut</th>
+                            <th>Nouveau statut</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for historique in historiques %}
+                            <tr>
+                                <td class="date-cell">{{ historique.date_action|date:"d/m/Y H:i" }}</td>
+                                <td class="username-cell">{{ historique.username|default:"—" }}</td>
+                                <td class="numero-cell">{{ historique.numero_reception|default:"—" }}</td>
+                                <td class="paysage-cell">{{ historique.paysage|default:"—" }}</td>
+                                <td class="project-title">{{ historique.intitule|default:"—" }}</td>
+                                <td>
+                                    {% if historique.ancien_statut == 'preselectionne' %}
+                                        <span class="badge-pill-custom badge-preselectionne">Présélectionné</span>
+                                    {% elif historique.ancien_statut == 'rejete' %}
+                                        <span class="badge-pill-custom badge-rejete">Rejeté</span>
+                                    {% elif historique.ancien_statut == 'reexaminer' %}
+                                        <span class="badge-pill-custom badge-reexaminer">À réexaminer</span>
+                                    {% elif historique.ancien_statut == 'a_examiner' %}
+                                        <span class="badge-pill-custom badge-aexaminer">À examiner</span>
+                                    {% else %}
+                                        <span class="badge-pill-custom badge-default">{{ historique.ancien_statut|default:"Non défini" }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    {% if historique.nouveau_statut == 'preselectionne' %}
+                                        <span class="badge-pill-custom badge-preselectionne">Présélectionné</span>
+                                    {% elif historique.nouveau_statut == 'rejete' %}
+                                        <span class="badge-pill-custom badge-rejete">Rejeté</span>
+                                    {% elif historique.nouveau_statut == 'reexaminer' %}
+                                        <span class="badge-pill-custom badge-reexaminer">À réexaminer</span>
+                                    {% elif historique.nouveau_statut == 'a_examiner' %}
+                                        <span class="badge-pill-custom badge-aexaminer">À examiner</span>
+                                    {% else %}
+                                        <span class="badge-pill-custom badge-default">{{ historique.nouveau_statut|default:"Non défini" }}</span>
+                                    {% endif %}
+                                </td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page_obj.paginator.num_pages > 1 %}
+                <div class="pagination-wrap">
+                    <nav aria-label="Pagination de l’historique">
+                        <ul class="pagination">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&numero_reception={{ numero_reception|urlencode }}&username={{ username|urlencode }}&ancien_statut={{ selected_ancien_statut|urlencode }}&nouveau_statut={{ selected_nouveau_statut|urlencode }}&date_debut={{ date_debut|urlencode }}&date_fin={{ date_fin|urlencode }}">Précédent</a>
+                                </li>
+                            {% endif %}
+
+                            {% for numero in page_obj.paginator.page_range %}
+                                {% if numero == page_obj.number %}
+                                    <li class="page-item active"><span class="page-link">{{ numero }}</span></li>
+                                {% elif numero >= page_obj.number|add:'-2' and numero <= page_obj.number|add:'2' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ numero }}&numero_reception={{ numero_reception|urlencode }}&username={{ username|urlencode }}&ancien_statut={{ selected_ancien_statut|urlencode }}&nouveau_statut={{ selected_nouveau_statut|urlencode }}&date_debut={{ date_debut|urlencode }}&date_fin={{ date_fin|urlencode }}">{{ numero }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&numero_reception={{ numero_reception|urlencode }}&username={{ username|urlencode }}&ancien_statut={{ selected_ancien_statut|urlencode }}&nouveau_statut={{ selected_nouveau_statut|urlencode }}&date_debut={{ date_debut|urlencode }}&date_fin={{ date_fin|urlencode }}">Suivant</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="empty-box">
+                <strong>Aucun changement trouvé</strong>
+                Aucun historique ne correspond aux critères sélectionnés.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

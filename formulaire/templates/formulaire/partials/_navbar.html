@@ -297,7 +297,37 @@
 
                 {% endif %}
 
+{% if request.session.user_role == 'superadmin' %}
+<li class="nav-item dropdown">
+    <a class="nav-link dropdown-toggle main-nav-link"
+       href="#"
+       id="adminDropdown"
+       role="button"
+       data-bs-toggle="dropdown"
+       aria-expanded="false">
+        Administration
+    </a>
 
+    <ul class="dropdown-menu custom-dropdown"
+        aria-labelledby="adminDropdown">
+
+        <li>
+            <a class="dropdown-item active-submenu"
+               href="{% url 'formulaire:admin_historique_modifications' %}">
+                Historique des modifications
+            </a>
+        </li>
+
+        <li>
+            <a class="dropdown-item active-submenu"
+               href="{% url 'formulaire:admin_historique_preselection' %}">
+                Historique des décisions
+            </a>
+        </li>
+
+    </ul>
+</li>
+{% endif %}
                 {# ================================================= #}
                 {# DÉCONNEXION : VISIBLE POUR TOUS                    #}
                 {# ================================================= #}

@@ -78,5 +78,20 @@ path(
     views.modifier_section_sous_projet,
     name='modifier_section_sous_projet'
 ),
+# ======================================================
+# SUPER ADMIN
+# ======================================================
+
+path(
+    'superadmin/historique-modifications/',
+    views.admin_historique_modifications,
+    name='admin_historique_modifications'
+),
+
+path(
+    'superadmin/historique-preselection/',
+    views.admin_historique_preselection,
+    name='admin_historique_preselection'
+),
 
 ]

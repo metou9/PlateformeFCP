@@ -9,16 +9,21 @@ import json
 from django.contrib import messages
 from django.contrib.auth import logout
 from django.forms import inlineformset_factory
-from django.http import JsonResponse, QueryDict
+from django.http import JsonResponse, QueryDict, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db import transaction
 from django.db.models import Sum, Count, Case, When, IntegerField, Value, Q
+from django.core.paginator import Paginator
 from django.db.models.functions import Cast
 from django.contrib.auth.decorators import login_required
 
+
+from openpyxl import Workbook
+from openpyxl.styles import Alignment, Border, Font, PatternFill, Side
+from openpyxl.utils import get_column_letter
 
 from .auth_forms import LoginForm
 from .forms import (
@@ -52,6 +57,7 @@ from .models import (
     RealisationPassee,
     PassifEmprunt,
     HistoriqueSousProjet,
+    HistoriqueModificationDossier,
 )
 
 
@@ -1299,6 +1305,13 @@ def realisation_passif(request):
                             montant_rembourse=cleaned_data.get('montant_rembourse'),
                         )
 
+                    enregistrer_historique_modification(
+                        sous_projet=sous_projet,
+                        utilisateur=utilisateur,
+                        section='dossier_complet',
+                        action='creation'
+                    )
+
                 _clear_creation_draft(request)
                 messages.success(request, "✅ Sous-projet créé avec succès !")
                 return redirect('formulaire:liste_sous_projets')
@@ -1676,9 +1689,33 @@ def supprimer_sous_projet(request, pk):
 
     if request.method == 'POST':
         intitule = sous_projet.intitule_sous_projet
-        sous_projet.delete()
-        messages.success(request, f'✅ Sous-projet "{intitule}" supprimé avec succès !')
-        return redirect('formulaire:liste_sous_projets')
+
+        try:
+            with transaction.atomic():
+                enregistrer_historique_modification(
+                    sous_projet=sous_projet,
+                    utilisateur=utilisateur,
+                    section='dossier_complet',
+                    action='suppression'
+                )
+                sous_projet.delete()
+
+            messages.success(
+                request,
+                f'✅ Sous-projet "{intitule}" supprimé avec succès !'
+            )
+            return redirect('formulaire:liste_sous_projets')
+
+        except Exception as exc:
+            messages.error(
+                request,
+                "❌ La suppression a été annulée : "
+                f"{exc}"
+            )
+            return redirect(
+                'formulaire:detail_sous_projet',
+                pk=sous_projet.pk
+            )
 
     return redirect('formulaire:liste_sous_projets')
 # =========================================================
@@ -1819,6 +1856,20 @@ def appliquer_preselection_automatique(sp):
 
 
 
+def normaliser_statut_preselection(statut):
+    """
+    Normalise les valeurs utilisées dans l'historique.
+    Les valeurs vides et le statut technique « etude » sont considérés
+    comme « a_examiner ».
+    """
+    statut = (statut or '').strip()
+
+    if statut in ['', 'etude', 'a_examiner']:
+        return 'a_examiner'
+
+    return statut
+
+
 def enregistrer_historique_statut(
     sous_projet,
     utilisateur,
@@ -1826,12 +1877,24 @@ def enregistrer_historique_statut(
     nouveau_statut
 ):
     """
-    Enregistre une transition de statut du dossier.
+    Enregistre uniquement un changement réel de statut du dossier.
 
-    Les informations du dossier sont copiées dans l'historique afin
-    de conserver leur valeur au moment exact de l'action.
+    Les informations du dossier sont copiées au moment de l'action :
+    numéro de réception, intitulé, paysage, ancien statut,
+    nouveau statut, utilisateur, date et heure.
     """
-    if not sous_projet or not utilisateur or not nouveau_statut:
+    if not sous_projet or not utilisateur:
+        return None
+
+    ancien_statut = normaliser_statut_preselection(
+        ancien_statut
+    )
+    nouveau_statut = normaliser_statut_preselection(
+        nouveau_statut
+    )
+
+    # Ne pas créer une ligne si le statut n'a pas changé.
+    if ancien_statut == nouveau_statut:
         return None
 
     return HistoriqueSousProjet.objects.create(
@@ -1847,7 +1910,7 @@ def enregistrer_historique_statut(
             if sous_projet.paysage
             else ''
         ),
-        ancien_statut=ancien_statut or '',
+        ancien_statut=ancien_statut,
         nouveau_statut=nouveau_statut,
         username=utilisateur.username or '',
     )
@@ -2613,7 +2676,7 @@ def preselection_comite_detail(request, pk):
     )
 
     if request.method == 'POST':
-        ancien_statut = (
+        ancien_statut = normaliser_statut_preselection(
             sous_projet.decision_comite
             or sous_projet.status
             or 'a_examiner'
@@ -2791,10 +2854,8 @@ def preselection_comite_detail(request, pk):
 
                 sous_projet.save()
 
-                nouveau_statut = (
-                    decision_globale
-                    if decision_globale
-                    else 'a_examiner'
+                nouveau_statut = normaliser_statut_preselection(
+                    decision_globale or 'a_examiner'
                 )
 
                 enregistrer_historique_statut(
@@ -3123,8 +3184,242 @@ def rapport_paysage_type_financement(request):
 
 
 # =========================================================
-# REPORTING : RÉSULTATS DE PRÉSÉLECTION DU COMITÉ
+# EXPORT EXCEL : RÉSULTATS DE PRÉSÉLECTION DU COMITÉ
 # =========================================================
+
+def exporter_rapport_preselection_excel(
+    lignes,
+    total_couts,
+    total_subventions,
+    selected_wilaya=None,
+    selected_paysage=None
+):
+    """
+    Génère un fichier Excel reprenant exactement les colonnes principales
+    du rapport de présélection du comité.
+    """
+    workbook = Workbook()
+    worksheet = workbook.active
+    worksheet.title = "Présélection comité"
+
+    # Couleurs et styles
+    green_fill = PatternFill("solid", fgColor="5DBB63")
+    light_green_fill = PatternFill("solid", fgColor="E8F5E9")
+    gray_fill = PatternFill("solid", fgColor="F3F4F6")
+    white_font = Font(color="FFFFFF", bold=True)
+    bold_font = Font(bold=True)
+    thin_gray = Side(style="thin", color="D1D5DB")
+    border = Border(
+        left=thin_gray,
+        right=thin_gray,
+        top=thin_gray,
+        bottom=thin_gray,
+    )
+
+    # Titre
+    worksheet.merge_cells("A1:M1")
+    worksheet["A1"] = "Résultats de présélection du comité"
+    worksheet["A1"].font = Font(bold=True, size=16, color="FFFFFF")
+    worksheet["A1"].fill = green_fill
+    worksheet["A1"].alignment = Alignment(
+        horizontal="center",
+        vertical="center"
+    )
+    worksheet.row_dimensions[1].height = 26
+
+    # Sous-titre / filtres
+    wilaya_label = (
+        selected_wilaya.nom
+        if selected_wilaya
+        else "Toutes les Wilayas"
+    )
+    paysage_label = (
+        selected_paysage.nom
+        if selected_paysage
+        else "Tous les paysages"
+    )
+
+    worksheet.merge_cells("A2:M2")
+    worksheet["A2"] = (
+        f"Wilaya : {wilaya_label} | "
+        f"Paysage / ZOCA : {paysage_label}"
+    )
+    worksheet["A2"].font = bold_font
+    worksheet["A2"].fill = light_green_fill
+    worksheet["A2"].alignment = Alignment(horizontal="center")
+
+    headers = [
+        "N°",
+        "Intitulé du sous-projet",
+        "Village",
+        "Nom et statut juridique",
+        "Principal domaine d’activité",
+        "Personne contact",
+        "Téléphone",
+        "Coût total",
+        "Subvention",
+        "Critères rejetés automatiquement",
+        "Critères rejetés CPR",
+        "Décision",
+        "Motif",
+    ]
+
+    header_row = 4
+
+    for column_index, header in enumerate(headers, start=1):
+        cell = worksheet.cell(
+            row=header_row,
+            column=column_index,
+            value=header
+        )
+        cell.fill = green_fill
+        cell.font = white_font
+        cell.alignment = Alignment(
+            horizontal="center",
+            vertical="center",
+            wrap_text=True
+        )
+        cell.border = border
+
+    worksheet.freeze_panes = "A5"
+    worksheet.auto_filter.ref = f"A4:M{max(4, len(lignes) + 4)}"
+
+    decision_labels = {
+        "preselectionne": "Présélectionné",
+        "rejete": "Rejeté",
+        "reexaminer": "À réexaminer",
+        "a_examiner": "À examiner",
+    }
+
+    for row_index, ligne in enumerate(lignes, start=5):
+        values = [
+            ligne.get("numero", "-"),
+            ligne.get("intitule", "-"),
+            ligne.get("village", "-"),
+            ligne.get("nom_statut_juridique", "-"),
+            ligne.get("domaine_activite", "Non renseigné"),
+            ligne.get("personne_contact", "-"),
+            ligne.get("telephone", "-"),
+            float(ligne.get("cout_total") or 0),
+            float(ligne.get("subvention") or 0),
+            ligne.get("nb_rejets_automatiques", 0),
+            ligne.get("nb_rejets_comite", 0),
+            decision_labels.get(
+                ligne.get("decision_code"),
+                ligne.get("decision", "À examiner")
+            ),
+            ligne.get("motif", "-"),
+        ]
+
+        for column_index, value in enumerate(values, start=1):
+            cell = worksheet.cell(
+                row=row_index,
+                column=column_index,
+                value=value
+            )
+            cell.border = border
+            cell.alignment = Alignment(
+                vertical="top",
+                wrap_text=True
+            )
+
+            if column_index in (8, 9):
+                cell.number_format = '#,##0.00'
+
+            if column_index in (1, 7, 10, 11, 12):
+                cell.alignment = Alignment(
+                    horizontal="center",
+                    vertical="top",
+                    wrap_text=True
+                )
+
+    total_row = len(lignes) + 5
+
+    worksheet.merge_cells(
+        start_row=total_row,
+        start_column=1,
+        end_row=total_row,
+        end_column=7,
+    )
+
+    total_label_cell = worksheet.cell(
+        row=total_row,
+        column=1,
+        value="TOTAL GÉNÉRAL"
+    )
+    total_label_cell.font = bold_font
+    total_label_cell.fill = gray_fill
+    total_label_cell.alignment = Alignment(horizontal="right")
+    total_label_cell.border = border
+
+    for merged_column in range(1, 8):
+        worksheet.cell(
+            row=total_row,
+            column=merged_column
+        ).border = border
+
+    total_cost_cell = worksheet.cell(
+        row=total_row,
+        column=8,
+        value=float(total_couts or 0)
+    )
+    total_cost_cell.font = bold_font
+    total_cost_cell.fill = gray_fill
+    total_cost_cell.number_format = '#,##0.00'
+    total_cost_cell.border = border
+
+    total_subvention_cell = worksheet.cell(
+        row=total_row,
+        column=9,
+        value=float(total_subventions or 0)
+    )
+    total_subvention_cell.font = bold_font
+    total_subvention_cell.fill = gray_fill
+    total_subvention_cell.number_format = '#,##0.00'
+    total_subvention_cell.border = border
+
+    for column_index in range(10, 14):
+        cell = worksheet.cell(row=total_row, column=column_index)
+        cell.fill = gray_fill
+        cell.border = border
+
+    # Largeurs de colonnes
+    column_widths = {
+        1: 14,
+        2: 34,
+        3: 20,
+        4: 32,
+        5: 32,
+        6: 26,
+        7: 16,
+        8: 18,
+        9: 18,
+        10: 18,
+        11: 18,
+        12: 18,
+        13: 40,
+    }
+
+    for column_index, width in column_widths.items():
+        worksheet.column_dimensions[
+            get_column_letter(column_index)
+        ].width = width
+
+    worksheet.sheet_view.showGridLines = False
+
+    response = HttpResponse(
+        content_type=(
+            "application/vnd.openxmlformats-officedocument."
+            "spreadsheetml.sheet"
+        )
+    )
+    response["Content-Disposition"] = (
+        'attachment; filename="rapport_preselection_comite.xlsx"'
+    )
+
+    workbook.save(response)
+    return response
+
 
 @login_required
 def rapport_preselection_comite(request):
@@ -3347,13 +3642,13 @@ def rapport_preselection_comite(request):
         total_criteres_rejetes_automatiques += nb_rejets_automatiques
         total_criteres_rejetes_comite += nb_rejets_comite
 
+        # Afficher uniquement la valeur réellement saisie dans
+        # « Principal domaine d'activités ».
+        # Ne jamais remplacer une valeur vide par le type de projet
+        # (AG, EL, SER ou ENV).
         domaine_activite = (
-            getattr(sp, 'principal_domaine_activites', None)
-            or (
-                sp.get_type_projet_display()
-                if sp.type_projet
-                else '-'
-            )
+            (sp.principal_domaine_activites or '').strip()
+            or 'Non renseigné'
         )
 
         lignes.append({
@@ -3444,6 +3739,16 @@ def rapport_preselection_comite(request):
         except (Paysage.DoesNotExist, ValueError):
             selected_paysage = None
 
+    # Export Excel avec exactement les filtres actuellement appliqués.
+    if request.GET.get('export') == 'excel':
+        return exporter_rapport_preselection_excel(
+            lignes=lignes,
+            total_couts=total_couts,
+            total_subventions=total_subventions,
+            selected_wilaya=selected_wilaya,
+            selected_paysage=selected_paysage,
+        )
+
     type_projet_choices = [
         ('AG', 'Agriculture'),
         ('EL', 'Élevage'),
@@ -3515,6 +3820,41 @@ def enregistrer_derniere_modification(sous_projet, utilisateur):
         'dernier_modificateur_username',
         'date_modification',
     ])
+
+
+def enregistrer_historique_modification(
+    sous_projet,
+    utilisateur,
+    section,
+    action='modification'
+):
+    """
+    Enregistre une action réalisée sur un dossier :
+    création, modification d'une section ou suppression.
+
+    Les informations principales du dossier sont copiées afin que
+    l'historique reste lisible même si le dossier est supprimé plus tard.
+    """
+    if not sous_projet or not utilisateur:
+        return None
+
+    return HistoriqueModificationDossier.objects.create(
+        sous_projet=sous_projet,
+        numero_reception=(
+            sous_projet.numero_reception_formulaire or ''
+        ),
+        intitule=(
+            sous_projet.intitule_sous_projet or ''
+        ),
+        paysage=(
+            sous_projet.paysage.nom
+            if sous_projet.paysage
+            else ''
+        ),
+        action=action,
+        section=section or '',
+        username=utilisateur.username or '',
+    )
 
 
 @login_required
@@ -3675,10 +4015,45 @@ def modifier_section_sous_projet(request, pk, section):
                         sous_projet.createur_username
                     )
 
-                obj.dernier_modificateur_username = (
-                    utilisateur.username
-                )
-                obj.save()
+                try:
+                    with transaction.atomic():
+                        obj.dernier_modificateur_username = (
+                            utilisateur.username
+                        )
+                        obj.save()
+
+                        enregistrer_historique_modification(
+                            sous_projet=obj,
+                            utilisateur=utilisateur,
+                            section=section,
+                            action='modification'
+                        )
+
+                except Exception as exc:
+                    messages.error(
+                        request,
+                        "❌ La modification a été annulée : "
+                        f"{exc}"
+                    )
+                    return render(
+                        request,
+                        'formulaire/modifier_section_sous_projet.html',
+                        {
+                            'sous_projet': sous_projet,
+                            'section': section,
+                            'titre_section': config['titre'],
+                            'form': form,
+                            'formset': None,
+                            'config_type': 'form',
+                            'can_add_line': False,
+                            'formset_prefix': '',
+                            'user_name': request.session.get('user_name'),
+                            'user_role': request.session.get('user_role'),
+                            'user_wilaya_nom': request.session.get(
+                                'user_wilaya_nom'
+                            ),
+                        }
+                    )
 
                 messages.success(
                     request,
@@ -3816,6 +4191,13 @@ def modifier_section_sous_projet(request, pk, section):
                             utilisateur
                         )
 
+                        enregistrer_historique_modification(
+                            sous_projet=sous_projet,
+                            utilisateur=utilisateur,
+                            section=section,
+                            action='modification'
+                        )
+
                     messages.success(
                         request,
                         "✅ Section modifiée avec succès."
@@ -3843,9 +4225,17 @@ def modifier_section_sous_projet(request, pk, section):
                 try:
                     with transaction.atomic():
                         formset.save()
+
                         enregistrer_derniere_modification(
                             sous_projet,
                             utilisateur
+                        )
+
+                        enregistrer_historique_modification(
+                            sous_projet=sous_projet,
+                            utilisateur=utilisateur,
+                            section=section,
+                            action='modification'
                         )
 
                     messages.success(
@@ -3947,4 +4337,247 @@ def modifier_section_sous_projet(request, pk, section):
             ),
         }
     )
+def superadmin_required(view_func):
+    """
+    Autorise uniquement les utilisateurs ayant le rôle superadmin.
+    """
+    @wraps(view_func)
+    def wrapper(request, *args, **kwargs):
+        utilisateur = get_current_user(request)
 
+        if not utilisateur:
+            return redirect('formulaire:login')
+
+        if utilisateur.role != 'superadmin':
+            messages.error(
+                request,
+                "❌ Cette page est réservée au Super Administrateur."
+            )
+            return redirect('formulaire:accueil')
+
+        return view_func(request, *args, **kwargs)
+
+    return wrapper
+
+
+@superadmin_required
+def admin_historique_modifications(request):
+    """
+    Historique des créations, modifications et suppressions de dossiers.
+    """
+
+    historiques = (
+        HistoriqueModificationDossier.objects
+        .select_related('sous_projet')
+        .all()
+    )
+
+    numero_reception = (
+        request.GET.get('numero_reception') or ''
+    ).strip()
+
+    username = (
+        request.GET.get('username') or ''
+    ).strip()
+
+    action = (
+        request.GET.get('action') or ''
+    ).strip()
+
+    section = (
+        request.GET.get('section') or ''
+    ).strip()
+
+    date_debut = (
+        request.GET.get('date_debut') or ''
+    ).strip()
+
+    date_fin = (
+        request.GET.get('date_fin') or ''
+    ).strip()
+
+    if numero_reception:
+        historiques = historiques.filter(
+            numero_reception__icontains=numero_reception
+        )
+
+    if username:
+        historiques = historiques.filter(
+            username__icontains=username
+        )
+
+    if action:
+        historiques = historiques.filter(
+            action=action
+        )
+
+    if section:
+        historiques = historiques.filter(
+            section=section
+        )
+
+    if date_debut:
+        historiques = historiques.filter(
+            date_action__date__gte=date_debut
+        )
+
+    if date_fin:
+        historiques = historiques.filter(
+            date_action__date__lte=date_fin
+        )
+
+    historiques = historiques.order_by(
+        '-date_action',
+        '-id'
+    )
+
+    paginator = Paginator(historiques, 30)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    sections_disponibles = (
+        HistoriqueModificationDossier.objects
+        .exclude(section='')
+        .values_list('section', flat=True)
+        .distinct()
+        .order_by('section')
+    )
+
+    context = {
+        'page_obj': page_obj,
+        'historiques': page_obj.object_list,
+
+        'numero_reception': numero_reception,
+        'username': username,
+        'selected_action': action,
+        'selected_section': section,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+
+        'sections_disponibles': sections_disponibles,
+
+        'total_resultats': paginator.count,
+
+        'user_name': request.session.get('user_name'),
+        'user_role': request.session.get('user_role'),
+        'user_wilaya_nom': request.session.get(
+            'user_wilaya_nom'
+        ),
+    }
+
+    return render(
+        request,
+        'formulaire/admin_historique_modifications.html',
+        context
+    )
+
+
+@superadmin_required
+def admin_historique_preselection(request):
+    """
+    Historique des changements de décision du comité.
+    """
+
+    historiques = (
+        HistoriqueSousProjet.objects
+        .select_related('sous_projet')
+        .all()
+    )
+
+    numero_reception = (
+        request.GET.get('numero_reception') or ''
+    ).strip()
+
+    username = (
+        request.GET.get('username') or ''
+    ).strip()
+
+    ancien_statut = (
+        request.GET.get('ancien_statut') or ''
+    ).strip()
+
+    nouveau_statut = (
+        request.GET.get('nouveau_statut') or ''
+    ).strip()
+
+    date_debut = (
+        request.GET.get('date_debut') or ''
+    ).strip()
+
+    date_fin = (
+        request.GET.get('date_fin') or ''
+    ).strip()
+
+    if numero_reception:
+        historiques = historiques.filter(
+            numero_reception__icontains=numero_reception
+        )
+
+    if username:
+        historiques = historiques.filter(
+            username__icontains=username
+        )
+
+    if ancien_statut:
+        historiques = historiques.filter(
+            ancien_statut=ancien_statut
+        )
+
+    if nouveau_statut:
+        historiques = historiques.filter(
+            nouveau_statut=nouveau_statut
+        )
+
+    if date_debut:
+        historiques = historiques.filter(
+            date_action__date__gte=date_debut
+        )
+
+    if date_fin:
+        historiques = historiques.filter(
+            date_action__date__lte=date_fin
+        )
+
+    historiques = historiques.order_by(
+        '-date_action',
+        '-id'
+    )
+
+    paginator = Paginator(historiques, 30)
+    page_number = request.GET.get('page')
+    page_obj = paginator.get_page(page_number)
+
+    statut_choices = [
+        ('a_examiner', 'À examiner'),
+        ('preselectionne', 'Présélectionné'),
+        ('rejete', 'Rejeté'),
+        ('reexaminer', 'À réexaminer'),
+    ]
+
+    context = {
+        'page_obj': page_obj,
+        'historiques': page_obj.object_list,
+
+        'numero_reception': numero_reception,
+        'username': username,
+        'selected_ancien_statut': ancien_statut,
+        'selected_nouveau_statut': nouveau_statut,
+        'date_debut': date_debut,
+        'date_fin': date_fin,
+
+        'statut_choices': statut_choices,
+
+        'total_resultats': paginator.count,
+
+        'user_name': request.session.get('user_name'),
+        'user_role': request.session.get('user_role'),
+        'user_wilaya_nom': request.session.get(
+            'user_wilaya_nom'
+        ),
+    }
+
+    return render(
+        request,
+        'formulaire/admin_historique_preselection.html',
+        context
+    )

@@ -1,0 +1,179 @@
+{% extends 'formulaire/base.html' %}
+{% load static %}
+
+{% block title %}Historique des modifications - PADISAM{% endblock %}
+
+{% block extra_css %}
+<link href="{% static 'formulaire/css/formulaire.css' %}" rel="stylesheet">
+<link href="{% static 'formulaire/css/statistics.css' %}" rel="stylesheet">
+<link href="{% static 'formulaire/css/historique.css' %}" rel="stylesheet">
+{% endblock %}
+
+{% block content %}
+<div class="container historique-page">
+
+    <div class="historique-header modifications">
+        <h1>Historique des modifications</h1>
+        <p>Consultation des créations, modifications et suppressions réalisées sur les dossiers.</p>
+    </div>
+
+    <div class="filters-card">
+        <div class="filters-title">Rechercher et filtrer l’historique</div>
+
+        <form method="get" class="filters-form">
+            <div class="filter-group">
+                <label for="numero_reception">N° de réception</label>
+                <input type="text" name="numero_reception" id="numero_reception"
+                       class="filter-control" value="{{ numero_reception }}"
+                       placeholder="Exemple : 12" autocomplete="off">
+            </div>
+
+            <div class="filter-group">
+                <label for="username">Utilisateur</label>
+                <input type="text" name="username" id="username"
+                       class="filter-control" value="{{ username }}"
+                       placeholder="Nom d’utilisateur" autocomplete="off">
+            </div>
+
+            <div class="filter-group">
+                <label for="action">Action</label>
+                <select name="action" id="action" class="filter-control">
+                    <option value="">Toutes les actions</option>
+                    <option value="creation" {% if selected_action == 'creation' %}selected{% endif %}>Création</option>
+                    <option value="modification" {% if selected_action == 'modification' %}selected{% endif %}>Modification</option>
+                    <option value="suppression" {% if selected_action == 'suppression' %}selected{% endif %}>Suppression</option>
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="section">Section</label>
+                <select name="section" id="section" class="filter-control">
+                    <option value="">Toutes les sections</option>
+                    {% for section_item in sections_disponibles %}
+                        <option value="{{ section_item }}" {% if selected_section == section_item %}selected{% endif %}>
+                            {{ section_item|capfirst }}
+                        </option>
+                    {% endfor %}
+                </select>
+            </div>
+
+            <div class="filter-group">
+                <label for="date_debut">Date de début</label>
+                <input type="date" name="date_debut" id="date_debut"
+                       class="filter-control" value="{{ date_debut }}">
+            </div>
+
+            <div class="filter-group">
+                <label for="date_fin">Date de fin</label>
+                <input type="date" name="date_fin" id="date_fin"
+                       class="filter-control" value="{{ date_fin }}">
+            </div>
+
+            <div class="filter-actions">
+                <button type="submit" class="search-btn">Rechercher</button>
+                <a href="{% url 'formulaire:admin_historique_modifications' %}" class="reset-btn">Réinitialiser</a>
+            </div>
+        </form>
+    </div>
+
+    <div class="stats-grid">
+        <div class="stat-item">
+            <span class="stat-label">Résultats trouvés</span>
+            <strong>{{ total_resultats }}</strong>
+        </div>
+        <div class="stat-item secondary">
+            <span class="stat-label">Éléments sur cette page</span>
+            <strong>{{ historiques|length }}</strong>
+        </div>
+    </div>
+
+    <div class="historique-table-card">
+        <div class="card-header-custom">
+            <h5>Liste des opérations</h5>
+            <span class="result-count">
+                {{ total_resultats }} opération{{ total_resultats|pluralize }} trouvée{{ total_resultats|pluralize }}
+            </span>
+        </div>
+
+        {% if historiques %}
+            <div class="table-responsive">
+                <table class="historique-table modifications-table">
+                    <thead>
+                        <tr>
+                            <th>Date</th>
+                            <th>Utilisateur</th>
+                            <th>Action</th>
+                            <th>Section</th>
+                            <th>N° réception</th>
+                            <th>Paysage / ZOCA</th>
+                            <th>Intitulé du sous-projet</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for historique in historiques %}
+                            <tr>
+                                <td class="date-cell">{{ historique.date_action|date:"d/m/Y H:i" }}</td>
+                                <td class="username-cell">{{ historique.username|default:"—" }}</td>
+                                <td>
+                                    {% if historique.action == 'creation' %}
+                                        <span class="badge-pill-custom badge-creation">Création</span>
+                                    {% elif historique.action == 'modification' %}
+                                        <span class="badge-pill-custom badge-modification">Modification</span>
+                                    {% elif historique.action == 'suppression' %}
+                                        <span class="badge-pill-custom badge-suppression">Suppression</span>
+                                    {% else %}
+                                        <span class="badge-pill-custom badge-default">{{ historique.action|capfirst }}</span>
+                                    {% endif %}
+                                </td>
+                                <td>
+                                    <span class="badge-pill-custom section-badge">
+                                        {{ historique.section|default:"Dossier complet"|capfirst }}
+                                    </span>
+                                </td>
+                                <td class="numero-cell">{{ historique.numero_reception|default:"—" }}</td>
+                                <td class="paysage-cell">{{ historique.paysage|default:"—" }}</td>
+                                <td class="project-title">{{ historique.intitule|default:"—" }}</td>
+                            </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+
+            {% if page_obj.paginator.num_pages > 1 %}
+                <div class="pagination-wrap">
+                    <nav aria-label="Pagination de l’historique">
+                        <ul class="pagination">
+                            {% if page_obj.has_previous %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.previous_page_number }}&numero_reception={{ numero_reception|urlencode }}&username={{ username|urlencode }}&action={{ selected_action|urlencode }}&section={{ selected_section|urlencode }}&date_debut={{ date_debut|urlencode }}&date_fin={{ date_fin|urlencode }}">Précédent</a>
+                                </li>
+                            {% endif %}
+
+                            {% for numero in page_obj.paginator.page_range %}
+                                {% if numero == page_obj.number %}
+                                    <li class="page-item active"><span class="page-link">{{ numero }}</span></li>
+                                {% elif numero >= page_obj.number|add:'-2' and numero <= page_obj.number|add:'2' %}
+                                    <li class="page-item">
+                                        <a class="page-link" href="?page={{ numero }}&numero_reception={{ numero_reception|urlencode }}&username={{ username|urlencode }}&action={{ selected_action|urlencode }}&section={{ selected_section|urlencode }}&date_debut={{ date_debut|urlencode }}&date_fin={{ date_fin|urlencode }}">{{ numero }}</a>
+                                    </li>
+                                {% endif %}
+                            {% endfor %}
+
+                            {% if page_obj.has_next %}
+                                <li class="page-item">
+                                    <a class="page-link" href="?page={{ page_obj.next_page_number }}&numero_reception={{ numero_reception|urlencode }}&username={{ username|urlencode }}&action={{ selected_action|urlencode }}&section={{ selected_section|urlencode }}&date_debut={{ date_debut|urlencode }}&date_fin={{ date_fin|urlencode }}">Suivant</a>
+                                </li>
+                            {% endif %}
+                        </ul>
+                    </nav>
+                </div>
+            {% endif %}
+        {% else %}
+            <div class="empty-box">
+                <strong>Aucune opération trouvée</strong>
+                Aucun historique ne correspond aux critères sélectionnés.
+            </div>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

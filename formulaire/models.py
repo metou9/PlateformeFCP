@@ -769,3 +769,143 @@ class HistoriqueSousProjet(models.Model):
             f"{self.ancien_statut or '-'} → {self.nouveau_statut} - "
             f"{self.username}"
         )
+class HistoriqueSousProjet(models.Model):
+    STATUT_CHOICES = [
+        ('a_examiner', 'À examiner'),
+        ('preselectionne', 'Présélectionné'),
+        ('rejete', 'Rejeté'),
+        ('reexaminer', 'À réexaminer'),
+    ]
+
+    sous_projet = models.ForeignKey(
+        'SousProjet',
+        on_delete=models.CASCADE,
+        related_name='historique_statuts',
+        verbose_name='Dossier'
+    )
+
+    numero_reception = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Numéro de réception'
+    )
+
+    intitule = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name='Intitulé du dossier'
+    )
+
+    paysage = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Paysage / ZOCA'
+    )
+
+    ancien_statut = models.CharField(
+        max_length=30,
+        blank=True,
+        choices=STATUT_CHOICES,
+        verbose_name='Ancien statut'
+    )
+
+    nouveau_statut = models.CharField(
+        max_length=30,
+        choices=STATUT_CHOICES,
+        db_index=True,
+        verbose_name='Nouveau statut'
+    )
+
+    username = models.CharField(
+        max_length=150,
+        db_index=True,
+        verbose_name="Nom d'utilisateur"
+    )
+
+    date_action = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        verbose_name="Date et heure de l'action"
+    )
+
+    class Meta:
+        ordering = ['-date_action', '-id']
+        verbose_name = 'Historique de présélection'
+        verbose_name_plural = 'Historiques de présélection'
+
+    def __str__(self):
+        return (
+            f"{self.numero_reception} - "
+            f"{self.ancien_statut or '-'} → {self.nouveau_statut}"
+        )
+
+
+class HistoriqueModificationDossier(models.Model):
+    ACTION_CHOICES = [
+        ('creation', 'Création'),
+        ('modification', 'Modification'),
+        ('suppression', 'Suppression'),
+    ]
+
+    sous_projet = models.ForeignKey(
+        'SousProjet',
+        on_delete=models.SET_NULL,
+        null=True,
+        blank=True,
+        related_name='historique_modifications',
+        verbose_name='Dossier'
+    )
+
+    numero_reception = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Numéro de réception'
+    )
+
+    intitule = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name='Intitulé du dossier'
+    )
+
+    paysage = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Paysage / ZOCA'
+    )
+
+    action = models.CharField(
+        max_length=20,
+        choices=ACTION_CHOICES,
+        db_index=True,
+        verbose_name='Action'
+    )
+
+    section = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Section concernée'
+    )
+
+    username = models.CharField(
+        max_length=150,
+        db_index=True,
+        verbose_name="Nom d'utilisateur"
+    )
+
+    date_action = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        verbose_name="Date et heure de l'action"
+    )
+
+    class Meta:
+        ordering = ['-date_action', '-id']
+        verbose_name = 'Historique de modification'
+        verbose_name_plural = 'Historiques de modification'
+
+    def __str__(self):
+        return (
+            f"{self.numero_reception} - "
+            f"{self.action} - {self.username}"
+        )

@@ -26,11 +26,20 @@ Résultats de présélection du comité
             </p>
         </div>
 
-        <button type="button"
-                class="btn btn-outline-secondary"
-                onclick="window.print();">
-            Imprimer
-        </button>
+        <div class="d-flex gap-2">
+            <a
+                href="{% if request.GET %}?{{ request.GET.urlencode }}&export=excel{% else %}?export=excel{% endif %}"
+                class="btn btn-success"
+            >
+                Exporter Excel
+            </a>
+
+            <button type="button"
+                    class="btn btn-outline-secondary"
+                    onclick="window.print();">
+                Imprimer
+            </button>
+        </div>
 
     </div>
 
