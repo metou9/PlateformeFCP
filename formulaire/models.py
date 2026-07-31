@@ -684,3 +684,88 @@ class ResultatPreselection(models.Model):
 
     def __str__(self):
         return f"{self.sous_projet.numero_reception_formulaire} - Critère {self.numero_critere}" 
+    
+class HistoriqueSousProjet(models.Model):
+    STATUT_CHOICES = [
+        ('a_examiner', 'À examiner'),
+        ('preselectionne', 'Présélectionné'),
+        ('rejete', 'Rejeté'),
+        ('reexaminer', 'À réexaminer'),
+    ]
+
+    sous_projet = models.ForeignKey(
+        'SousProjet',
+        on_delete=models.CASCADE,
+        related_name='historique_statuts',
+        verbose_name='Dossier'
+    )
+
+    # Informations du dossier copiées au moment du changement
+    numero_reception = models.CharField(
+        max_length=100,
+        blank=True,
+        verbose_name='Numéro de réception'
+    )
+
+    intitule = models.CharField(
+        max_length=500,
+        blank=True,
+        verbose_name='Intitulé du dossier'
+    )
+
+    paysage = models.CharField(
+        max_length=255,
+        blank=True,
+        verbose_name='Paysage / ZOCA'
+    )
+
+    # Transition de statut
+    ancien_statut = models.CharField(
+        max_length=30,
+        blank=True,
+        choices=STATUT_CHOICES,
+        verbose_name='Ancien statut'
+    )
+
+    nouveau_statut = models.CharField(
+        max_length=30,
+        choices=STATUT_CHOICES,
+        db_index=True,
+        verbose_name='Nouveau statut'
+    )
+
+    # Utilisateur ayant effectué l'action
+    username = models.CharField(
+        max_length=150,
+        db_index=True,
+        verbose_name="Nom d'utilisateur"
+    )
+
+    # Date et heure automatiques
+    date_action = models.DateTimeField(
+        auto_now_add=True,
+        db_index=True,
+        verbose_name="Date et heure de l'action"
+    )
+
+    class Meta:
+        ordering = ['-date_action', '-id']
+        verbose_name = 'Historique du dossier'
+        verbose_name_plural = 'Historique des dossiers'
+        indexes = [
+            models.Index(
+                fields=['sous_projet', '-date_action'],
+                name='hist_sp_date_idx'
+            ),
+            models.Index(
+                fields=['nouveau_statut', '-date_action'],
+                name='hist_statut_date_idx'
+            ),
+        ]
+
+    def __str__(self):
+        return (
+            f"{self.numero_reception or self.sous_projet_id} - "
+            f"{self.ancien_statut or '-'} → {self.nouveau_statut} - "
+            f"{self.username}"
+        )

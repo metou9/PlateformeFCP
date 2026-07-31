@@ -51,6 +51,7 @@ from .models import (
     Activite,
     RealisationPassee,
     PassifEmprunt,
+    HistoriqueSousProjet,
 )
 
 
@@ -1817,6 +1818,41 @@ def appliquer_preselection_automatique(sp):
     }
 
 
+
+def enregistrer_historique_statut(
+    sous_projet,
+    utilisateur,
+    ancien_statut,
+    nouveau_statut
+):
+    """
+    Enregistre une transition de statut du dossier.
+
+    Les informations du dossier sont copiées dans l'historique afin
+    de conserver leur valeur au moment exact de l'action.
+    """
+    if not sous_projet or not utilisateur or not nouveau_statut:
+        return None
+
+    return HistoriqueSousProjet.objects.create(
+        sous_projet=sous_projet,
+        numero_reception=(
+            sous_projet.numero_reception_formulaire or ''
+        ),
+        intitule=(
+            sous_projet.intitule_sous_projet or ''
+        ),
+        paysage=(
+            sous_projet.paysage.nom
+            if sous_projet.paysage
+            else ''
+        ),
+        ancien_statut=ancien_statut or '',
+        nouveau_statut=nouveau_statut,
+        username=utilisateur.username or '',
+    )
+
+
 def filtrer_et_trier_preselection(request, sous_projets_base):
     """
     Applique les filtres communs aux pages de présélection :
@@ -2538,9 +2574,7 @@ def preselection_comite_detail(request, pk):
 
     auto = appliquer_preselection_automatique(sous_projet)
 
-    # Aucun verrouillage après une décision du comité.
-    # Le comité peut toujours rouvrir et modifier une présélection,
-    # même si le dossier est déjà présélectionné ou rejeté.
+    # Aucun verrouillage : le comité peut toujours modifier la décision.
     readonly_mode = False
 
     if not sous_projet.resultats_preselection.exists():
@@ -2579,6 +2613,12 @@ def preselection_comite_detail(request, pk):
     )
 
     if request.method == 'POST':
+        ancien_statut = (
+            sous_projet.decision_comite
+            or sous_projet.status
+            or 'a_examiner'
+        )
+
         formset = ResultatPreselectionFormSet(
             request.POST,
             queryset=queryset,
@@ -2599,8 +2639,8 @@ def preselection_comite_detail(request, pk):
             'global-motif_comite'
         )
 
-        # Décisions complètes : elles exigent une décision et un motif
-        # pour chaque critère, mais elles ne verrouillent plus le dossier.
+        # Une décision complète impose la saisie des décisions et motifs,
+        # mais ne verrouille plus le dossier.
         decision_finale = decision_globale in [
             'preselectionne',
             'rejete',
@@ -2715,11 +2755,17 @@ def preselection_comite_detail(request, pk):
                     timezone.now()
                 )
 
-                # Le statut reflète la décision globale, sans verrouiller
-                # la possibilité de la modifier ultérieurement.
+                # Le statut reflète la décision, sans bloquer les modifications futures.
                 sous_projet.status = decision_globale
 
                 sous_projet.save()
+
+                enregistrer_historique_statut(
+                    sous_projet=sous_projet,
+                    utilisateur=utilisateur,
+                    ancien_statut=ancien_statut,
+                    nouveau_statut=decision_globale
+                )
 
                 messages.success(
                     request,
@@ -2744,6 +2790,19 @@ def preselection_comite_detail(request, pk):
                     sous_projet.evaluation_comite_terminee = False
 
                 sous_projet.save()
+
+                nouveau_statut = (
+                    decision_globale
+                    if decision_globale
+                    else 'a_examiner'
+                )
+
+                enregistrer_historique_statut(
+                    sous_projet=sous_projet,
+                    utilisateur=utilisateur,
+                    ancien_statut=ancien_statut,
+                    nouveau_statut=nouveau_statut
+                )
 
                 if decision_globale == 'reexaminer':
                     messages.success(
