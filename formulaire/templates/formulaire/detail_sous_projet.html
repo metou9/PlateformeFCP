@@ -52,7 +52,7 @@
             <p class="text-muted mb-0">Consultation complète des informations du dossier</p>
         </div>
         <div class="col-md-4 text-end">
-            <a href="{% url 'formulaire:liste_sous_projets' %}" class="btn-secondary-custom me-2">← Retour à la liste</a>
+            <a href="{{ liste_retour }}" class="btn-secondary-custom me-2">← Retour à la liste</a>
             <button type="button" class="btn-action" onclick="window.print()">🖨️ Imprimer</button>
         </div>
     </div>

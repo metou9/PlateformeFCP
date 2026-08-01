@@ -473,6 +473,18 @@ Résultats de présélection du comité
                             </th>
 
                             <th rowspan="2">
+                                Type de projet
+                            </th>
+
+                            <th rowspan="2">
+                                Guichet
+                            </th>
+
+                            <th rowspan="2">
+                                Paysage / ZOCA
+                            </th>
+
+                            <th rowspan="2">
                                 Village
                             </th>
 
@@ -555,6 +567,18 @@ Résultats de présélection du comité
                                 </td>
 
                                 <td>
+                                    {{ ligne.type_projet }}
+                                </td>
+
+                                <td class="text-center">
+                                    {{ ligne.guichet }}
+                                </td>
+
+                                <td>
+                                    {{ ligne.paysage }}
+                                </td>
+
+                                <td>
                                     {{ ligne.village }}
                                 </td>
 
@@ -630,7 +654,7 @@ Résultats de présélection du comité
 
                             <tr>
 
-                                <td colspan="13"
+                                <td colspan="16"
                                     class="text-center py-4 text-muted">
 
                                     Aucun dossier ne correspond aux filtres sélectionnés.
@@ -649,7 +673,7 @@ Résultats de présélection du comité
 
                             <tr>
 
-                                <th colspan="7"
+                                <th colspan="10"
                                     class="text-end">
 
                                     Total général

@@ -1495,7 +1495,22 @@ def liste_sous_projets(request):
 def detail_sous_projet(request, pk):
     """Détail d'un sous-projet."""
     utilisateur = get_current_user(request)
-    sous_projet = get_object_or_404(get_accessible_sous_projets(utilisateur), pk=pk)
+
+    sous_projet = get_object_or_404(
+        get_accessible_sous_projets(utilisateur),
+        pk=pk
+    )
+
+    liste_retour = request.GET.get('next')
+
+    if not liste_retour or not url_has_allowed_host_and_scheme(
+        url=liste_retour,
+        allowed_hosts={request.get_host()},
+        require_https=request.is_secure(),
+    ):
+        liste_retour = reverse(
+            'formulaire:liste_sous_projets'
+        )
 
     infrastructures = list(sous_projet.infrastructures.all())
     equipements = list(sous_projet.equipements.all())
@@ -1625,6 +1640,7 @@ def detail_sous_projet(request, pk):
         'user_name': request.session.get('user_name'),
         'user_role': request.session.get('user_role'),
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
+        'liste_retour': liste_retour,
 
         'infrastructures': infrastructures,
         'equipements': equipements,
@@ -3195,20 +3211,62 @@ def exporter_rapport_preselection_excel(
     selected_paysage=None
 ):
     """
-    Génère un fichier Excel reprenant exactement les colonnes principales
-    du rapport de présélection du comité.
+    Génère le fichier Excel du rapport de présélection du comité.
+
+    Colonnes exportées :
+    - N° de réception
+    - Intitulé
+    - Type de projet
+    - Guichet
+    - Paysage / ZOCA
+    - Village
+    - Nom et statut juridique
+    - Principal domaine d'activité
+    - Personne contact
+    - Téléphone
+    - Coût total
+    - Subvention
+    - Critères rejetés automatiquement
+    - Critères rejetés par le CPR
+    - Décision
+    - Motif
     """
     workbook = Workbook()
     worksheet = workbook.active
     worksheet.title = "Présélection comité"
 
-    # Couleurs et styles
-    green_fill = PatternFill("solid", fgColor="5DBB63")
-    light_green_fill = PatternFill("solid", fgColor="E8F5E9")
-    gray_fill = PatternFill("solid", fgColor="F3F4F6")
-    white_font = Font(color="FFFFFF", bold=True)
-    bold_font = Font(bold=True)
-    thin_gray = Side(style="thin", color="D1D5DB")
+    # =====================================================
+    # COULEURS ET STYLES
+    # =====================================================
+    green_fill = PatternFill(
+        "solid",
+        fgColor="5DBB63"
+    )
+
+    light_green_fill = PatternFill(
+        "solid",
+        fgColor="E8F5E9"
+    )
+
+    gray_fill = PatternFill(
+        "solid",
+        fgColor="F3F4F6"
+    )
+
+    white_font = Font(
+        color="FFFFFF",
+        bold=True
+    )
+
+    bold_font = Font(
+        bold=True
+    )
+
+    thin_gray = Side(
+        style="thin",
+        color="D1D5DB"
+    )
+
     border = Border(
         left=thin_gray,
         right=thin_gray,
@@ -3216,41 +3274,70 @@ def exporter_rapport_preselection_excel(
         bottom=thin_gray,
     )
 
-    # Titre
-    worksheet.merge_cells("A1:M1")
-    worksheet["A1"] = "Résultats de présélection du comité"
-    worksheet["A1"].font = Font(bold=True, size=16, color="FFFFFF")
+    # =====================================================
+    # TITRE
+    # 16 colonnes : A à P
+    # =====================================================
+    worksheet.merge_cells("A1:P1")
+
+    worksheet["A1"] = (
+        "Résultats de présélection du comité"
+    )
+
+    worksheet["A1"].font = Font(
+        bold=True,
+        size=16,
+        color="FFFFFF"
+    )
+
     worksheet["A1"].fill = green_fill
+
     worksheet["A1"].alignment = Alignment(
         horizontal="center",
         vertical="center"
     )
+
     worksheet.row_dimensions[1].height = 26
 
-    # Sous-titre / filtres
+    # =====================================================
+    # SOUS-TITRE ET FILTRES
+    # =====================================================
     wilaya_label = (
         selected_wilaya.nom
         if selected_wilaya
         else "Toutes les Wilayas"
     )
+
     paysage_label = (
         selected_paysage.nom
         if selected_paysage
         else "Tous les paysages"
     )
 
-    worksheet.merge_cells("A2:M2")
+    worksheet.merge_cells("A2:P2")
+
     worksheet["A2"] = (
         f"Wilaya : {wilaya_label} | "
         f"Paysage / ZOCA : {paysage_label}"
     )
+
     worksheet["A2"].font = bold_font
     worksheet["A2"].fill = light_green_fill
-    worksheet["A2"].alignment = Alignment(horizontal="center")
 
+    worksheet["A2"].alignment = Alignment(
+        horizontal="center",
+        vertical="center"
+    )
+
+    # =====================================================
+    # EN-TÊTES
+    # =====================================================
     headers = [
         "N°",
         "Intitulé du sous-projet",
+        "Type de projet",
+        "Guichet",
+        "Paysage / ZOCA",
         "Village",
         "Nom et statut juridique",
         "Principal domaine d’activité",
@@ -3266,80 +3353,199 @@ def exporter_rapport_preselection_excel(
 
     header_row = 4
 
-    for column_index, header in enumerate(headers, start=1):
+    for column_index, header in enumerate(
+        headers,
+        start=1
+    ):
         cell = worksheet.cell(
             row=header_row,
             column=column_index,
             value=header
         )
+
         cell.fill = green_fill
         cell.font = white_font
+
         cell.alignment = Alignment(
             horizontal="center",
             vertical="center",
             wrap_text=True
         )
+
         cell.border = border
 
-    worksheet.freeze_panes = "A5"
-    worksheet.auto_filter.ref = f"A4:M{max(4, len(lignes) + 4)}"
+    worksheet.row_dimensions[header_row].height = 42
 
+    # Geler les lignes de titre et d'en-tête
+    worksheet.freeze_panes = "A5"
+
+    # Filtre Excel sur les 16 colonnes
+    worksheet.auto_filter.ref = (
+        f"A4:P{max(4, len(lignes) + 4)}"
+    )
+
+    # =====================================================
+    # LIBELLÉS DES DÉCISIONS
+    # =====================================================
     decision_labels = {
         "preselectionne": "Présélectionné",
         "rejete": "Rejeté",
         "reexaminer": "À réexaminer",
         "a_examiner": "À examiner",
+        "": "À examiner",
+        None: "À examiner",
     }
 
-    for row_index, ligne in enumerate(lignes, start=5):
+    # =====================================================
+    # LIGNES DU RAPPORT
+    # =====================================================
+    for row_index, ligne in enumerate(
+        lignes,
+        start=5
+    ):
         values = [
-            ligne.get("numero", "-"),
-            ligne.get("intitule", "-"),
-            ligne.get("village", "-"),
-            ligne.get("nom_statut_juridique", "-"),
-            ligne.get("domaine_activite", "Non renseigné"),
-            ligne.get("personne_contact", "-"),
-            ligne.get("telephone", "-"),
-            float(ligne.get("cout_total") or 0),
-            float(ligne.get("subvention") or 0),
-            ligne.get("nb_rejets_automatiques", 0),
-            ligne.get("nb_rejets_comite", 0),
+            ligne.get(
+                "numero",
+                "Non renseigné"
+            ),
+
+            ligne.get(
+                "intitule",
+                "Non renseigné"
+            ),
+
+            ligne.get(
+                "type_projet",
+                "Non renseigné"
+            ),
+
+            ligne.get(
+                "guichet",
+                "Non renseigné"
+            ),
+
+            ligne.get(
+                "paysage",
+                "Non renseigné"
+            ),
+
+            ligne.get(
+                "village",
+                "Non renseigné"
+            ),
+
+            ligne.get(
+                "nom_statut_juridique",
+                "Non renseigné"
+            ),
+
+            ligne.get(
+                "domaine_activite",
+                "Non renseigné"
+            ),
+
+            ligne.get(
+                "personne_contact",
+                "Non renseigné"
+            ),
+
+            ligne.get(
+                "telephone",
+                "Non renseigné"
+            ),
+
+            float(
+                ligne.get("cout_total") or 0
+            ),
+
+            float(
+                ligne.get("subvention") or 0
+            ),
+
+            ligne.get(
+                "nb_rejets_automatiques",
+                0
+            ),
+
+            ligne.get(
+                "nb_rejets_comite",
+                0
+            ),
+
             decision_labels.get(
                 ligne.get("decision_code"),
-                ligne.get("decision", "À examiner")
+                ligne.get(
+                    "decision",
+                    "À examiner"
+                )
             ),
-            ligne.get("motif", "-"),
+
+            ligne.get(
+                "motif",
+                "Non renseigné"
+            ),
         ]
 
-        for column_index, value in enumerate(values, start=1):
+        for column_index, value in enumerate(
+            values,
+            start=1
+        ):
             cell = worksheet.cell(
                 row=row_index,
                 column=column_index,
                 value=value
             )
+
             cell.border = border
+
             cell.alignment = Alignment(
                 vertical="top",
                 wrap_text=True
             )
 
-            if column_index in (8, 9):
+            # Colonnes financières :
+            # K = coût total
+            # L = subvention
+            if column_index in (11, 12):
                 cell.number_format = '#,##0.00'
+                cell.alignment = Alignment(
+                    horizontal="right",
+                    vertical="top"
+                )
 
-            if column_index in (1, 7, 10, 11, 12):
+            # Colonnes centrées :
+            # A : numéro
+            # C : type
+            # D : guichet
+            # J : téléphone
+            # M et N : nombres de critères
+            # O : décision
+            if column_index in (
+                1,
+                3,
+                4,
+                10,
+                13,
+                14,
+                15,
+            ):
                 cell.alignment = Alignment(
                     horizontal="center",
                     vertical="top",
                     wrap_text=True
                 )
 
+    # =====================================================
+    # LIGNE TOTAL GÉNÉRAL
+    # =====================================================
     total_row = len(lignes) + 5
 
+    # Fusion de A à J
     worksheet.merge_cells(
         start_row=total_row,
         start_column=1,
         end_row=total_row,
-        end_column=7,
+        end_column=10,
     )
 
     total_label_cell = worksheet.cell(
@@ -3347,77 +3553,122 @@ def exporter_rapport_preselection_excel(
         column=1,
         value="TOTAL GÉNÉRAL"
     )
+
     total_label_cell.font = bold_font
     total_label_cell.fill = gray_fill
-    total_label_cell.alignment = Alignment(horizontal="right")
+
+    total_label_cell.alignment = Alignment(
+        horizontal="right",
+        vertical="center"
+    )
+
     total_label_cell.border = border
 
-    for merged_column in range(1, 8):
+    # Bordures des cellules fusionnées A à J
+    for merged_column in range(1, 11):
         worksheet.cell(
             row=total_row,
             column=merged_column
         ).border = border
 
+        worksheet.cell(
+            row=total_row,
+            column=merged_column
+        ).fill = gray_fill
+
+    # Coût total en colonne K
     total_cost_cell = worksheet.cell(
         row=total_row,
-        column=8,
+        column=11,
         value=float(total_couts or 0)
     )
+
     total_cost_cell.font = bold_font
     total_cost_cell.fill = gray_fill
     total_cost_cell.number_format = '#,##0.00'
     total_cost_cell.border = border
 
+    total_cost_cell.alignment = Alignment(
+        horizontal="right",
+        vertical="center"
+    )
+
+    # Subvention en colonne L
     total_subvention_cell = worksheet.cell(
         row=total_row,
-        column=9,
+        column=12,
         value=float(total_subventions or 0)
     )
+
     total_subvention_cell.font = bold_font
     total_subvention_cell.fill = gray_fill
     total_subvention_cell.number_format = '#,##0.00'
     total_subvention_cell.border = border
 
-    for column_index in range(10, 14):
-        cell = worksheet.cell(row=total_row, column=column_index)
+    total_subvention_cell.alignment = Alignment(
+        horizontal="right",
+        vertical="center"
+    )
+
+    # Colonnes M à P
+    for column_index in range(13, 17):
+        cell = worksheet.cell(
+            row=total_row,
+            column=column_index
+        )
+
         cell.fill = gray_fill
         cell.border = border
 
-    # Largeurs de colonnes
+    # =====================================================
+    # LARGEURS DES COLONNES
+    # =====================================================
     column_widths = {
-        1: 14,
-        2: 34,
-        3: 20,
-        4: 32,
-        5: 32,
-        6: 26,
-        7: 16,
-        8: 18,
-        9: 18,
-        10: 18,
-        11: 18,
-        12: 18,
-        13: 40,
+        1: 14,   # N°
+        2: 35,   # Intitulé
+        3: 20,   # Type de projet
+        4: 14,   # Guichet
+        5: 26,   # Paysage / ZOCA
+        6: 20,   # Village
+        7: 32,   # Nom et statut juridique
+        8: 34,   # Domaine d'activité
+        9: 26,   # Personne contact
+        10: 17,  # Téléphone
+        11: 18,  # Coût total
+        12: 18,  # Subvention
+        13: 20,  # Rejets automatiques
+        14: 18,  # Rejets CPR
+        15: 20,  # Décision
+        16: 42,  # Motif
     }
 
-    for column_index, width in column_widths.items():
+    for column_index, width in (
+        column_widths.items()
+    ):
         worksheet.column_dimensions[
             get_column_letter(column_index)
         ].width = width
 
+    # Masquer le quadrillage Excel
     worksheet.sheet_view.showGridLines = False
 
+    # =====================================================
+    # RÉPONSE HTTP
+    # =====================================================
     response = HttpResponse(
         content_type=(
-            "application/vnd.openxmlformats-officedocument."
-            "spreadsheetml.sheet"
+            "application/vnd.openxmlformats-"
+            "officedocument.spreadsheetml.sheet"
         )
     )
+
     response["Content-Disposition"] = (
-        'attachment; filename="rapport_preselection_comite.xlsx"'
+        'attachment; '
+        'filename="rapport_preselection_comite.xlsx"'
     )
 
     workbook.save(response)
+
     return response
 
 
@@ -3655,6 +3906,22 @@ def rapport_preselection_comite(request):
             'sous_projet': sp,
             'numero': sp.numero_reception_formulaire or '-',
             'intitule': sp.intitule_sous_projet or '-',
+            'type_projet': (
+    sp.get_type_projet_display()
+    if sp.type_projet
+    else 'Non renseigné'
+),
+
+'guichet': (
+    sp.get_guichet_display()
+    if sp.guichet
+    else 'Non renseigné'
+),
+'paysage': (
+    sp.paysage.nom
+    if sp.paysage
+    else 'Non renseigné'
+),
             'village': sp.village or '-',
             'nom_statut_juridique': sp.nom_statut_juridique or '-',
             'domaine_activite': domaine_activite,
