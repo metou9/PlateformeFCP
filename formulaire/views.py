@@ -100,15 +100,24 @@ def is_admin_like(utilisateur):
 # =========================================================
 
 CORRECTION_PAYSAGES_PAR_USERNAME = {
+    # Accès limité aux deux paysages indiqués.
     'smaziz': [
         'CPB Extension',
         'Bababé',
     ],
+
+    # None signifie : accès à tous les dossiers et modification autorisée.
+    'nedhirou': None,
 }
 
 
 def get_paysages_autorises_correction(utilisateur):
-    """Retourne les paysages autorisés selon le username."""
+    """
+    Retourne :
+    - une liste de paysages pour un utilisateur correction limité ;
+    - None pour un utilisateur correction ayant accès à tous les dossiers ;
+    - une liste vide pour un utilisateur correction non configuré.
+    """
     if not utilisateur or utilisateur.role != 'correction':
         return []
 
@@ -135,6 +144,11 @@ def can_modify_project(utilisateur, sous_projet):
         paysages_autorises = get_paysages_autorises_correction(
             utilisateur
         )
+
+        # None signifie que ce compte correction peut modifier
+        # tous les dossiers, quel que soit le paysage.
+        if paysages_autorises is None:
+            return True
 
         if not paysages_autorises or not sous_projet.paysage:
             return False
@@ -200,6 +214,10 @@ def get_accessible_sous_projets(utilisateur):
         paysages_autorises = get_paysages_autorises_correction(
             utilisateur
         )
+
+        # None signifie que ce compte correction voit tous les dossiers.
+        if paysages_autorises is None:
+            return SousProjet.objects.all()
 
         if not paysages_autorises:
             return SousProjet.objects.none()
