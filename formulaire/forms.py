@@ -272,14 +272,14 @@ class SousProjetForm(forms.ModelForm):
         elif is_smaziz:
             # SMAziz peut créer uniquement dans la Wilaya Brakna.
             self.fields['wilaya'].queryset = Wilaya.objects.filter(
-                pk=11
+                pk=3
             )
             self.fields['wilaya'].empty_label = None
-            self.fields['wilaya'].initial = 11
+            self.fields['wilaya'].initial = 3
             self.fields['wilaya'].help_text = (
                 "Wilaya autorisée : Brakna"
             )
-            chosen_wilaya_id = 11
+            chosen_wilaya_id = 3
 
         elif 'wilaya' in self.data:
             try:
@@ -302,7 +302,7 @@ class SousProjetForm(forms.ModelForm):
 
             if is_smaziz:
                 moughataa_queryset = moughataa_queryset.filter(
-                    id__in=[25, 26]
+                    id__in=[7, 8]
                 )
 
             self.fields['moughataa'].queryset = (
@@ -340,13 +340,13 @@ class SousProjetForm(forms.ModelForm):
             )
 
             if is_smaziz:
-                if chosen_moughataa_id == 25:
+                if chosen_moughataa_id == 7:
                     commune_queryset = commune_queryset.filter(
-                        id=25
+                        id=7
                     )
-                elif chosen_moughataa_id == 26:
+                elif chosen_moughataa_id == 8:
                     commune_queryset = commune_queryset.filter(
-                        id=26
+                        id=8
                     )
                 else:
                     commune_queryset = Commune.objects.none()
@@ -383,13 +383,13 @@ class SousProjetForm(forms.ModelForm):
             )
 
             if is_smaziz:
-                if chosen_commune_id == 25:
+                if chosen_commune_id == 7:
                     paysage_queryset = paysage_queryset.filter(
-                        id=25
+                        id=7
                     )
-                elif chosen_commune_id == 26:
+                elif chosen_commune_id == 8:
                     paysage_queryset = paysage_queryset.filter(
-                        id=26
+                        id=8
                     )
                 else:
                     paysage_queryset = Paysage.objects.none()
@@ -476,7 +476,7 @@ class SousProjetForm(forms.ModelForm):
                 getattr(self.user, 'username', '') or ''
             ).strip().casefold() == 'smaziz'
         ):
-            if not wilaya or wilaya.id != 11:
+            if not wilaya or wilaya.id != 3:
                 raise forms.ValidationError(
                     (
                         "Vous pouvez créer uniquement "
@@ -499,7 +499,7 @@ class SousProjetForm(forms.ModelForm):
         ):
             if (
                 not moughataa
-                or moughataa.id not in [25, 26]
+                or moughataa.id not in [7, 8]
             ):
                 raise forms.ValidationError(
                     (
@@ -527,13 +527,13 @@ class SousProjetForm(forms.ModelForm):
                 and moughataa
                 and (
                     (
-                        moughataa.id == 25
-                        and commune.id == 25
+                        moughataa.id == 7
+                        and commune.id == 7
                     )
                     or
                     (
-                        moughataa.id == 26
-                        and commune.id == 26
+                        moughataa.id == 8
+                        and commune.id == 8
                     )
                 )
             )
@@ -568,18 +568,18 @@ class SousProjetForm(forms.ModelForm):
                 and moughataa
                 and commune
                 and paysage
-                and wilaya.id == 11
+                and wilaya.id == 3
                 and (
                     (
-                        moughataa.id == 25
-                        and commune.id == 25
-                        and paysage.id == 25
+                        moughataa.id == 7
+                        and commune.id == 7
+                        and paysage.id == 7
                     )
                     or
                     (
-                        moughataa.id == 26
-                        and commune.id == 26
-                        and paysage.id == 26
+                        moughataa.id == 8
+                        and commune.id == 8
+                        and paysage.id == 8
                     )
                 )
             )

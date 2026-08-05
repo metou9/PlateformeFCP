@@ -112,8 +112,8 @@ CORRECTION_PAYSAGES_PAR_USERNAME = {
 
 
 SMAZIZ_LOCALISATIONS_AUTORISEES = {
-    25: {'wilaya_id': 11, 'moughataa_id': 25, 'commune_id': 25, 'paysage_id': 25, 'paysage_nom': 'Bababé'},
-    26: {'wilaya_id': 11, 'moughataa_id': 26, 'commune_id': 26, 'paysage_id': 26, 'paysage_nom': 'CPB Extension'},
+    25: {'wilaya_id': 3, 'moughataa_id': 7, 'commune_id': 7, 'paysage_id': 7, 'paysage_nom': 'Bababé'},
+    26: {'wilaya_id': 3, 'moughataa_id': 8, 'commune_id': 8, 'paysage_id': 8, 'paysage_nom': 'CPB Extension'},
 }
 
 
@@ -665,11 +665,11 @@ def nouveau_sous_projet(request):
                     wilaya_selectionnee and moughataa_selectionnee
                     and commune_selectionnee and paysage_selectionne
                     and can_create_in_paysage(utilisateur, paysage_selectionne)
-                    and wilaya_selectionnee.id == 11
+                    and wilaya_selectionnee.id == 3
                     and (
-                        (moughataa_selectionnee.id == 25 and commune_selectionnee.id == 25 and paysage_selectionne.id == 25)
+                        (moughataa_selectionnee.id == 7 and commune_selectionnee.id == 7 and paysage_selectionne.id == 7)
                         or
-                        (moughataa_selectionnee.id == 26 and commune_selectionnee.id == 26 and paysage_selectionne.id == 26)
+                        (moughataa_selectionnee.id == 8 and commune_selectionnee.id == 8 and paysage_selectionne.id == 8)
                     )
                 )
 
@@ -1418,12 +1418,12 @@ def realisation_passif(request):
 
             if utilisateur.role == 'correction':
                 localisation_finale_valide = bool(
-                    sous_projet_verification.wilaya_id == 11
+                    sous_projet_verification.wilaya_id == 3
                     and can_create_in_paysage(utilisateur, sous_projet_verification.paysage)
                     and (
-                        (sous_projet_verification.moughataa_id == 25 and sous_projet_verification.commune_id == 25 and sous_projet_verification.paysage_id == 25)
+                        (sous_projet_verification.moughataa_id == 7 and sous_projet_verification.commune_id == 7 and sous_projet_verification.paysage_id == 7)
                         or
-                        (sous_projet_verification.moughataa_id == 26 and sous_projet_verification.commune_id == 26 and sous_projet_verification.paysage_id == 26)
+                        (sous_projet_verification.moughataa_id == 8 and sous_projet_verification.commune_id == 8 and sous_projet_verification.paysage_id == 8)
                     )
                 )
                 if not localisation_finale_valide:
@@ -1966,9 +1966,9 @@ def get_moughataas(request):
         if utilisateur and utilisateur.role == 'agent' and utilisateur.wilaya_id and str(wilaya_id) != str(utilisateur.wilaya_id):
             return JsonResponse([], safe=False)
         if utilisateur and utilisateur.role == 'correction':
-            if (utilisateur.username or '').strip().casefold() != 'smaziz' or int(wilaya_id) != 11:
+            if (utilisateur.username or '').strip().casefold() != 'smaziz' or int(wilaya_id) != 3:
                 return JsonResponse([], safe=False)
-            moughataas = moughataas.filter(id__in=[25, 26])
+            moughataas = moughataas.filter(id__in=[7, 8])
         return JsonResponse([{'id': x.id, 'nom': x.nom} for x in moughataas.order_by('nom')], safe=False)
     except Exception:
         return JsonResponse([], safe=False)
@@ -1987,10 +1987,10 @@ def get_communes(request):
         if utilisateur and utilisateur.role == 'correction':
             if (utilisateur.username or '').strip().casefold() != 'smaziz':
                 return JsonResponse([], safe=False)
-            if int(moughataa_id) == 25:
-                communes = communes.filter(id=25)
-            elif int(moughataa_id) == 26:
-                communes = communes.filter(id=26)
+            if int(moughataa_id) == 7:
+                communes = communes.filter(id=7)
+            elif int(moughataa_id) == 8:
+                communes = communes.filter(id=8)
             else:
                 return JsonResponse([], safe=False)
         return JsonResponse([{'id': x.id, 'nom': x.nom} for x in communes.order_by('nom')], safe=False)
@@ -2011,10 +2011,10 @@ def get_paysages(request):
         if utilisateur and utilisateur.role == 'correction':
             if (utilisateur.username or '').strip().casefold() != 'smaziz':
                 return JsonResponse([], safe=False)
-            if int(commune_id) == 25:
-                paysages = paysages.filter(id=25)
-            elif int(commune_id) == 26:
-                paysages = paysages.filter(id=26)
+            if int(commune_id) == 7:
+                paysages = paysages.filter(id=7)
+            elif int(commune_id) == 8:
+                paysages = paysages.filter(id=8)
             else:
                 return JsonResponse([], safe=False)
         return JsonResponse([{'id': x.id, 'nom': x.nom} for x in paysages.order_by('nom')], safe=False)
