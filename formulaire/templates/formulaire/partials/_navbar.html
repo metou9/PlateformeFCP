@@ -47,6 +47,17 @@
                         <ul class="dropdown-menu custom-dropdown"
                             aria-labelledby="dossiersCorrectionDropdown">
 
+                            {% if request.session.can_create_project %}
+                                <li>
+                                    <a class="dropdown-item active-submenu"
+                                       href="{% url 'formulaire:nouveau_sous_projet' %}">
+
+                                        Dépôt de dossier
+
+                                    </a>
+                                </li>
+                            {% endif %}
+
                             <li>
                                 <a class="dropdown-item active-submenu"
                                    href="{% url 'formulaire:liste_sous_projets' %}">
@@ -82,18 +93,16 @@
                         <ul class="dropdown-menu custom-dropdown"
                             aria-labelledby="dossiersDropdown">
 
-                            {% if request.session.user_role != 'prescomite' and request.session.user_role != 'superviseur' %}
-
-                                <li>
-                                    <a class="dropdown-item active-submenu"
-                                       href="{% url 'formulaire:nouveau_sous_projet' %}">
-
-                                        Dépôt de dossier
-
-                                    </a>
-                                </li>
-
-                            {% endif %}
+          {% if request.session.can_create_project %}
+    <li>
+        <a
+            class="dropdown-item active-submenu"
+            href="{% url 'formulaire:nouveau_sous_projet' %}"
+        >
+            Dépôt de dossier
+        </a>
+    </li>
+{% endif %}
 
                             <li>
                                 <a class="dropdown-item active-submenu"

@@ -259,91 +259,314 @@
     </style>
 </head>
 <body>
-   <nav class="navbar navbar-expand-lg custom-navbar">
+<nav class="navbar navbar-expand-lg custom-navbar">
     <div class="container">
-        <a class="navbar-brand" href="{% url 'formulaire:accueil' %}">
-            <img src="/static/formulaire/images/logo.jpg" alt="Logo PADISAM" onerror="this.style.display='none'">
+
+        <a class="navbar-brand"
+           href="{% url 'formulaire:accueil' %}">
+
+            <img src="/static/formulaire/images/logo.jpg"
+                 alt="Logo PADISAM"
+                 onerror="this.style.display='none'">
         </a>
 
-        <button class="navbar-toggler" type="button" data-bs-toggle="collapse" data-bs-target="#navbarPadisam" aria-controls="navbarPadisam" aria-expanded="false" aria-label="Toggle navigation">
+        <button class="navbar-toggler"
+                type="button"
+                data-bs-toggle="collapse"
+                data-bs-target="#navbarPadisam"
+                aria-controls="navbarPadisam"
+                aria-expanded="false"
+                aria-label="Toggle navigation">
+
             <span class="navbar-toggler-icon"></span>
         </button>
 
-        <div class="collapse navbar-collapse" id="navbarPadisam">
+        <div class="collapse navbar-collapse"
+             id="navbarPadisam">
+
             <ul class="navbar-nav ms-auto align-items-lg-center">
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="dossiersDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Gestion des demandes</a>
-                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="dossiersDropdown">
- {% if request.session.user_role != 'prescomite' and request.session.user_role != 'superviseur' and request.session.user_role != 'correction' %}
+
+                {# ================================================= #}
+                {# NAVBAR SPÉCIALE POUR LE RÔLE CORRECTION           #}
+                {# ================================================= #}
+
+                {% if request.session.user_role == 'correction' %}
+
+                    <li class="nav-item dropdown">
+
+                        <a class="nav-link dropdown-toggle main-nav-link"
+                           href="#"
+                           id="dossiersCorrectionDropdown"
+                           role="button"
+                           data-bs-toggle="dropdown"
+                           aria-expanded="false">
+
+                            Gestion des demandes
+
+                        </a>
+
+                        <ul class="dropdown-menu custom-dropdown"
+                            aria-labelledby="dossiersCorrectionDropdown">
+
+                            {% if request.session.can_create_project %}
+                                <li>
+                                    <a class="dropdown-item active-submenu"
+                                       href="{% url 'formulaire:nouveau_sous_projet' %}">
+
+                                        Dépôt de dossier
+
+                                    </a>
+                                </li>
+                            {% endif %}
+
+                            <li>
+                                <a class="dropdown-item active-submenu"
+                                   href="{% url 'formulaire:liste_sous_projets' %}">
+
+                                    Liste des dossiers
+
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </li>
+
+                {% else %}
+
+                    {# ================================================= #}
+                    {# NAVBAR NORMALE POUR LES AUTRES RÔLES              #}
+                    {# ================================================= #}
+
+                    <li class="nav-item dropdown">
+
+                        <a class="nav-link dropdown-toggle main-nav-link"
+                           href="#"
+                           id="dossiersDropdown"
+                           role="button"
+                           data-bs-toggle="dropdown"
+                           aria-expanded="false">
+
+                            Gestion des demandes
+
+                        </a>
+
+                        <ul class="dropdown-menu custom-dropdown"
+                            aria-labelledby="dossiersDropdown">
+
+          {% if request.session.can_create_project %}
     <li>
-        <a class="dropdown-item active-submenu" href="{% url 'formulaire:nouveau_sous_projet' %}">
+        <a
+            class="dropdown-item active-submenu"
+            href="{% url 'formulaire:nouveau_sous_projet' %}"
+        >
             Dépôt de dossier
         </a>
     </li>
-{% endif %}                    
-            <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:liste_sous_projets' %}">Liste des dossiers</a></li>
-                    </ul>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="examenDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Présélection</a>
-                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="examenDropdown">
-                        <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:preselection_automatique' %}">Présélection Automatique</a></li>
-                        <li><a class="dropdown-item active-submenu" href="{% url 'formulaire:preselection_comite_liste' %}">Présélection Comité de présélection régional</a></li>
-                        
-                    </ul>
-                </li>
-                <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Plans d’affaires</a>
-                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
-                        <li><span class="dropdown-item disabled-submenu">Screening environnemental et social</span></li>
-                        <li><span class="dropdown-item disabled-submenu"> Élaboration des plans d’affaires</span></li>
+{% endif %}
 
-                    </ul>
-                </li>
-                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Validation</a>
-                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
-                        <li><span class="dropdown-item disabled-submenu">Approbation (Comité technique de sélection)</span></li>
-                        
+                            <li>
+                                <a class="dropdown-item active-submenu"
+                                   href="{% url 'formulaire:liste_sous_projets' %}">
 
-                    </ul>
-                </li>
-                 <li class="nav-item dropdown">
-                    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="transmissionDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">Suivi des sous-projets</a>
-                    <ul class="dropdown-menu custom-dropdown" aria-labelledby="transmissionDropdown">
-                        <li><span class="dropdown-item disabled-submenu">Financement</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Mise en œuvre & Suivi</span></li>
-                        <li><span class="dropdown-item disabled-submenu">Évaluation</span></li>
+                                    Liste des dossiers
+
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </li>
 
 
-                    </ul>
-                </li>
-                
-         <li class="nav-item dropdown">
-    <a class="nav-link dropdown-toggle main-nav-link" href="#" id="reportingDropdown" role="button" data-bs-toggle="dropdown" aria-expanded="false">
-        Reporting
-    </a>
+                    <li class="nav-item dropdown">
 
-    <ul class="dropdown-menu custom-dropdown" aria-labelledby="reportingDropdown">
-        <li>
-            <a class="dropdown-item active-submenu" href="{% url 'formulaire:statistiques' %}">
-                Statistiques
-            </a>
-        </li>
+                        <a class="nav-link dropdown-toggle main-nav-link"
+                           href="#"
+                           id="examenDropdown"
+                           role="button"
+                           data-bs-toggle="dropdown"
+                           aria-expanded="false">
 
-        <li>
-            <a class="dropdown-item active-submenu" href="{% url 'formulaire:rapport_paysage_type_financement' %}">
-                Rapport paysage/ZOCA par type de projet et financement
-            </a>
-        </li>
-          <li>
-    <a class="dropdown-item active-submenu"
-       href="{% url 'formulaire:rapport_preselection_comite' %}">
-        Résultats de présélection du comité
-    </a>
-</li>
-    </ul>
-</li>
+                            Présélection
+
+                        </a>
+
+                        <ul class="dropdown-menu custom-dropdown"
+                            aria-labelledby="examenDropdown">
+
+                            <li>
+                                <a class="dropdown-item active-submenu"
+                                   href="{% url 'formulaire:preselection_automatique' %}">
+
+                                    Présélection automatique
+
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item active-submenu"
+                                   href="{% url 'formulaire:preselection_comite_liste' %}">
+
+                                    Présélection Comité de présélection régional
+
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </li>
+
+
+                    <li class="nav-item dropdown">
+
+                        <a class="nav-link dropdown-toggle main-nav-link"
+                           href="#"
+                           id="plansAffairesDropdown"
+                           role="button"
+                           data-bs-toggle="dropdown"
+                           aria-expanded="false">
+
+                            Plans d’affaires
+
+                        </a>
+
+                        <ul class="dropdown-menu custom-dropdown"
+                            aria-labelledby="plansAffairesDropdown">
+
+                            <li>
+                                <span class="dropdown-item disabled-submenu">
+                                    Screening environnemental et social
+                                </span>
+                            </li>
+
+                            <li>
+                                <span class="dropdown-item disabled-submenu">
+                                    Élaboration des plans d’affaires
+                                </span>
+                            </li>
+
+                        </ul>
+
+                    </li>
+
+
+                    <li class="nav-item dropdown">
+
+                        <a class="nav-link dropdown-toggle main-nav-link"
+                           href="#"
+                           id="validationDropdown"
+                           role="button"
+                           data-bs-toggle="dropdown"
+                           aria-expanded="false">
+
+                            Validation
+
+                        </a>
+
+                        <ul class="dropdown-menu custom-dropdown"
+                            aria-labelledby="validationDropdown">
+
+                            <li>
+                                <span class="dropdown-item disabled-submenu">
+                                    Approbation
+                                    (Comité technique de sélection)
+                                </span>
+                            </li>
+
+                        </ul>
+
+                    </li>
+
+
+                    <li class="nav-item dropdown">
+
+                        <a class="nav-link dropdown-toggle main-nav-link"
+                           href="#"
+                           id="suiviDropdown"
+                           role="button"
+                           data-bs-toggle="dropdown"
+                           aria-expanded="false">
+
+                            Suivi des sous-projets
+
+                        </a>
+
+                        <ul class="dropdown-menu custom-dropdown"
+                            aria-labelledby="suiviDropdown">
+
+                            <li>
+                                <span class="dropdown-item disabled-submenu">
+                                    Financement
+                                </span>
+                            </li>
+
+                            <li>
+                                <span class="dropdown-item disabled-submenu">
+                                    Mise en œuvre & Suivi
+                                </span>
+                            </li>
+
+                            <li>
+                                <span class="dropdown-item disabled-submenu">
+                                    Évaluation
+                                </span>
+                            </li>
+
+                        </ul>
+
+                    </li>
+
+
+                    <li class="nav-item dropdown">
+
+                        <a class="nav-link dropdown-toggle main-nav-link"
+                           href="#"
+                           id="reportingDropdown"
+                           role="button"
+                           data-bs-toggle="dropdown"
+                           aria-expanded="false">
+
+                            Reporting
+
+                        </a>
+
+                        <ul class="dropdown-menu custom-dropdown"
+                            aria-labelledby="reportingDropdown">
+
+                            <li>
+                                <a class="dropdown-item active-submenu"
+                                   href="{% url 'formulaire:statistiques' %}">
+
+                                    Statistiques
+
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item active-submenu"
+                                   href="{% url 'formulaire:rapport_paysage_type_financement' %}">
+
+                                    Rapport paysage/ZOCA par type de projet et financement
+
+                                </a>
+                            </li>
+
+                            <li>
+                                <a class="dropdown-item active-submenu"
+                                   href="{% url 'formulaire:rapport_preselection_comite' %}">
+
+                                    Résultats de présélection du comité
+
+                                </a>
+                            </li>
+
+                        </ul>
+
+                    </li>
+
+                {% endif %}
+
 {% if request.session.user_role == 'superadmin' %}
 <li class="nav-item dropdown">
     <a class="nav-link dropdown-toggle main-nav-link"
@@ -375,11 +598,25 @@
     </ul>
 </li>
 {% endif %}
+                {# ================================================= #}
+                {# DÉCONNEXION : VISIBLE POUR TOUS                    #}
+                {# ================================================= #}
+
                 <li class="nav-item ms-lg-3">
-                    <a class="nav-link main-nav-link" href="{% url 'formulaire:logout' %}">Déconnexion</a>
+
+                    <a class="nav-link main-nav-link"
+                       href="{% url 'formulaire:logout' %}">
+
+                        Déconnexion
+
+                    </a>
+
                 </li>
+
             </ul>
+
         </div>
+
     </div>
 </nav>
 

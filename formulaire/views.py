@@ -111,6 +111,12 @@ CORRECTION_PAYSAGES_PAR_USERNAME = {
 }
 
 
+SMAZIZ_LOCALISATIONS_AUTORISEES = {
+    25: {'wilaya_id': 11, 'moughataa_id': 25, 'commune_id': 25, 'paysage_id': 25, 'paysage_nom': 'Bababé'},
+    26: {'wilaya_id': 11, 'moughataa_id': 26, 'commune_id': 26, 'paysage_id': 26, 'paysage_nom': 'CPB Extension'},
+}
+
+
 def get_paysages_autorises_correction(utilisateur):
     """
     Retourne :
@@ -127,6 +133,41 @@ def get_paysages_autorises_correction(utilisateur):
         username,
         []
     )
+
+
+def can_create_project(utilisateur):
+    """Autorise la création pour admin, superadmin, agent et SMAziz uniquement."""
+    if not utilisateur:
+        return False
+    if utilisateur.role in ['admin', 'superadmin', 'agent']:
+        return True
+    if utilisateur.role == 'correction':
+        return (utilisateur.username or '').strip().casefold() == 'smaziz'
+    return False
+
+
+def can_create_in_paysage(utilisateur, paysage):
+    """Vérifie la cohérence complète de la localisation de création."""
+    if not utilisateur or not paysage:
+        return False
+    if utilisateur.role in ['admin', 'superadmin', 'agent']:
+        return True
+    if utilisateur.role != 'correction':
+        return False
+    if (utilisateur.username or '').strip().casefold() != 'smaziz':
+        return False
+    configuration = SMAZIZ_LOCALISATIONS_AUTORISEES.get(paysage.id)
+    if not configuration:
+        return False
+    try:
+        return (
+            paysage.id == configuration['paysage_id']
+            and paysage.commune_id == configuration['commune_id']
+            and paysage.commune.moughataa_id == configuration['moughataa_id']
+            and paysage.commune.moughataa.wilaya_id == configuration['wilaya_id']
+        )
+    except AttributeError:
+        return False
 
 def can_modify_project(utilisateur, sous_projet):
     """
@@ -473,27 +514,56 @@ def login_view(request):
                 utilisateur = Utilisateur.objects.get(username=username)
 
                 if utilisateur.check_password(password) and utilisateur.actif:
+
+                    # ===========================
+                    # Création de la session
+                    # ===========================
                     request.session['user_id'] = utilisateur.id
                     request.session['user_name'] = f"{utilisateur.prenom} {utilisateur.nom}"
+                    request.session['user_username'] = utilisateur.username
                     request.session['user_role'] = utilisateur.role
                     request.session['user_wilaya_id'] = utilisateur.wilaya_id
-                    request.session['user_wilaya_nom'] = utilisateur.wilaya.nom if utilisateur.wilaya else ''
+                    request.session['user_wilaya_nom'] = (
+                        utilisateur.wilaya.nom if utilisateur.wilaya else ''
+                    )
+
+                    # Autorisation d'ajout de dossier
+                    request.session['can_create_project'] = can_create_project(
+                        utilisateur
+                    )
 
                     utilisateur.dernier_login = timezone.now()
-                    utilisateur.save()
+                    utilisateur.save(update_fields=['dernier_login'])
 
-                    messages.success(request, f"Bienvenue {utilisateur.prenom} !")
+                    messages.success(
+                        request,
+                        f"Bienvenue {utilisateur.prenom} !"
+                    )
+
                     return redirect('formulaire:accueil')
+
                 else:
-                    messages.error(request, "Mot de passe incorrect ou compte inactif.")
+                    messages.error(
+                        request,
+                        "Mot de passe incorrect ou compte inactif."
+                    )
 
             except Utilisateur.DoesNotExist:
-                messages.error(request, "Nom d'utilisateur inexistant.")
+                messages.error(
+                    request,
+                    "Nom d'utilisateur inexistant."
+                )
+
     else:
         form = LoginForm()
 
-    return render(request, 'formulaire/login.html', {'form': form})
-
+    return render(
+        request,
+        'formulaire/login.html',
+        {
+            'form': form
+        }
+    )
 
 def logout_view(request):
     """Déconnexion."""
@@ -563,10 +633,11 @@ def nouveau_sous_projet(request):
     """
     utilisateur = get_current_user(request)
 
-    if utilisateur and utilisateur.role in ['prescomite', 'superviseur', 'correction']:
-        messages.error(request,
-        "❌ Vous n'êtes pas autorisé à créer un nouveau dossier."
-    )
+    if not can_create_project(utilisateur):
+        messages.error(
+            request,
+            "❌ Vous n'êtes pas autorisé à créer un nouveau dossier."
+        )
         return redirect('formulaire:accueil')
 
     if is_agent_saisie(utilisateur) and not utilisateur.wilaya_id:
@@ -583,9 +654,35 @@ def nouveau_sous_projet(request):
         )
 
         if form.is_valid() and activite_formset.is_valid():
-            _save_creation_step(request, 'step1', request.POST)
-            messages.success(request, "✅ Étape 1 validée. Les données seront enregistrées définitivement à la dernière étape.")
-            return redirect('formulaire:financement_infrastructure')
+            wilaya_selectionnee = form.cleaned_data.get('wilaya')
+            moughataa_selectionnee = form.cleaned_data.get('moughataa')
+            commune_selectionnee = form.cleaned_data.get('commune')
+            paysage_selectionne = form.cleaned_data.get('paysage')
+
+            localisation_valide = True
+            if utilisateur.role == 'correction':
+                localisation_valide = bool(
+                    wilaya_selectionnee and moughataa_selectionnee
+                    and commune_selectionnee and paysage_selectionne
+                    and can_create_in_paysage(utilisateur, paysage_selectionne)
+                    and wilaya_selectionnee.id == 11
+                    and (
+                        (moughataa_selectionnee.id == 25 and commune_selectionnee.id == 25 and paysage_selectionne.id == 25)
+                        or
+                        (moughataa_selectionnee.id == 26 and commune_selectionnee.id == 26 and paysage_selectionne.id == 26)
+                    )
+                )
+
+            if not localisation_valide:
+                form.add_error(
+                    'paysage',
+                    "Localisation non autorisée. Utilisez Brakna > Bababé > Bababé > Bababé ou Brakna > Boghé > Boghé > CPB Extension."
+                )
+                messages.error(request, "❌ La localisation sélectionnée n’est pas autorisée.")
+            else:
+                _save_creation_step(request, 'step1', request.POST)
+                messages.success(request, "✅ Étape 1 validée. Les données seront enregistrées définitivement à la dernière étape.")
+                return redirect('formulaire:financement_infrastructure')
 
         for field, errors in form.errors.items():
             for error in errors:
@@ -1317,6 +1414,25 @@ def realisation_passif(request):
         ])
 
         if all_valid:
+            sous_projet_verification = step1_form.save(commit=False)
+
+            if utilisateur.role == 'correction':
+                localisation_finale_valide = bool(
+                    sous_projet_verification.wilaya_id == 11
+                    and can_create_in_paysage(utilisateur, sous_projet_verification.paysage)
+                    and (
+                        (sous_projet_verification.moughataa_id == 25 and sous_projet_verification.commune_id == 25 and sous_projet_verification.paysage_id == 25)
+                        or
+                        (sous_projet_verification.moughataa_id == 26 and sous_projet_verification.commune_id == 26 and sous_projet_verification.paysage_id == 26)
+                    )
+                )
+                if not localisation_finale_valide:
+                    messages.error(
+                        request,
+                        "❌ Enregistrement refusé : localisation non autorisée pour SMAziz."
+                    )
+                    return redirect('formulaire:nouveau_sous_projet')
+
             try:
                 with transaction.atomic():
                     sous_projet = step1_form.save(commit=False)
@@ -1840,63 +1956,70 @@ def supprimer_sous_projet(request, pk):
 # =========================================================
 
 def get_moughataas(request):
-    """Retourne les moughataas d'une wilaya."""
+    """Retourne les moughataas autorisées d'une wilaya."""
     wilaya_id = request.GET.get('wilaya_id')
-    user_role = request.session.get('user_role')
-    user_wilaya_id = request.session.get('user_wilaya_id')
-
-    if user_role == 'agent' and user_wilaya_id and str(wilaya_id) != str(user_wilaya_id):
+    utilisateur = get_current_user(request)
+    if not wilaya_id or not wilaya_id.isdigit():
         return JsonResponse([], safe=False)
-
-    if wilaya_id:
-        moughataas = Moughataa.objects.filter(wilaya_id=wilaya_id).order_by('nom')
-        data = [{'id': m.id, 'nom': m.nom} for m in moughataas]
-        return JsonResponse(data, safe=False)
-
-    return JsonResponse([], safe=False)
+    try:
+        moughataas = Moughataa.objects.filter(wilaya_id=wilaya_id)
+        if utilisateur and utilisateur.role == 'agent' and utilisateur.wilaya_id and str(wilaya_id) != str(utilisateur.wilaya_id):
+            return JsonResponse([], safe=False)
+        if utilisateur and utilisateur.role == 'correction':
+            if (utilisateur.username or '').strip().casefold() != 'smaziz' or int(wilaya_id) != 11:
+                return JsonResponse([], safe=False)
+            moughataas = moughataas.filter(id__in=[25, 26])
+        return JsonResponse([{'id': x.id, 'nom': x.nom} for x in moughataas.order_by('nom')], safe=False)
+    except Exception:
+        return JsonResponse([], safe=False)
 
 
 def get_communes(request):
-    """Retourne les communes d'une moughataa."""
+    """Retourne les communes autorisées d'une moughataa."""
     moughataa_id = request.GET.get('moughataa_id')
-    user_role = request.session.get('user_role')
-    user_wilaya_id = request.session.get('user_wilaya_id')
-
-    if moughataa_id and moughataa_id.isdigit():
-        try:
-            communes = Commune.objects.filter(moughataa_id=moughataa_id)
-
-            if user_role == 'agent' and user_wilaya_id:
-                communes = communes.filter(moughataa__wilaya_id=user_wilaya_id)
-
-            data = [{'id': c.id, 'nom': c.nom} for c in communes.order_by('nom')]
-            return JsonResponse(data, safe=False)
-        except Exception:
-            return JsonResponse([], safe=False)
-
-    return JsonResponse([], safe=False)
+    utilisateur = get_current_user(request)
+    if not moughataa_id or not moughataa_id.isdigit():
+        return JsonResponse([], safe=False)
+    try:
+        communes = Commune.objects.filter(moughataa_id=moughataa_id)
+        if utilisateur and utilisateur.role == 'agent' and utilisateur.wilaya_id:
+            communes = communes.filter(moughataa__wilaya_id=utilisateur.wilaya_id)
+        if utilisateur and utilisateur.role == 'correction':
+            if (utilisateur.username or '').strip().casefold() != 'smaziz':
+                return JsonResponse([], safe=False)
+            if int(moughataa_id) == 25:
+                communes = communes.filter(id=25)
+            elif int(moughataa_id) == 26:
+                communes = communes.filter(id=26)
+            else:
+                return JsonResponse([], safe=False)
+        return JsonResponse([{'id': x.id, 'nom': x.nom} for x in communes.order_by('nom')], safe=False)
+    except Exception:
+        return JsonResponse([], safe=False)
 
 
 def get_paysages(request):
-    """Retourne les paysages d'une commune."""
+    """Retourne les paysages autorisés d'une commune."""
     commune_id = request.GET.get('commune_id')
-    user_role = request.session.get('user_role')
-    user_wilaya_id = request.session.get('user_wilaya_id')
-
-    if commune_id and commune_id.isdigit():
-        try:
-            paysages = Paysage.objects.filter(commune_id=commune_id)
-
-            if user_role == 'agent' and user_wilaya_id:
-                paysages = paysages.filter(commune__moughataa__wilaya_id=user_wilaya_id)
-
-            data = [{'id': p.id, 'nom': p.nom} for p in paysages.order_by('nom')]
-            return JsonResponse(data, safe=False)
-        except Exception:
-            return JsonResponse([], safe=False)
-
-    return JsonResponse([], safe=False)
-
+    utilisateur = get_current_user(request)
+    if not commune_id or not commune_id.isdigit():
+        return JsonResponse([], safe=False)
+    try:
+        paysages = Paysage.objects.filter(commune_id=commune_id)
+        if utilisateur and utilisateur.role == 'agent' and utilisateur.wilaya_id:
+            paysages = paysages.filter(commune__moughataa__wilaya_id=utilisateur.wilaya_id)
+        if utilisateur and utilisateur.role == 'correction':
+            if (utilisateur.username or '').strip().casefold() != 'smaziz':
+                return JsonResponse([], safe=False)
+            if int(commune_id) == 25:
+                paysages = paysages.filter(id=25)
+            elif int(commune_id) == 26:
+                paysages = paysages.filter(id=26)
+            else:
+                return JsonResponse([], safe=False)
+        return JsonResponse([{'id': x.id, 'nom': x.nom} for x in paysages.order_by('nom')], safe=False)
+    except Exception:
+        return JsonResponse([], safe=False)
 
 def get_villages(request):
     """Retourne les villages d'un paysage."""

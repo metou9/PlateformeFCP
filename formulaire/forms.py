@@ -239,63 +239,181 @@ class SousProjetForm(forms.ModelForm):
         self.user = kwargs.pop('user', None)
         super().__init__(*args, **kwargs)
 
+        role = getattr(self.user, 'role', None)
+        username = (
+            getattr(self.user, 'username', '') or ''
+        ).strip().casefold()
+
+        is_agent = role == 'agent'
+        is_smaziz = (
+            role == 'correction'
+            and username == 'smaziz'
+        )
+
+        # =====================================================
+        # WILAYA
+        # =====================================================
         chosen_wilaya_id = None
 
-        if self.user and getattr(self.user, 'role', None) == 'agent':
+        if is_agent:
             if getattr(self.user, 'wilaya_id', None):
-                self.fields['wilaya'].queryset = Wilaya.objects.filter(pk=self.user.wilaya_id)
+                self.fields['wilaya'].queryset = Wilaya.objects.filter(
+                    pk=self.user.wilaya_id
+                )
                 self.fields['wilaya'].empty_label = None
                 self.fields['wilaya'].initial = self.user.wilaya
-                self.fields['wilaya'].help_text = f"Wilaya affectée : {self.user.wilaya.nom}"
+                self.fields['wilaya'].help_text = (
+                    f"Wilaya affectée : {self.user.wilaya.nom}"
+                )
                 chosen_wilaya_id = self.user.wilaya_id
             else:
                 self.fields['wilaya'].queryset = Wilaya.objects.none()
 
+        elif is_smaziz:
+            # SMAziz peut créer uniquement dans la Wilaya Brakna.
+            self.fields['wilaya'].queryset = Wilaya.objects.filter(
+                pk=11
+            )
+            self.fields['wilaya'].empty_label = None
+            self.fields['wilaya'].initial = 11
+            self.fields['wilaya'].help_text = (
+                "Wilaya autorisée : Brakna"
+            )
+            chosen_wilaya_id = 11
+
         elif 'wilaya' in self.data:
             try:
-                chosen_wilaya_id = int(self.data.get('wilaya'))
+                chosen_wilaya_id = int(
+                    self.data.get('wilaya')
+                )
             except (ValueError, TypeError):
                 chosen_wilaya_id = None
 
         elif self.instance.pk and self.instance.wilaya_id:
             chosen_wilaya_id = self.instance.wilaya_id
 
+        # =====================================================
+        # MOUGHATAA
+        # =====================================================
         if chosen_wilaya_id:
-            self.fields['moughataa'].queryset = Moughataa.objects.filter(wilaya_id=chosen_wilaya_id).order_by('nom')
+            moughataa_queryset = Moughataa.objects.filter(
+                wilaya_id=chosen_wilaya_id
+            )
+
+            if is_smaziz:
+                moughataa_queryset = moughataa_queryset.filter(
+                    id__in=[25, 26]
+                )
+
+            self.fields['moughataa'].queryset = (
+                moughataa_queryset.order_by('nom')
+            )
         else:
-            self.fields['moughataa'].queryset = Moughataa.objects.none()
+            self.fields['moughataa'].queryset = (
+                Moughataa.objects.none()
+            )
 
         chosen_moughataa_id = None
+
         if 'moughataa' in self.data:
             try:
-                chosen_moughataa_id = int(self.data.get('moughataa'))
+                chosen_moughataa_id = int(
+                    self.data.get('moughataa')
+                )
             except (ValueError, TypeError):
                 chosen_moughataa_id = None
-        elif self.instance.pk and self.instance.moughataa_id:
-            chosen_moughataa_id = self.instance.moughataa_id
 
+        elif (
+            self.instance.pk
+            and self.instance.moughataa_id
+        ):
+            chosen_moughataa_id = (
+                self.instance.moughataa_id
+            )
+
+        # =====================================================
+        # COMMUNE
+        # =====================================================
         if chosen_moughataa_id:
-            self.fields['commune'].queryset = Commune.objects.filter(moughataa_id=chosen_moughataa_id).order_by('nom')
+            commune_queryset = Commune.objects.filter(
+                moughataa_id=chosen_moughataa_id
+            )
+
+            if is_smaziz:
+                if chosen_moughataa_id == 25:
+                    commune_queryset = commune_queryset.filter(
+                        id=25
+                    )
+                elif chosen_moughataa_id == 26:
+                    commune_queryset = commune_queryset.filter(
+                        id=26
+                    )
+                else:
+                    commune_queryset = Commune.objects.none()
+
+            self.fields['commune'].queryset = (
+                commune_queryset.order_by('nom')
+            )
         else:
-            self.fields['commune'].queryset = Commune.objects.none()
+            self.fields['commune'].queryset = (
+                Commune.objects.none()
+            )
 
         chosen_commune_id = None
+
         if 'commune' in self.data:
             try:
-                chosen_commune_id = int(self.data.get('commune'))
+                chosen_commune_id = int(
+                    self.data.get('commune')
+                )
             except (ValueError, TypeError):
                 chosen_commune_id = None
+
         elif self.instance.pk and self.instance.commune_id:
-            chosen_commune_id = self.instance.commune_id
+            chosen_commune_id = (
+                self.instance.commune_id
+            )
 
+        # =====================================================
+        # PAYSAGE
+        # =====================================================
         if chosen_commune_id:
-            self.fields['paysage'].queryset = Paysage.objects.filter(commune_id=chosen_commune_id).order_by('nom')
-        else:
-            self.fields['paysage'].queryset = Paysage.objects.none()
+            paysage_queryset = Paysage.objects.filter(
+                commune_id=chosen_commune_id
+            )
 
-        for _, field in self.fields.items():
+            if is_smaziz:
+                if chosen_commune_id == 25:
+                    paysage_queryset = paysage_queryset.filter(
+                        id=25
+                    )
+                elif chosen_commune_id == 26:
+                    paysage_queryset = paysage_queryset.filter(
+                        id=26
+                    )
+                else:
+                    paysage_queryset = Paysage.objects.none()
+
+            self.fields['paysage'].queryset = (
+                paysage_queryset.order_by('nom')
+            )
+        else:
+            self.fields['paysage'].queryset = (
+                Paysage.objects.none()
+            )
+
+        # =====================================================
+        # ATTRIBUTS VISUELS
+        # =====================================================
+        for field in self.fields.values():
             if field.required:
-                field.widget.attrs['class'] = field.widget.attrs.get('class', '') + ' required-field'
+                current_class = field.widget.attrs.get(
+                    'class',
+                    ''
+                )
+                field.widget.attrs['class'] = (
+                    f"{current_class} required-field"
+                ).strip()
 
     def clean(self):
         cleaned_data = super().clean()
@@ -327,14 +445,157 @@ class SousProjetForm(forms.ModelForm):
     def clean_wilaya(self):
         wilaya = self.cleaned_data.get('wilaya')
 
-        if self.user and getattr(self.user, 'role', None) == 'agent':
+        if self.user and getattr(
+            self.user,
+            'role',
+            None
+        ) == 'agent':
             if not getattr(self.user, 'wilaya_id', None):
-                raise forms.ValidationError("Cet agent n'a pas de wilaya affectée.")
-            if not wilaya or wilaya.id != self.user.wilaya_id:
-                raise forms.ValidationError("Vous ne pouvez saisir que des sous-projets de votre wilaya.")
+                raise forms.ValidationError(
+                    "Cet agent n'a pas de wilaya affectée."
+                )
+
+            if (
+                not wilaya
+                or wilaya.id != self.user.wilaya_id
+            ):
+                raise forms.ValidationError(
+                    (
+                        "Vous ne pouvez saisir que des "
+                        "sous-projets de votre wilaya."
+                    )
+                )
+
             return self.user.wilaya
 
+        if (
+            self.user
+            and getattr(self.user, 'role', None)
+            == 'correction'
+            and (
+                getattr(self.user, 'username', '') or ''
+            ).strip().casefold() == 'smaziz'
+        ):
+            if not wilaya or wilaya.id != 11:
+                raise forms.ValidationError(
+                    (
+                        "Vous pouvez créer uniquement "
+                        "dans la Wilaya Brakna."
+                    )
+                )
+
         return wilaya
+
+    def clean_moughataa(self):
+        moughataa = self.cleaned_data.get('moughataa')
+
+        if (
+            self.user
+            and getattr(self.user, 'role', None)
+            == 'correction'
+            and (
+                getattr(self.user, 'username', '') or ''
+            ).strip().casefold() == 'smaziz'
+        ):
+            if (
+                not moughataa
+                or moughataa.id not in [25, 26]
+            ):
+                raise forms.ValidationError(
+                    (
+                        "Vous pouvez sélectionner uniquement "
+                        "Bababé ou Boghé."
+                    )
+                )
+
+        return moughataa
+
+    def clean_commune(self):
+        commune = self.cleaned_data.get('commune')
+        moughataa = self.cleaned_data.get('moughataa')
+
+        if (
+            self.user
+            and getattr(self.user, 'role', None)
+            == 'correction'
+            and (
+                getattr(self.user, 'username', '') or ''
+            ).strip().casefold() == 'smaziz'
+        ):
+            combinaison_valide = bool(
+                commune
+                and moughataa
+                and (
+                    (
+                        moughataa.id == 25
+                        and commune.id == 25
+                    )
+                    or
+                    (
+                        moughataa.id == 26
+                        and commune.id == 26
+                    )
+                )
+            )
+
+            if not combinaison_valide:
+                raise forms.ValidationError(
+                    (
+                        "La commune doit correspondre à la "
+                        "Moughataa sélectionnée : "
+                        "Bababé avec Bababé, ou Boghé avec Boghé."
+                    )
+                )
+
+        return commune
+
+    def clean_paysage(self):
+        paysage = self.cleaned_data.get('paysage')
+        commune = self.cleaned_data.get('commune')
+        moughataa = self.cleaned_data.get('moughataa')
+        wilaya = self.cleaned_data.get('wilaya')
+
+        if (
+            self.user
+            and getattr(self.user, 'role', None)
+            == 'correction'
+            and (
+                getattr(self.user, 'username', '') or ''
+            ).strip().casefold() == 'smaziz'
+        ):
+            combinaison_valide = bool(
+                wilaya
+                and moughataa
+                and commune
+                and paysage
+                and wilaya.id == 11
+                and (
+                    (
+                        moughataa.id == 25
+                        and commune.id == 25
+                        and paysage.id == 25
+                    )
+                    or
+                    (
+                        moughataa.id == 26
+                        and commune.id == 26
+                        and paysage.id == 26
+                    )
+                )
+            )
+
+            if not combinaison_valide:
+                raise forms.ValidationError(
+                    (
+                        "Localisation non autorisée. "
+                        "Choisissez soit "
+                        "Brakna > Bababé > Bababé > Bababé, "
+                        "soit "
+                        "Brakna > Boghé > Boghé > CPB Extension."
+                    )
+                )
+
+        return paysage
 
     def clean_telephone(self):
         telephone = self.cleaned_data.get('telephone')
