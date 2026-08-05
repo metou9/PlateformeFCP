@@ -294,6 +294,16 @@ utilisateurs = [
         'actif': True,
         'wilaya_code': None
     },
+    {
+            'nom': '',
+            'prenom': 'SMAziz',
+            'username': 'SMAziz',
+            'password': 'sdrty@7658',
+            'role': 'correction',
+            'email': 'smaziz@gmail.com',
+            'actif': True,
+            'wilaya_code': None
+        },
 ]
 
 

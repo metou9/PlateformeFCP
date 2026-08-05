@@ -94,25 +94,67 @@ def is_admin_like(utilisateur):
     """
     return bool(utilisateur and utilisateur.role in ['admin', 'superadmin'])
 
+
+# =========================================================
+# RESTRICTIONS DU RÔLE CORRECTION PAR USERNAME
+# =========================================================
+
+CORRECTION_PAYSAGES_PAR_USERNAME = {
+    'smaziz': [
+        'CPB Extension',
+        'Bababé',
+    ],
+}
+
+
+def get_paysages_autorises_correction(utilisateur):
+    """Retourne les paysages autorisés selon le username."""
+    if not utilisateur or utilisateur.role != 'correction':
+        return []
+
+    username = (utilisateur.username or '').strip().lower()
+
+    return CORRECTION_PAYSAGES_PAR_USERNAME.get(
+        username,
+        []
+    )
+
 def can_modify_project(utilisateur, sous_projet):
     """
-    Permission de modification d'un sous-projet.
-
-    - admin / superadmin / correction : peuvent modifier tous les sous-projets
-    - agent : peut modifier seulement les sous-projets qu'il a saisis
-    - superviseur / prescomite : lecture seule
+    - admin / superadmin : tous les dossiers
+    - correction : seulement les paysages autorisés pour son username
+    - agent : seulement ses propres dossiers
     """
     if not utilisateur or not sous_projet:
         return False
 
-    if utilisateur.role in ['admin', 'superadmin', 'correction']:
+    if utilisateur.role in ['admin', 'superadmin']:
         return True
 
+    if utilisateur.role == 'correction':
+        paysages_autorises = get_paysages_autorises_correction(
+            utilisateur
+        )
+
+        if not paysages_autorises or not sous_projet.paysage:
+            return False
+
+        paysage_nom = (
+            sous_projet.paysage.nom or ''
+        ).strip().casefold()
+
+        return any(
+            paysage_nom == (nom or '').strip().casefold()
+            for nom in paysages_autorises
+        )
+
     if utilisateur.role == 'agent':
-        return sous_projet.createur_username == utilisateur.username
+        return (
+            (sous_projet.createur_username or '').strip().casefold()
+            == (utilisateur.username or '').strip().casefold()
+        )
 
     return False
-
 
 def is_comite(utilisateur):
     """
@@ -139,27 +181,62 @@ def can_view_comite_list(utilisateur):
 
 def get_accessible_sous_projets(utilisateur):
     """
-    Sous-projets visibles selon le rôle.
-
-    - admin, superadmin, superviseur, correction : voient tous les sous-projets
-    - agent : voit seulement les sous-projets qu'il a créés
-    - prescomite avec wilaya : voit seulement les sous-projets de sa wilaya
+    - admin, superadmin, superviseur : tous les dossiers
+    - correction : seulement les paysages autorisés pour son username
+    - agent : seulement ses dossiers
+    - prescomite : dossiers de sa wilaya
     """
     if not utilisateur:
         return SousProjet.objects.none()
 
-    if utilisateur.role in ['admin', 'superadmin', 'superviseur', 'correction']:
+    if utilisateur.role in [
+        'admin',
+        'superadmin',
+        'superviseur',
+    ]:
         return SousProjet.objects.all()
+
+    if utilisateur.role == 'correction':
+        paysages_autorises = get_paysages_autorises_correction(
+            utilisateur
+        )
+
+        if not paysages_autorises:
+            return SousProjet.objects.none()
+
+        filtre_paysages = Q()
+
+        for nom_paysage in paysages_autorises:
+            nom_paysage = (nom_paysage or '').strip()
+
+            if nom_paysage:
+                filtre_paysages |= Q(
+                    paysage__nom__iexact=nom_paysage
+                )
+
+        if not filtre_paysages:
+            return SousProjet.objects.none()
+
+        return SousProjet.objects.filter(
+            filtre_paysages
+        ).distinct()
 
     if utilisateur.role == 'agent':
         username = (utilisateur.username or '').strip()
-        return SousProjet.objects.filter(createur_username__iexact=username)
 
-    if utilisateur.role == 'prescomite' and utilisateur.wilaya_id:
-        return SousProjet.objects.filter(wilaya_id=utilisateur.wilaya_id)
+        return SousProjet.objects.filter(
+            createur_username__iexact=username
+        )
+
+    if (
+        utilisateur.role == 'prescomite'
+        and utilisateur.wilaya_id
+    ):
+        return SousProjet.objects.filter(
+            wilaya_id=utilisateur.wilaya_id
+        )
 
     return SousProjet.objects.none()
-
 
 def get_current_sous_projet(request):
     """
@@ -1487,8 +1564,14 @@ def liste_sous_projets(request):
         'user_wilaya_nom': request.session.get('user_wilaya_nom'),
         'is_admin': is_admin_like(utilisateur),
         'is_superadmin': is_superadmin(utilisateur),
-        'can_edit_all': bool(utilisateur and utilisateur.role in ['admin', 'superadmin', 'correction']),
-        'is_correction': bool(utilisateur and utilisateur.role == 'correction'),
+        'can_edit_all': bool(
+            utilisateur
+            and utilisateur.role in ['admin', 'superadmin']
+        ),
+        'is_correction': bool(
+            utilisateur
+            and utilisateur.role == 'correction'
+        ),
     })
 
 @login_required
