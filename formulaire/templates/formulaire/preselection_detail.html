@@ -117,6 +117,63 @@
         <div class="summary-card"><strong>Non éligibles :</strong> {{ nb_non_eligibles }}</div>
         <div class="summary-card"><strong>À examiner :</strong> {{ nb_a_examiner }}</div>
     </div>
+    {% if note_comite is not None %}
+
+    <div class="card mb-4 shadow-sm">
+
+        <div class="card-header fw-bold">
+            Résultat du comité
+        </div>
+
+        <div class="card-body">
+
+            {% if note_type == 'preselectionne' %}
+
+                <div class="alert alert-success">
+
+                    <h5>
+                        Présélectionné
+                    </h5>
+
+                    <p class="mb-1">
+                        Critères présélectionnés :
+                        <strong>{{ nb_criteres_preselectionnes }}/20</strong>
+                    </p>
+
+                    <p class="mb-0">
+                        Critères rejetés :
+                        <strong>{{ nb_criteres_rejetes }}/20</strong>
+                    </p>
+
+                </div>
+
+            {% elif note_type == 'rejete' %}
+
+                <div class="alert alert-danger">
+
+                    <h5>
+                        Rejeté
+                    </h5>
+
+                    <p class="mb-1">
+                        Critères rejetés :
+                        <strong>{{ nb_criteres_rejetes }}/20</strong>
+                    </p>
+
+                    <p class="mb-0">
+                        Critères présélectionnés :
+                        <strong>{{ nb_criteres_preselectionnes }}/20</strong>
+                    </p>
+
+                </div>
+
+            {% endif %}
+
+        </div>
+
+    </div>
+
+{% endif %}
 
     <div class="preselection-table-card">
         <div class="card-header-custom">

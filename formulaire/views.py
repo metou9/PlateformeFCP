@@ -2764,7 +2764,9 @@ def preselection_comite_liste(request):
     - filtre Paysage / ZOCA ;
     - recherche par N° de réception ;
     - tri numérique croissant ;
-    - statistiques dynamiques.
+    - statistiques dynamiques ;
+    - note sur 20 selon le nombre de critères
+      présélectionnés ou rejetés.
     """
     utilisateur = get_current_user(request)
 
@@ -2776,50 +2778,180 @@ def preselection_comite_liste(request):
         return redirect('formulaire:accueil')
 
     sous_projets_base = get_accessible_sous_projets(utilisateur)
-    filtre = filtrer_et_trier_preselection(request, sous_projets_base)
+
+    filtre = filtrer_et_trier_preselection(
+        request,
+        sous_projets_base
+    )
+
     sous_projets = filtre['sous_projets']
 
     lignes = []
+
     nb_preselectionnes = 0
     nb_rejetes = 0
     nb_a_examiner = 0
     nb_reexaminer = 0
 
     for sp in sous_projets:
+
         auto = appliquer_preselection_automatique(sp)
-        decision_comite = sp.decision_comite or 'a_examiner'
+
+        decision_comite = (
+            sp.decision_comite
+            or 'a_examiner'
+        )
+
+        # =====================================================
+        # STATISTIQUES GLOBALES
+        # =====================================================
 
         if decision_comite == 'preselectionne':
-          nb_preselectionnes += 1
+            nb_preselectionnes += 1
+
         elif decision_comite == 'rejete':
-          nb_rejetes += 1
+            nb_rejetes += 1
+
         elif decision_comite == 'reexaminer':
-         nb_reexaminer += 1
+            nb_reexaminer += 1
+
         else:
-         nb_a_examiner += 1
+            nb_a_examiner += 1
+
+        # =====================================================
+        # NOTE COMITÉ SUR 20
+        # =====================================================
+        # Chaque dossier possède au maximum 20 critères.
+        #
+        # Si le dossier est présélectionné :
+        #     note = nombre de critères présélectionnés.
+        #
+        # Si le dossier est rejeté :
+        #     note = nombre de critères rejetés.
+        #
+        # Si le dossier est à examiner / réexaminer :
+        #     aucune note définitive n'est affichée.
+        # =====================================================
+
+        resultats_comite = (
+            sp.resultats_preselection.all()
+        )
+
+        nb_criteres_preselectionnes = (
+            resultats_comite.filter(
+                decision_comite='preselectionne'
+            ).count()
+        )
+
+        nb_criteres_rejetes = (
+            resultats_comite.filter(
+                decision_comite='rejete'
+            ).count()
+        )
+
+        if decision_comite == 'preselectionne':
+            note_comite = (
+                nb_criteres_preselectionnes
+            )
+
+            note_type = 'preselectionne'
+
+        elif decision_comite == 'rejete':
+            note_comite = (
+                nb_criteres_rejetes
+            )
+
+            note_type = 'rejete'
+
+        else:
+            note_comite = None
+            note_type = None
+
+        # =====================================================
+        # CONSTRUCTION DE LA LIGNE
+        # =====================================================
 
         lignes.append({
+
             'sous_projet': sp,
+
             'numero_reception': (
-                sp.numero_reception_formulaire or 'Non renseigné'
+                sp.numero_reception_formulaire
+                or 'Non renseigné'
             ),
+
             'paysage': (
-                sp.paysage.nom if sp.paysage else 'Non renseigné'
+                sp.paysage.nom
+                if sp.paysage
+                else 'Non renseigné'
             ),
+
             'wilaya': (
-                sp.wilaya.nom if sp.wilaya else 'Non renseignée'
+                sp.wilaya.nom
+                if sp.wilaya
+                else 'Non renseignée'
             ),
+
             'intitule': (
-                sp.intitule_sous_projet or 'Non renseigné'
+                sp.intitule_sous_projet
+                or 'Non renseigné'
             ),
-            'decision_automatique': auto['decision'],
-            'motif_automatique': auto['motif'],
-            'badge_class': auto['badge_class'],
-            'bloque_comite': auto['bloque_comite'],
-            'decision_comite': decision_comite,
-            'motif_comite': sp.motif_comite,
-            'status': sp.status,
-            'score_comite': getattr(sp, 'score_comite', 0),
+
+            'decision_automatique': (
+                auto['decision']
+            ),
+
+            'motif_automatique': (
+                auto['motif']
+            ),
+
+            'badge_class': (
+                auto['badge_class']
+            ),
+
+            'bloque_comite': (
+                auto['bloque_comite']
+            ),
+
+            'decision_comite': (
+                decision_comite
+            ),
+
+            'motif_comite': (
+                sp.motif_comite
+            ),
+
+            'status': (
+                sp.status
+            ),
+
+            # =================================================
+            # NOTE SUR 20
+            # =================================================
+
+            'note_comite': (
+                note_comite
+            ),
+
+            'note_type': (
+                note_type
+            ),
+
+            'nb_criteres_preselectionnes': (
+                nb_criteres_preselectionnes
+            ),
+
+            'nb_criteres_rejetes': (
+                nb_criteres_rejetes
+            ),
+
+            # On garde aussi ton ancien champ existant
+            'score_comite': getattr(
+                sp,
+                'score_comite',
+                0
+            ),
+
             'evaluation_comite_terminee': getattr(
                 sp,
                 'evaluation_comite_terminee',
@@ -2827,21 +2959,61 @@ def preselection_comite_liste(request):
             ),
         })
 
+    # =========================================================
+    # CONTEXTE
+    # =========================================================
+
     context = {
+
         'lignes': lignes,
+
         'total_dossiers': len(lignes),
-        'nb_preselectionnes': nb_preselectionnes,
-        'nb_rejetes': nb_rejetes,
-        'nb_a_examiner': nb_a_examiner,
-        'nb_reexaminer': nb_reexaminer,
-        'paysages_disponibles': filtre['paysages_disponibles'],
-        'selected_paysage_id': filtre['selected_paysage_id'],
-        'selected_paysage': filtre['selected_paysage'],
-        'numero_reception': filtre['numero_reception'],
-        'current_list_url': request.get_full_path(),
-        'can_validate_comite': can_validate_comite(utilisateur),
+
+        'nb_preselectionnes': (
+            nb_preselectionnes
+        ),
+
+        'nb_rejetes': (
+            nb_rejetes
+        ),
+
+        'nb_a_examiner': (
+            nb_a_examiner
+        ),
+
+        'nb_reexaminer': (
+            nb_reexaminer
+        ),
+
+        'paysages_disponibles': (
+            filtre['paysages_disponibles']
+        ),
+
+        'selected_paysage_id': (
+            filtre['selected_paysage_id']
+        ),
+
+        'selected_paysage': (
+            filtre['selected_paysage']
+        ),
+
+        'numero_reception': (
+            filtre['numero_reception']
+        ),
+
+        'current_list_url': (
+            request.get_full_path()
+        ),
+
+        'can_validate_comite': (
+            can_validate_comite(utilisateur)
+        ),
+
         'can_view_comite_list': True,
-        'is_superadmin': is_superadmin(utilisateur),
+
+        'is_superadmin': (
+            is_superadmin(utilisateur)
+        ),
     }
 
     return render(
@@ -2859,35 +3031,60 @@ def preselection_comite_detail(request, pk):
             request,
             "❌ Vous n'êtes pas autorisé à accéder au détail de la présélection comité."
         )
-        return redirect('formulaire:liste_sous_projets')
+        return redirect(
+            'formulaire:liste_sous_projets'
+        )
 
-    liste_retour = request.GET.get('next') or request.POST.get('next')
+    # =========================================================
+    # URL DE RETOUR
+    # =========================================================
 
-    if not liste_retour or not url_has_allowed_host_and_scheme(
-        url=liste_retour,
-        allowed_hosts={request.get_host()},
-        require_https=request.is_secure(),
+    liste_retour = (
+        request.GET.get('next')
+        or request.POST.get('next')
+    )
+
+    if (
+        not liste_retour
+        or not url_has_allowed_host_and_scheme(
+            url=liste_retour,
+            allowed_hosts={request.get_host()},
+            require_https=request.is_secure(),
+        )
     ):
         liste_retour = reverse(
             'formulaire:preselection_comite_liste'
         )
+
+    # =========================================================
+    # DOSSIER
+    # =========================================================
 
     sous_projet = get_object_or_404(
         get_accessible_sous_projets(utilisateur),
         pk=pk
     )
 
-    auto = appliquer_preselection_automatique(sous_projet)
+    auto = appliquer_preselection_automatique(
+        sous_projet
+    )
 
-    # Aucun verrouillage : le comité peut toujours modifier la décision.
+    # Aucun verrouillage :
+    # le comité peut toujours modifier la décision.
     readonly_mode = False
 
+    # =========================================================
+    # CRÉATION INITIALE DES 20 CRITÈRES
+    # =========================================================
+
     if not sous_projet.resultats_preselection.exists():
+
         criteres_auto = evaluer_criteres_preselection(
             sous_projet
         )
 
         for item in criteres_auto:
+
             decision_auto = item.get(
                 'decision',
                 'À examiner'
@@ -2895,8 +3092,10 @@ def preselection_comite_detail(request, pk):
 
             if decision_auto == 'Éligible':
                 decision_auto_db = 'eligible'
+
             elif decision_auto == 'Non éligible':
                 decision_auto_db = 'non_eligible'
+
             else:
                 decision_auto_db = 'a_examiner'
 
@@ -2905,10 +3104,18 @@ def preselection_comite_detail(request, pk):
                 numero_critere=item.get('numero'),
                 critere=item.get('critere'),
                 question=item.get('question'),
-                resultat_automatique=item.get('resultat'),
+                resultat_automatique=item.get(
+                    'resultat'
+                ),
                 decision_automatique=decision_auto_db,
-                motif_automatique=item.get('motif'),
+                motif_automatique=item.get(
+                    'motif'
+                ),
             )
+
+    # =========================================================
+    # QUERYSET DES CRITÈRES
+    # =========================================================
 
     queryset = (
         sous_projet
@@ -2917,11 +3124,18 @@ def preselection_comite_detail(request, pk):
         .order_by('numero_critere')
     )
 
+    # =========================================================
+    # POST : ENREGISTREMENT DU COMITÉ
+    # =========================================================
+
     if request.method == 'POST':
-        ancien_statut = normaliser_statut_preselection(
-            sous_projet.decision_comite
-            or sous_projet.status
-            or 'a_examiner'
+
+        ancien_statut = (
+            normaliser_statut_preselection(
+                sous_projet.decision_comite
+                or sous_projet.status
+                or 'a_examiner'
+            )
         )
 
         formset = ResultatPreselectionFormSet(
@@ -2930,10 +3144,12 @@ def preselection_comite_detail(request, pk):
             prefix='critere'
         )
 
-        decision_form = DecisionComiteSousProjetForm(
-            request.POST,
-            instance=sous_projet,
-            prefix='global'
+        decision_form = (
+            DecisionComiteSousProjetForm(
+                request.POST,
+                instance=sous_projet,
+                prefix='global'
+            )
         )
 
         decision_globale = request.POST.get(
@@ -2944,22 +3160,37 @@ def preselection_comite_detail(request, pk):
             'global-motif_comite'
         )
 
-        # Une décision complète impose la saisie des décisions et motifs,
-        # mais ne verrouille plus le dossier.
-        decision_finale = decision_globale in [
-            'preselectionne',
-            'rejete',
-        ]
+        # =====================================================
+        # DÉCISION FINALE
+        # =====================================================
 
-        # Décisions provisoires : le dossier reste modifiable.
-        decision_attente = decision_globale in [
-            '',
-            None,
-            'reexaminer',
-        ]
+        decision_finale = (
+            decision_globale in [
+                'preselectionne',
+                'rejete',
+            ]
+        )
+
+        # =====================================================
+        # DÉCISION PROVISOIRE
+        # =====================================================
+
+        decision_attente = (
+            decision_globale in [
+                '',
+                None,
+                'reexaminer',
+            ]
+        )
+
+        # =====================================================
+        # VALIDATION DES CRITÈRES SI DÉCISION FINALE
+        # =====================================================
 
         if decision_finale:
+
             for form in formset.forms:
+
                 decision = form.data.get(
                     form.add_prefix(
                         'decision_comite'
@@ -2993,6 +3224,7 @@ def preselection_comite_detail(request, pk):
                     )
 
             if not motif_global:
+
                 decision_form.add_error(
                     'motif_comite',
                     (
@@ -3002,26 +3234,69 @@ def preselection_comite_detail(request, pk):
                     )
                 )
 
-        if formset.is_valid() and decision_form.is_valid():
+        # =====================================================
+        # ENREGISTREMENT
+        # =====================================================
+
+        if (
+            formset.is_valid()
+            and decision_form.is_valid()
+        ):
+
             formset.save()
 
             sous_projet = decision_form.save(
                 commit=False
             )
 
-            if decision_finale:
-                score = 0
+            # =================================================
+            # DÉCISION FINALE
+            # =================================================
 
-                for resultat in (
+            if decision_finale:
+
+                # ---------------------------------------------
+                # Calcul des critères
+                # ---------------------------------------------
+
+                nb_criteres_preselectionnes = (
                     sous_projet
                     .resultats_preselection
-                    .all()
-                ):
-                    if (
-                        resultat.decision_comite
-                        == 'preselectionne'
-                    ):
-                        score += 1
+                    .filter(
+                        decision_comite='preselectionne'
+                    )
+                    .count()
+                )
+
+                nb_criteres_rejetes = (
+                    sous_projet
+                    .resultats_preselection
+                    .filter(
+                        decision_comite='rejete'
+                    )
+                    .count()
+                )
+
+                # ---------------------------------------------
+                # Score existant
+                # ---------------------------------------------
+
+                if decision_globale == 'preselectionne':
+                    score = (
+                        nb_criteres_preselectionnes
+                    )
+
+                elif decision_globale == 'rejete':
+                    score = (
+                        nb_criteres_rejetes
+                    )
+
+                else:
+                    score = 0
+
+                # ---------------------------------------------
+                # Score en base si le champ existe
+                # ---------------------------------------------
 
                 if hasattr(
                     sous_projet,
@@ -3029,11 +3304,21 @@ def preselection_comite_detail(request, pk):
                 ):
                     sous_projet.score_comite = score
 
+                # ---------------------------------------------
+                # Évaluation terminée
+                # ---------------------------------------------
+
                 if hasattr(
                     sous_projet,
                     'evaluation_comite_terminee'
                 ):
-                    sous_projet.evaluation_comite_terminee = True
+                    sous_projet.evaluation_comite_terminee = (
+                        True
+                    )
+
+                # ---------------------------------------------
+                # Date d'évaluation
+                # ---------------------------------------------
 
                 if hasattr(
                     sous_projet,
@@ -3043,9 +3328,13 @@ def preselection_comite_detail(request, pk):
                         timezone.now()
                     )
 
-                # Traçabilité du président ayant
-                # enregistré la décision finale.
-                sous_projet.president_comite = utilisateur
+                # ---------------------------------------------
+                # Président du comité
+                # ---------------------------------------------
+
+                sous_projet.president_comite = (
+                    utilisateur
+                )
 
                 sous_projet.president_username = (
                     utilisateur.username
@@ -3060,54 +3349,106 @@ def preselection_comite_detail(request, pk):
                     timezone.now()
                 )
 
-                # Le statut reflète la décision, sans bloquer les modifications futures.
-                sous_projet.status = decision_globale
+                # ---------------------------------------------
+                # Statut
+                # ---------------------------------------------
+
+                sous_projet.status = (
+                    decision_globale
+                )
 
                 sous_projet.save()
+
+                # ---------------------------------------------
+                # Historique
+                # ---------------------------------------------
 
                 enregistrer_historique_statut(
                     sous_projet=sous_projet,
                     utilisateur=utilisateur,
                     ancien_statut=ancien_statut,
-                    nouveau_statut=decision_globale
-                )
-
-                messages.success(
-                    request,
-                    (
-                        "✅ Décision du comité enregistrée avec succès. "
-                        "Elle reste modifiable ultérieurement. "
-                        f"Score : {score}/20."
+                    nouveau_statut=(
+                        decision_globale
                     )
                 )
 
-                return redirect(liste_retour)
+                # ---------------------------------------------
+                # Message
+                # ---------------------------------------------
+
+                if (
+                    decision_globale
+                    == 'preselectionne'
+                ):
+
+                    messages.success(
+                        request,
+                        (
+                            "✅ Dossier présélectionné "
+                            "avec succès. "
+                            f"Note : {score}/20 critères "
+                            "présélectionnés."
+                        )
+                    )
+
+                elif (
+                    decision_globale
+                    == 'rejete'
+                ):
+
+                    messages.success(
+                        request,
+                        (
+                            "✅ Dossier rejeté "
+                            "avec succès. "
+                            f"Note : {score}/20 critères "
+                            "rejetés."
+                        )
+                    )
+
+                return redirect(
+                    liste_retour
+                )
+
+            # =================================================
+            # DÉCISION PROVISOIRE
+            # =================================================
 
             if decision_attente:
-                # Le statut reste non final pour permettre
-                # la modification du dossier.
+
                 sous_projet.status = 'etude'
 
                 if hasattr(
                     sous_projet,
                     'evaluation_comite_terminee'
                 ):
-                    sous_projet.evaluation_comite_terminee = False
+                    sous_projet.evaluation_comite_terminee = (
+                        False
+                    )
 
                 sous_projet.save()
 
-                nouveau_statut = normaliser_statut_preselection(
-                    decision_globale or 'a_examiner'
+                nouveau_statut = (
+                    normaliser_statut_preselection(
+                        decision_globale
+                        or 'a_examiner'
+                    )
                 )
 
                 enregistrer_historique_statut(
                     sous_projet=sous_projet,
                     utilisateur=utilisateur,
                     ancien_statut=ancien_statut,
-                    nouveau_statut=nouveau_statut
+                    nouveau_statut=(
+                        nouveau_statut
+                    )
                 )
 
-                if decision_globale == 'reexaminer':
+                if (
+                    decision_globale
+                    == 'reexaminer'
+                ):
+
                     messages.success(
                         request,
                         (
@@ -3118,64 +3459,171 @@ def preselection_comite_detail(request, pk):
                     )
 
                 else:
+
                     messages.success(
                         request,
                         (
-                            "✅ Travail du comité enregistré. "
+                            "✅ Travail du comité "
+                            "enregistré. "
                             "Le dossier reste modifiable."
                         )
                     )
 
-                return redirect(liste_retour)
+                return redirect(
+                    liste_retour
+                )
 
         messages.error(
             request,
             "❌ Veuillez corriger les erreurs du formulaire."
         )
 
+    # =========================================================
+    # GET
+    # =========================================================
+
     else:
+
         formset = ResultatPreselectionFormSet(
             queryset=queryset,
             prefix='critere'
         )
 
-        decision_form = DecisionComiteSousProjetForm(
-            instance=sous_projet,
-            prefix='global',
-            readonly=False
+        decision_form = (
+            DecisionComiteSousProjetForm(
+                instance=sous_projet,
+                prefix='global',
+                readonly=False
+            )
         )
+
+    # =========================================================
+    # STATISTIQUES AUTOMATIQUES
+    # =========================================================
 
     criteres = list(queryset)
 
     nb_eligibles = sum(
         1
         for critere in criteres
-        if critere.decision_automatique == 'eligible'
+        if critere.decision_automatique
+        == 'eligible'
     )
 
     nb_non_eligibles = sum(
         1
         for critere in criteres
-        if critere.decision_automatique == 'non_eligible'
+        if critere.decision_automatique
+        == 'non_eligible'
     )
 
     nb_a_examiner = sum(
         1
         for critere in criteres
-        if critere.decision_automatique == 'a_examiner'
+        if critere.decision_automatique
+        == 'a_examiner'
     )
 
+    # =========================================================
+    # NOTE DU COMITÉ SUR 20
+    # =========================================================
+
+    decision_comite = (
+        sous_projet.decision_comite
+        or 'a_examiner'
+    )
+
+    nb_criteres_preselectionnes = (
+        queryset
+        .filter(
+            decision_comite='preselectionne'
+        )
+        .count()
+    )
+
+    nb_criteres_rejetes = (
+        queryset
+        .filter(
+            decision_comite='rejete'
+        )
+        .count()
+    )
+
+    # =========================================================
+    # NOTE À AFFICHER
+    # =========================================================
+
+    if decision_comite == 'preselectionne':
+
+        note_comite = (
+            nb_criteres_preselectionnes
+        )
+
+        note_type = 'preselectionne'
+
+    elif decision_comite == 'rejete':
+
+        note_comite = (
+            nb_criteres_rejetes
+        )
+
+        note_type = 'rejete'
+
+    else:
+
+        note_comite = None
+        note_type = None
+
+    # =========================================================
+    # CONTEXTE
+    # =========================================================
+
     context = {
+
         'sous_projet': sous_projet,
+
         'formset': formset,
+
         'decision_form': decision_form,
+
         'criteres': criteres,
+
+        # Statistiques automatiques
         'nb_eligibles': nb_eligibles,
-        'nb_non_eligibles': nb_non_eligibles,
+        'nb_non_eligibles': (
+            nb_non_eligibles
+        ),
         'nb_a_examiner': nb_a_examiner,
+
         'auto': auto,
+
         'readonly_mode': False,
+
         'liste_retour': liste_retour,
+
+        # =====================================================
+        # NOTE COMITÉ
+        # =====================================================
+
+        'decision_comite': (
+            decision_comite
+        ),
+
+        'note_comite': (
+            note_comite
+        ),
+
+        'note_type': (
+            note_type
+        ),
+
+        'nb_criteres_preselectionnes': (
+            nb_criteres_preselectionnes
+        ),
+
+        'nb_criteres_rejetes': (
+            nb_criteres_rejetes
+        ),
     }
 
     return render(
@@ -3183,7 +3631,6 @@ def preselection_comite_detail(request, pk):
         'formulaire/preselection_comite_detail.html',
         context
     )
-
 @login_required
 def rapport_paysage_type_financement(request):
     """

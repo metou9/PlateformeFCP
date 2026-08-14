@@ -616,6 +616,7 @@
                             <th>Décision automatique</th>
                             <th>Motif automatique</th>
                             <th>Décision comité</th>
+                            <th>Note /20</th>
                             <th>Motif comité</th>
 
                             {% if can_validate_comite %}
@@ -641,6 +642,7 @@
                                         {{ ligne.decision_automatique }}
                                     </span>
                                 </td>
+                      
 
                                 <td class="motif-text">
                                     {{ ligne.motif_automatique }}
@@ -668,6 +670,26 @@
                                         </span>
                                     {% endif %}
                                 </td>
+                                          <td class="text-center">
+
+    {% if ligne.note_comite is not None %}
+
+        {% if ligne.note_type == 'preselectionne' %}
+            <strong>
+                {{ ligne.note_comite }}/20
+            </strong>
+
+        {% elif ligne.note_type == 'rejete' %}
+            <strong>
+                {{ ligne.note_comite }}/20
+            </strong>
+        {% endif %}
+
+    {% else %}
+        -
+    {% endif %}
+
+</td>
 
                                 <td class="motif-text">
                                     {{ ligne.motif_comite|default:"Non renseigné" }}
