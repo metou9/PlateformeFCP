@@ -1,0 +1,507 @@
+{% extends 'formulaire/base.html' %}
+{% load static %}
+
+{% block title %}Impression des dossiers - PADISAM{% endblock %}
+
+{% block extra_css %}
+<style>
+    .print-page {
+        padding-top: 10px;
+    }
+
+    .print-header {
+        background: linear-gradient(135deg, #5dbb63, #4cae55);
+        color: #ffffff;
+        border-radius: 14px;
+        padding: 22px 24px;
+        margin-bottom: 24px;
+        box-shadow: 0 6px 18px rgba(0, 0, 0, 0.08);
+    }
+
+    .print-header h1 {
+        margin: 0;
+        font-size: 26px;
+        font-weight: 700;
+    }
+
+    .print-header p {
+        margin: 8px 0 0;
+        opacity: 0.95;
+    }
+
+    .filter-card,
+    .list-card {
+        background: #ffffff;
+        border: 1px solid #e5e7eb;
+        border-radius: 14px;
+        box-shadow: 0 4px 14px rgba(0, 0, 0, 0.05);
+        margin-bottom: 22px;
+    }
+
+    .filter-card .card-body,
+    .list-card .card-body {
+        padding: 20px;
+    }
+
+    .filter-title {
+        font-size: 16px;
+        font-weight: 700;
+        color: #374151;
+        margin-bottom: 14px;
+    }
+
+    .table-print {
+        width: 100%;
+        border-collapse: collapse;
+    }
+
+    .table-print th {
+        background: #5dbb63;
+        color: #ffffff;
+        font-size: 13px;
+        font-weight: 700;
+        padding: 11px 10px;
+        border: 1px solid #d1d5db;
+        text-align: center;
+        vertical-align: middle;
+    }
+
+    .table-print td {
+        padding: 10px;
+        font-size: 13px;
+        border: 1px solid #e5e7eb;
+        vertical-align: middle;
+    }
+
+    .table-print tbody tr:hover {
+        background: #f8fafc;
+    }
+
+    .checkbox-cell {
+        width: 55px;
+        text-align: center;
+    }
+
+    .checkbox-cell input {
+        width: 18px;
+        height: 18px;
+        cursor: pointer;
+    }
+
+    .selection-toolbar {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        gap: 12px;
+        margin-bottom: 15px;
+        flex-wrap: wrap;
+    }
+
+    .selection-count {
+        font-weight: 600;
+        color: #374151;
+    }
+
+    .empty-state {
+        padding: 35px 20px;
+        text-align: center;
+        color: #6b7280;
+    }
+
+    .empty-state strong {
+        color: #374151;
+    }
+
+    .action-footer {
+        display: flex;
+        justify-content: flex-end;
+        align-items: center;
+        gap: 12px;
+        margin-top: 18px;
+        flex-wrap: wrap;
+    }
+
+    .btn-pdf {
+        background: #dc3545;
+        border: none;
+        color: #ffffff;
+        padding: 10px 18px;
+        border-radius: 8px;
+        font-weight: 700;
+        transition: 0.2s ease;
+    }
+
+    .btn-pdf:hover {
+        background: #bb2d3b;
+        color: #ffffff;
+    }
+
+    .btn-select {
+        border: 1px solid #5dbb63;
+        background: #ffffff;
+        color: #3f9147;
+        padding: 7px 12px;
+        border-radius: 7px;
+        font-weight: 600;
+    }
+
+    .btn-select:hover {
+        background: #eef9ef;
+    }
+
+    .selected-paysage-info {
+        background: #eef9ef;
+        border-left: 4px solid #5dbb63;
+        padding: 10px 14px;
+        border-radius: 8px;
+        margin-bottom: 15px;
+        color: #374151;
+        font-size: 14px;
+    }
+
+    @media (max-width: 768px) {
+        .print-header {
+            padding: 18px;
+        }
+
+        .print-header h1 {
+            font-size: 22px;
+        }
+
+        .selection-toolbar,
+        .action-footer {
+            flex-direction: column;
+            align-items: stretch;
+        }
+
+        .selection-toolbar .btn,
+        .action-footer .btn,
+        .btn-select,
+        .btn-pdf {
+            width: 100%;
+        }
+    }
+</style>
+{% endblock %}
+
+{% block content %}
+
+<div class="print-page">
+
+    <div class="print-header">
+        <h1>🖨️ Impression des dossiers</h1>
+        <p>
+            Filtrez les dossiers par Paysage / ZOCA, sélectionnez ceux que vous souhaitez imprimer,
+            puis générez un seul fichier PDF.
+        </p>
+    </div>
+
+    <div class="filter-card">
+        <div class="card-body">
+
+            <div class="filter-title">
+                Filtrer par Paysage / ZOCA
+            </div>
+
+            <form method="get"
+                  action="{% url 'formulaire:impression_dossiers' %}">
+                <div class="row g-3 align-items-end">
+
+                    <div class="col-md-8">
+                        <label for="id_paysage"
+                               class="form-label fw-bold">
+                            Paysage / ZOCA
+                        </label>
+
+                        <select name="paysage"
+                                id="id_paysage"
+                                class="form-select">
+
+                            <option value="">
+                                Sélectionnez un paysage
+                            </option>
+
+                            {% for paysage in paysages_disponibles %}
+                                <option value="{{ paysage.paysage_id }}"
+                                    {% if selected_paysage_id == paysage.paysage_id|stringformat:"s" %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ paysage.paysage__nom }}
+                                    {% if paysage.wilaya__nom %}
+                                        - {{ paysage.wilaya__nom }}
+                                    {% endif %}
+                                </option>
+                            {% endfor %}
+                        </select>
+                    </div>
+
+                    <div class="col-md-4">
+                        <button type="submit"
+                                class="btn btn-success w-100">
+                            🔎 Afficher les dossiers
+                        </button>
+                    </div>
+
+                </div>
+            </form>
+
+        </div>
+    </div>
+
+    {% if selected_paysage %}
+
+        <div class="list-card">
+            <div class="card-body">
+
+                <div class="selected-paysage-info">
+                    Paysage sélectionné :
+                    <strong>{{ selected_paysage.nom }}</strong>
+                </div>
+
+                <form method="post"
+                      action="{% url 'formulaire:generer_pdf_dossiers' %}"
+                      id="form-impression">
+
+                    {% csrf_token %}
+
+                    <input type="hidden"
+                           name="paysage"
+                           value="{{ selected_paysage_id }}">
+
+                    {% if sous_projets %}
+
+                        <div class="selection-toolbar">
+
+                            <div>
+                                <button type="button"
+                                        class="btn-select"
+                                        id="btn-select-all">
+                                    Tout sélectionner
+                                </button>
+
+                                <button type="button"
+                                        class="btn-select"
+                                        id="btn-unselect-all">
+                                    Tout désélectionner
+                                </button>
+                            </div>
+
+                            <div class="selection-count">
+                                <span id="selected-count">0</span>
+                                dossier(s) sélectionné(s)
+                            </div>
+
+                        </div>
+
+                        <div class="table-responsive">
+
+                            <table class="table-print">
+                                <thead>
+                                    <tr>
+                                        <th class="checkbox-cell">
+                                            Sélection
+                                        </th>
+                                        <th>N° réception</th>
+                                        <th>Intitulé</th>
+                                        <th>Wilaya</th>
+                                        <th>Moughataa</th>
+                                        <th>Commune</th>
+                                        <th>Paysage / ZOCA</th>
+                                        <th>Village</th>
+                                        <th>Type projet</th>
+                                        <th>Guichet</th>
+                                    </tr>
+                                </thead>
+
+                                <tbody>
+
+                                    {% for sous_projet in sous_projets %}
+                                        <tr>
+
+                                            <td class="checkbox-cell">
+                                                <input
+                                                    type="checkbox"
+                                                    name="dossiers"
+                                                    value="{{ sous_projet.id }}"
+                                                    class="dossier-checkbox"
+                                                >
+                                            </td>
+
+                                            <td class="text-center">
+                                                {{ sous_projet.numero_reception_formulaire|default:"Non renseigné" }}
+                                            </td>
+
+                                            <td>
+                                                {{ sous_projet.intitule_sous_projet|default:"Non renseigné" }}
+                                            </td>
+
+                                            <td>
+                                                {% if sous_projet.wilaya %}
+                                                    {{ sous_projet.wilaya.nom }}
+                                                {% else %}
+                                                    Non renseignée
+                                                {% endif %}
+                                            </td>
+
+                                            <td>
+                                                {% if sous_projet.moughataa %}
+                                                    {{ sous_projet.moughataa.nom }}
+                                                {% else %}
+                                                    Non renseignée
+                                                {% endif %}
+                                            </td>
+
+                                            <td>
+                                                {% if sous_projet.commune %}
+                                                    {{ sous_projet.commune.nom }}
+                                                {% else %}
+                                                    Non renseignée
+                                                {% endif %}
+                                            </td>
+
+                                            <td>
+                                                {% if sous_projet.paysage %}
+                                                    {{ sous_projet.paysage.nom }}
+                                                {% else %}
+                                                    Non renseigné
+                                                {% endif %}
+                                            </td>
+
+                                            <td>
+                                                {{ sous_projet.village|default:"Non renseigné" }}
+                                            </td>
+
+                                            <td>
+                                                {% if sous_projet.type_projet %}
+                                                    {{ sous_projet.get_type_projet_display }}
+                                                {% else %}
+                                                    Non renseigné
+                                                {% endif %}
+                                            </td>
+
+                                            <td>
+                                                {% if sous_projet.guichet %}
+                                                    {{ sous_projet.get_guichet_display }}
+                                                {% else %}
+                                                    Non renseigné
+                                                {% endif %}
+                                            </td>
+
+                                        </tr>
+                                    {% endfor %}
+
+                                </tbody>
+                            </table>
+
+                        </div>
+
+                        <div class="action-footer">
+
+                            <div class="text-muted">
+                                Les dossiers sélectionnés seront regroupés
+                                dans un seul fichier PDF.
+                            </div>
+
+                            <button type="submit"
+                                    class="btn-pdf"
+                                    id="btn-generate-pdf"
+                                    disabled>
+                                📄 Générer le PDF
+                            </button>
+
+                        </div>
+
+                    {% else %}
+
+                        <div class="empty-state">
+                            <strong>Aucun dossier trouvé.</strong>
+                            <br>
+                            Aucun dossier accessible ne correspond à ce paysage.
+                        </div>
+
+                    {% endif %}
+
+                </form>
+
+            </div>
+        </div>
+
+    {% else %}
+
+        <div class="list-card">
+            <div class="card-body">
+
+                <div class="empty-state">
+                    <strong>Sélectionnez d'abord un Paysage / ZOCA.</strong>
+                    <br>
+                    Les dossiers correspondants apparaîtront ensuite ici.
+                </div>
+
+            </div>
+        </div>
+
+    {% endif %}
+
+</div>
+
+{% endblock %}
+
+{% block extra_js %}
+
+<script>
+document.addEventListener('DOMContentLoaded', function () {
+
+    const checkboxes = document.querySelectorAll('.dossier-checkbox');
+    const selectAllButton = document.getElementById('btn-select-all');
+    const unselectAllButton = document.getElementById('btn-unselect-all');
+    const selectedCount = document.getElementById('selected-count');
+    const generateButton = document.getElementById('btn-generate-pdf');
+
+    function updateSelectedCount() {
+        let count = 0;
+
+        checkboxes.forEach(function (checkbox) {
+            if (checkbox.checked) {
+                count++;
+            }
+        });
+
+        if (selectedCount) {
+            selectedCount.textContent = count;
+        }
+
+        if (generateButton) {
+            generateButton.disabled = count === 0;
+        }
+    }
+
+    checkboxes.forEach(function (checkbox) {
+        checkbox.addEventListener('change', updateSelectedCount);
+    });
+
+    if (selectAllButton) {
+        selectAllButton.addEventListener('click', function () {
+            checkboxes.forEach(function (checkbox) {
+                checkbox.checked = true;
+            });
+
+            updateSelectedCount();
+        });
+    }
+
+    if (unselectAllButton) {
+        unselectAllButton.addEventListener('click', function () {
+            checkboxes.forEach(function (checkbox) {
+                checkbox.checked = false;
+            });
+
+            updateSelectedCount();
+        });
+    }
+
+    updateSelectedCount();
+});
+</script>
+
+{% endblock %}

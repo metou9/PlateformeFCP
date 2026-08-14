@@ -73,6 +73,22 @@ path(
     name='rapport_preselection_comite'
 ),
 
+# ======================================================
+# REPORTING - IMPRESSION DES DOSSIERS
+# ======================================================
+
+path(
+    'impression-dossiers/',
+    views.impression_dossiers,
+    name='impression_dossiers'
+),
+
+path(
+    'impression-dossiers/pdf/',
+    views.generer_pdf_dossiers,
+    name='generer_pdf_dossiers'
+),
+
 path(
     'modifier-section/<int:pk>/<str:section>/',
     views.modifier_section_sous_projet,

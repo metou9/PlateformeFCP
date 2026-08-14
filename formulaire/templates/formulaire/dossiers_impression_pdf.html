@@ -1,0 +1,1356 @@
+{% load humanize %}
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+
+    <title>
+        Impression des dossiers
+    </title>
+
+    <style>
+        @page {
+            size: A4;
+            margin: 15mm 12mm 15mm 12mm;
+
+            @bottom-center {
+                content: "PADISAM / FCP - Page " counter(page) " / " counter(pages);
+                font-size: 9px;
+                color: #6b7280;
+            }
+        }
+
+        * {
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: Arial, Helvetica, sans-serif;
+            color: #1f2937;
+            font-size: 10px;
+            line-height: 1.4;
+            margin: 0;
+            padding: 0;
+        }
+
+        .dossier {
+            width: 100%;
+        }
+
+        .dossier + .dossier {
+            page-break-before: always;
+        }
+
+        .header {
+            border-bottom: 3px solid #5dbb63;
+            margin-bottom: 14px;
+            padding-bottom: 10px;
+        }
+
+        .header-title {
+            text-align: center;
+            font-size: 20px;
+            font-weight: bold;
+            color: #2f7d36;
+            margin-bottom: 5px;
+        }
+
+        .header-subtitle {
+            text-align: center;
+            font-size: 12px;
+            font-weight: bold;
+            color: #374151;
+        }
+
+        .header-meta {
+            margin-top: 9px;
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .header-meta td {
+            border: none;
+            padding: 2px 5px;
+            font-size: 9px;
+        }
+
+        .header-meta .right {
+            text-align: right;
+        }
+
+        .dossier-number {
+            margin-top: 10px;
+            background: #e8f5e9;
+            border: 1px solid #5dbb63;
+            padding: 8px 10px;
+            font-size: 13px;
+            font-weight: bold;
+            border-radius: 4px;
+        }
+
+        .section {
+            margin-top: 14px;
+            page-break-inside: avoid;
+        }
+
+        .section-title {
+            background: #5dbb63;
+            color: white;
+            font-size: 12px;
+            font-weight: bold;
+            padding: 6px 8px;
+            margin-bottom: 0;
+        }
+
+        table {
+            width: 100%;
+            border-collapse: collapse;
+        }
+
+        .info-table td,
+        .data-table th,
+        .data-table td {
+            border: 1px solid #d1d5db;
+            padding: 5px 6px;
+            vertical-align: top;
+        }
+
+        .info-table .label {
+            width: 27%;
+            font-weight: bold;
+            background: #f3f4f6;
+            color: #374151;
+        }
+
+        .info-table .value {
+            width: 73%;
+        }
+
+        .data-table th {
+            background: #e8f5e9;
+            font-weight: bold;
+            text-align: center;
+            color: #374151;
+        }
+
+        .data-table td {
+            text-align: left;
+        }
+
+        .text-center {
+            text-align: center !important;
+        }
+
+        .text-right {
+            text-align: right !important;
+        }
+
+        .total-row td {
+            background: #f3f4f6;
+            font-weight: bold;
+        }
+
+        .grand-total td {
+            background: #dff2e1;
+            font-weight: bold;
+            color: #245c29;
+        }
+
+        .empty {
+            color: #6b7280;
+            font-style: italic;
+        }
+
+        .small {
+            font-size: 9px;
+        }
+
+        .paragraph {
+            border: 1px solid #d1d5db;
+            padding: 7px;
+            min-height: 30px;
+            white-space: pre-line;
+        }
+
+        .footer-dossier {
+            border-top: 1px solid #d1d5db;
+            margin-top: 18px;
+            padding-top: 7px;
+            text-align: right;
+            font-size: 8px;
+            color: #6b7280;
+        }
+    </style>
+</head>
+
+<body>
+
+{% for dossier in dossiers %}
+
+    {% with sp=dossier.sous_projet %}
+
+    <div class="dossier">
+
+        <!-- ================================================== -->
+        <!-- EN-TÊTE -->
+        <!-- ================================================== -->
+
+        <div class="header">
+
+            <div class="header-title">
+                PADISAM / FCP
+            </div>
+
+            <div class="header-subtitle">
+                Fiche détaillée du sous-projet
+            </div>
+
+            <table class="header-meta">
+                <tr>
+                    <td>
+                        {% if selected_paysage %}
+                            Paysage / ZOCA :
+                            <strong>{{ selected_paysage.nom }}</strong>
+                        {% endif %}
+                    </td>
+
+                    <td class="right">
+                        Généré le :
+                        {{ date_generation|date:"d/m/Y à H:i" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td>
+                        {% if utilisateur %}
+                            Utilisateur :
+                            <strong>{{ utilisateur.username }}</strong>
+                        {% endif %}
+                    </td>
+
+                    <td></td>
+                </tr>
+            </table>
+
+        </div>
+
+        <div class="dossier-number">
+            Dossier N°
+            {{ sp.numero_reception_formulaire|default:"Non renseigné" }}
+            —
+            {{ sp.intitule_sous_projet|default:"Sous-projet sans intitulé" }}
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 1. INFORMATIONS GÉNÉRALES -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                1. Informations générales
+            </div>
+
+            <table class="info-table">
+
+                <tr>
+                    <td class="label">
+                        Numéro de réception
+                    </td>
+                    <td class="value">
+                        {{ sp.numero_reception_formulaire|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Date du formulaire
+                    </td>
+                    <td class="value">
+                        {% if sp.date_formulaire %}
+                            {{ sp.date_formulaire|date:"d/m/Y" }}
+                        {% else %}
+                            Non renseignée
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Intitulé du sous-projet
+                    </td>
+                    <td class="value">
+                        {{ sp.intitule_sous_projet|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Guichet
+                    </td>
+                    <td class="value">
+                        {% if sp.guichet %}
+                            {{ sp.get_guichet_display }}
+                        {% else %}
+                            Non renseigné
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Type de projet
+                    </td>
+                    <td class="value">
+                        {% if sp.type_projet %}
+                            {{ sp.get_type_projet_display }}
+                        {% else %}
+                            Non renseigné
+                        {% endif %}
+                    </td>
+                </tr>
+
+                {% if sp.type_projet == 'AG' %}
+                <tr>
+                    <td class="label">
+                        Nombre d'hectares
+                    </td>
+                    <td class="value">
+                        {{ sp.nombre_hectare|default:"Non renseigné" }}
+                    </td>
+                </tr>
+                {% endif %}
+
+                <tr>
+                    <td class="label">
+                        Présenté par femmes / jeunes
+                    </td>
+                    <td class="value">
+                        {% if sp.presente_par_femmes_jeunes %}
+                            {{ sp.get_presente_par_femmes_jeunes_display }}
+                        {% else %}
+                            Non renseigné
+                        {% endif %}
+                    </td>
+                </tr>
+
+            </table>
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 2. LOCALISATION -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                2. Localisation
+            </div>
+
+            <table class="info-table">
+
+                <tr>
+                    <td class="label">
+                        Wilaya
+                    </td>
+                    <td>
+                        {% if sp.wilaya %}
+                            {{ sp.wilaya.nom }}
+                        {% else %}
+                            Non renseignée
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Moughataa
+                    </td>
+                    <td>
+                        {% if sp.moughataa %}
+                            {{ sp.moughataa.nom }}
+                        {% else %}
+                            Non renseignée
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Commune
+                    </td>
+                    <td>
+                        {% if sp.commune %}
+                            {{ sp.commune.nom }}
+                        {% else %}
+                            Non renseignée
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Paysage / ZOCA
+                    </td>
+                    <td>
+                        {% if sp.paysage %}
+                            {{ sp.paysage.nom }}
+                        {% else %}
+                            Non renseigné
+                        {% endif %}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Village
+                    </td>
+                    <td>
+                        {{ sp.village|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Adresse
+                    </td>
+                    <td>
+                        {{ sp.adresse|default:"Non renseignée" }}
+                    </td>
+                </tr>
+
+            </table>
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 3. PROMOTEUR -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                3. Identification du promoteur
+            </div>
+
+            <table class="info-table">
+
+                <tr>
+                    <td class="label">
+                        Nom et statut juridique
+                    </td>
+                    <td>
+                        {{ sp.nom_statut_juridique|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Principal domaine d'activités
+                    </td>
+                    <td>
+                        {{ sp.principal_domaine_activites|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Personne contact
+                    </td>
+                    <td>
+                        {{ sp.personne_contact_nom|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Fonction
+                    </td>
+                    <td>
+                        {{ sp.personne_contact_fonction|default:"Non renseignée" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Téléphone
+                    </td>
+                    <td>
+                        {{ sp.telephone|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Fax
+                    </td>
+                    <td>
+                        {{ sp.fax|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Email
+                    </td>
+                    <td>
+                        {{ sp.email|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+            </table>
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 4. PROJET -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                4. Description et objectif du sous-projet
+            </div>
+
+            <table class="info-table">
+
+                <tr>
+                    <td class="label">
+                        Chaîne d'approvisionnement
+                    </td>
+                    <td>
+                        {{ sp.chaine_approvisionnement|default:"Non renseignée" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Segment de chaîne de valeur
+                    </td>
+                    <td>
+                        {{ sp.segment_ca|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Marchés visés
+                    </td>
+                    <td>
+                        {{ sp.marches_vises|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+            </table>
+
+            <div style="margin-top: 6px; font-weight: bold;">
+                Objectif du sous-projet
+            </div>
+
+            <div class="paragraph">
+                {{ sp.objectif_sous_projet|default:"Non renseigné" }}
+            </div>
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 5. ACTIVITÉS -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                5. Activités prévues
+            </div>
+
+            {% if dossier.activites %}
+
+                <table class="data-table">
+
+                    <thead>
+                        <tr>
+                            <th style="width: 35%;">
+                                Activité
+                            </th>
+                            <th>
+                                Objectifs quantitatifs / réalisations
+                            </th>
+                        </tr>
+                    </thead>
+
+                    <tbody>
+
+                        {% for activite in dossier.activites %}
+                        <tr>
+                            <td>
+                                {{ activite.nom_activite|default:"Non renseigné" }}
+                            </td>
+
+                            <td>
+                                {{ activite.realisations|default:"Non renseigné" }}
+                            </td>
+                        </tr>
+                        {% endfor %}
+
+                    </tbody>
+
+                </table>
+
+            {% else %}
+
+                <div class="paragraph empty">
+                    Aucune activité renseignée.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 6. INFRASTRUCTURES -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                6. Infrastructures
+            </div>
+
+            {% if dossier.infrastructures %}
+
+            <table class="data-table">
+
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Qté</th>
+                        <th>Prix unit.</th>
+                        <th>Montant total</th>
+                        <th>Subvention</th>
+                        <th>Contribution</th>
+                        <th>Autre</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for ligne in dossier.infrastructures %}
+                    <tr>
+                        <td>{{ ligne.description|default:"-" }}</td>
+
+                        <td class="text-center">
+                            {{ ligne.quantite|default:"-" }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ ligne.prix_unit|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ ligne.montant_total|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ ligne.subvention_padisam|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ ligne.contribution_promoteur|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ ligne.autre_financement|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr class="total-row">
+                        <td colspan="3" class="text-right">
+                            Total infrastructures
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.total_infrastructures|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.infra_subvention|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.infra_contribution|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.infra_autre|floatformat:2|intcomma }}
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+            {% else %}
+
+                <div class="paragraph empty">
+                    Aucune infrastructure renseignée.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 7. ÉQUIPEMENTS -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                7. Équipements
+            </div>
+
+            {% if dossier.equipements %}
+
+            <table class="data-table">
+
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Qté</th>
+                        <th>Prix unit.</th>
+                        <th>Montant total</th>
+                        <th>Subvention</th>
+                        <th>Contribution</th>
+                        <th>Autre</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for ligne in dossier.equipements %}
+                    <tr>
+                        <td>{{ ligne.description|default:"-" }}</td>
+                        <td class="text-center">{{ ligne.quantite|default:"-" }}</td>
+                        <td class="text-right">{{ ligne.prix_unit|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.montant_total|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.subvention_padisam|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.contribution_promoteur|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.autre_financement|default_if_none:0|floatformat:2|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr class="total-row">
+                        <td colspan="3" class="text-right">
+                            Total équipements
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.total_equipements|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.equip_subvention|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.equip_contribution|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.equip_autre|floatformat:2|intcomma }}
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+            {% else %}
+
+                <div class="paragraph empty">
+                    Aucun équipement renseigné.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 8. INTRANTS -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                8. Intrants
+            </div>
+
+            {% if dossier.intrants %}
+
+            <table class="data-table">
+
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Qté</th>
+                        <th>Prix unit.</th>
+                        <th>Montant total</th>
+                        <th>Subvention</th>
+                        <th>Contribution</th>
+                        <th>Autre</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for ligne in dossier.intrants %}
+                    <tr>
+                        <td>{{ ligne.description|default:"-" }}</td>
+                        <td class="text-center">{{ ligne.quantite|default:"-" }}</td>
+                        <td class="text-right">{{ ligne.prix_unit|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.montant_total|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.subvention_padisam|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.contribution_promoteur|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.autre_financement|default_if_none:0|floatformat:2|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr class="total-row">
+                        <td colspan="3" class="text-right">
+                            Total intrants
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.total_intrants|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.intrant_subvention|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.intrant_contribution|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.intrant_autre|floatformat:2|intcomma }}
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+            {% else %}
+
+                <div class="paragraph empty">
+                    Aucun intrant renseigné.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 9. FONCTIONNEMENT -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                9. Fonctionnement
+            </div>
+
+            {% if dossier.fonctionnements %}
+
+            <table class="data-table">
+
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Qté</th>
+                        <th>Prix unit.</th>
+                        <th>Montant total</th>
+                        <th>Contribution</th>
+                        <th>Autre</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for ligne in dossier.fonctionnements %}
+                    <tr>
+                        <td>{{ ligne.description|default:"-" }}</td>
+                        <td class="text-center">{{ ligne.quantite|default:"-" }}</td>
+                        <td class="text-right">{{ ligne.prix_unit|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.montant_total|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.contribution_promoteur|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.autre_financement|default_if_none:0|floatformat:2|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr class="total-row">
+                        <td colspan="3" class="text-right">
+                            Total fonctionnement
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.total_fonctionnements|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.fonct_contribution|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.fonct_autre|floatformat:2|intcomma }}
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+            {% else %}
+
+                <div class="paragraph empty">
+                    Aucun coût de fonctionnement renseigné.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 10. SERVICES -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                10. Services
+            </div>
+
+            {% if dossier.services %}
+
+            <table class="data-table">
+
+                <thead>
+                    <tr>
+                        <th>Description</th>
+                        <th>Qté</th>
+                        <th>Prix unit.</th>
+                        <th>Montant total</th>
+                        <th>Subvention</th>
+                        <th>Contribution</th>
+                        <th>Autre</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for ligne in dossier.services %}
+                    <tr>
+                        <td>{{ ligne.description|default:"-" }}</td>
+                        <td class="text-center">{{ ligne.quantite|default:"-" }}</td>
+                        <td class="text-right">{{ ligne.prix_unit|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.montant_total|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.subvention_padisam|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.contribution_promoteur|default_if_none:0|floatformat:2|intcomma }}</td>
+                        <td class="text-right">{{ ligne.autre_financement|default_if_none:0|floatformat:2|intcomma }}</td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr class="total-row">
+                        <td colspan="3" class="text-right">
+                            Total services
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.total_services|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.service_subvention|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.service_contribution|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.service_autre|floatformat:2|intcomma }}
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+            {% else %}
+
+                <div class="paragraph empty">
+                    Aucun service renseigné.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 11. RÉCAPITULATIF FINANCIER -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                11. Récapitulatif du financement
+            </div>
+
+            <table class="data-table">
+
+                <thead>
+                    <tr>
+                        <th>Catégorie</th>
+                        <th>Subvention PADISAM</th>
+                        <th>Contribution promoteur</th>
+                        <th>Autre financement</th>
+                        <th>Montant total</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for ligne in dossier.recap_financement %}
+                    <tr>
+                        <td>
+                            {{ ligne.libelle }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ ligne.subvention|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ ligne.contribution|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ ligne.autre|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ ligne.total|floatformat:2|intcomma }}
+                        </td>
+                    </tr>
+                    {% endfor %}
+
+                    <tr class="grand-total">
+                        <td>
+                            TOTAL GÉNÉRAL
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.recap_total_subvention|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.recap_total_contribution|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.recap_total_autre|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.recap_total_general|floatformat:2|intcomma }}
+                        </td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 12. EXPÉRIENCE DU PROMOTEUR -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                12. Expérience et ressources du promoteur
+            </div>
+
+            <table class="info-table">
+
+                <tr>
+                    <td class="label">
+                        Année de début des activités
+                    </td>
+
+                    <td>
+                        {{ sp.annee_debut_activites|default:"Non renseignée" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Historique du promoteur
+                    </td>
+
+                    <td>
+                        {{ sp.historique_promoteur|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+                <tr>
+                    <td class="label">
+                        Ressources du promoteur
+                    </td>
+
+                    <td>
+                        {{ sp.ressources_promoteur|default:"Non renseigné" }}
+                    </td>
+                </tr>
+
+            </table>
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 13. RÉALISATIONS PASSÉES -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                13. Réalisations passées
+            </div>
+
+            {% if dossier.realisations %}
+
+            <table class="data-table small">
+
+                <thead>
+                    <tr>
+                        <th>Produit</th>
+                        <th>Année 1</th>
+                        <th>Volume</th>
+                        <th>Ventes</th>
+                        <th>Prix</th>
+
+                        <th>Année 2</th>
+                        <th>Volume</th>
+                        <th>Ventes</th>
+                        <th>Prix</th>
+
+                        <th>Année 3</th>
+                        <th>Volume</th>
+                        <th>Ventes</th>
+                        <th>Prix</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for real in dossier.realisations %}
+                    <tr>
+
+                        <td>
+                            {{ real.produit|default:"-" }}
+                        </td>
+
+                        <td class="text-center">
+                            {{ real.annee_1|default:"-" }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ real.volume_annee_1|default:"-" }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ real.ventes_usd_annee_1|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ real.prix_vente_mru_annee_1|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-center">
+                            {{ real.annee_2|default:"-" }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ real.volume_annee_2|default:"-" }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ real.ventes_usd_annee_2|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ real.prix_vente_mru_annee_2|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-center">
+                            {{ real.annee_3|default:"-" }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ real.volume_annee_3|default:"-" }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ real.ventes_usd_annee_3|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ real.prix_vente_mru_annee_3|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+
+                </tbody>
+
+            </table>
+
+            <div style="margin-top: 5px; text-align: right;">
+                <strong>
+                    Total des ventes :
+                    {{ dossier.total_ventes|floatformat:2|intcomma }}
+                </strong>
+            </div>
+
+            {% else %}
+
+                <div class="paragraph empty">
+                    Aucune réalisation passée renseignée.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- 14. EMPRUNTS -->
+        <!-- ================================================== -->
+
+        <div class="section">
+
+            <div class="section-title">
+                14. Passifs / emprunts
+            </div>
+
+            {% if dossier.emprunts %}
+
+            <table class="data-table">
+
+                <thead>
+                    <tr>
+                        <th>Année</th>
+                        <th>Institution financière</th>
+                        <th>Montant emprunté</th>
+                        <th>Montant remboursé</th>
+                        <th>Solde</th>
+                    </tr>
+                </thead>
+
+                <tbody>
+
+                    {% for emprunt in dossier.emprunts %}
+                    <tr>
+
+                        <td class="text-center">
+                            {{ emprunt.annee|default:"-" }}
+                        </td>
+
+                        <td>
+                            {{ emprunt.institution_financiere|default:"-" }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ emprunt.montant_emprunte|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ emprunt.montant_rembourse|default_if_none:0|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-center">
+                            Voir montants
+                        </td>
+
+                    </tr>
+                    {% endfor %}
+
+                    <tr class="total-row">
+                        <td colspan="2" class="text-right">
+                            Totaux
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.total_emprunte|floatformat:2|intcomma }}
+                        </td>
+
+                        <td class="text-right">
+                            {{ dossier.total_rembourse|floatformat:2|intcomma }}
+                        </td>
+
+                        <td></td>
+                    </tr>
+
+                </tbody>
+
+            </table>
+
+            {% else %}
+
+                <div class="paragraph empty">
+                    Aucun emprunt renseigné.
+                </div>
+
+            {% endif %}
+
+        </div>
+
+
+        <!-- ================================================== -->
+        <!-- FIN DU DOSSIER -->
+        <!-- ================================================== -->
+
+        <div class="footer-dossier">
+            Dossier
+            {{ sp.numero_reception_formulaire|default:"Non renseigné" }}
+            —
+            Impression générée le
+            {{ date_generation|date:"d/m/Y à H:i" }}
+        </div>
+
+    </div>
+
+    {% endwith %}
+
+{% endfor %}
+
+</body>
+</html>

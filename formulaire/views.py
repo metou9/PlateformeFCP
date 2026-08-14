@@ -13,6 +13,8 @@ from django.http import JsonResponse, QueryDict, HttpResponse
 from django.shortcuts import get_object_or_404, redirect, render
 from django.urls import reverse
 from django.utils import timezone
+from django.template.loader import render_to_string
+from django.utils.text import slugify
 from django.utils.http import url_has_allowed_host_and_scheme
 from django.db import transaction
 from django.db.models import Sum, Count, Case, When, IntegerField, Value, Q
@@ -3421,6 +3423,619 @@ def rapport_paysage_type_financement(request):
         'formulaire/rapport_paysage_type_financement.html',
         context
     )
+
+
+
+# =========================================================
+# REPORTING : IMPRESSION GROUPÉE DES DOSSIERS EN PDF
+# =========================================================
+
+def _construire_donnees_dossier_impression(sous_projet):
+    """
+    Prépare toutes les données nécessaires à l'impression d'un dossier.
+
+    Cette fonction reprend les informations détaillées utilisées dans
+    detail_sous_projet afin que le template PDF puisse afficher le dossier
+    complet sans dépendre de la page HTML de détail.
+    """
+
+    infrastructures = list(sous_projet.infrastructures.all())
+    equipements = list(sous_projet.equipements.all())
+    intrants = list(sous_projet.intrants.all())
+    fonctionnements = list(sous_projet.fonctionnements.all())
+    services = list(sous_projet.services.all())
+    activites = list(sous_projet.activites.all())
+    realisations = list(sous_projet.realisations.all())
+    emprunts = list(sous_projet.emprunts.all())
+
+    total_infrastructures = (
+        sous_projet.infrastructures.aggregate(
+            total=Sum('montant_total')
+        )['total'] or 0
+    )
+    total_equipements = (
+        sous_projet.equipements.aggregate(
+            total=Sum('montant_total')
+        )['total'] or 0
+    )
+    total_intrants = (
+        sous_projet.intrants.aggregate(
+            total=Sum('montant_total')
+        )['total'] or 0
+    )
+    total_fonctionnements = (
+        sous_projet.fonctionnements.aggregate(
+            total=Sum('montant_total')
+        )['total'] or 0
+    )
+    total_services = (
+        sous_projet.services.aggregate(
+            total=Sum('montant_total')
+        )['total'] or 0
+    )
+
+    infra_subvention = (
+        sous_projet.infrastructures.aggregate(
+            total=Sum('subvention_padisam')
+        )['total'] or 0
+    )
+    infra_contribution = (
+        sous_projet.infrastructures.aggregate(
+            total=Sum('contribution_promoteur')
+        )['total'] or 0
+    )
+    infra_autre = (
+        sous_projet.infrastructures.aggregate(
+            total=Sum('autre_financement')
+        )['total'] or 0
+    )
+
+    equip_subvention = (
+        sous_projet.equipements.aggregate(
+            total=Sum('subvention_padisam')
+        )['total'] or 0
+    )
+    equip_contribution = (
+        sous_projet.equipements.aggregate(
+            total=Sum('contribution_promoteur')
+        )['total'] or 0
+    )
+    equip_autre = (
+        sous_projet.equipements.aggregate(
+            total=Sum('autre_financement')
+        )['total'] or 0
+    )
+
+    intrant_subvention = (
+        sous_projet.intrants.aggregate(
+            total=Sum('subvention_padisam')
+        )['total'] or 0
+    )
+    intrant_contribution = (
+        sous_projet.intrants.aggregate(
+            total=Sum('contribution_promoteur')
+        )['total'] or 0
+    )
+    intrant_autre = (
+        sous_projet.intrants.aggregate(
+            total=Sum('autre_financement')
+        )['total'] or 0
+    )
+
+    fonct_contribution = (
+        sous_projet.fonctionnements.aggregate(
+            total=Sum('contribution_promoteur')
+        )['total'] or 0
+    )
+    fonct_autre = (
+        sous_projet.fonctionnements.aggregate(
+            total=Sum('autre_financement')
+        )['total'] or 0
+    )
+
+    service_subvention = (
+        sous_projet.services.aggregate(
+            total=Sum('subvention_padisam')
+        )['total'] or 0
+    )
+    service_contribution = (
+        sous_projet.services.aggregate(
+            total=Sum('contribution_promoteur')
+        )['total'] or 0
+    )
+    service_autre = (
+        sous_projet.services.aggregate(
+            total=Sum('autre_financement')
+        )['total'] or 0
+    )
+
+    recap_financement = [
+        {
+            'libelle': 'Infrastructures',
+            'subvention': infra_subvention,
+            'contribution': infra_contribution,
+            'autre': infra_autre,
+            'total': total_infrastructures,
+        },
+        {
+            'libelle': 'Équipements',
+            'subvention': equip_subvention,
+            'contribution': equip_contribution,
+            'autre': equip_autre,
+            'total': total_equipements,
+        },
+        {
+            'libelle': 'Intrants',
+            'subvention': intrant_subvention,
+            'contribution': intrant_contribution,
+            'autre': intrant_autre,
+            'total': total_intrants,
+        },
+        {
+            'libelle': 'Fonctionnement',
+            'subvention': 0,
+            'contribution': fonct_contribution,
+            'autre': fonct_autre,
+            'total': total_fonctionnements,
+        },
+        {
+            'libelle': 'Services',
+            'subvention': service_subvention,
+            'contribution': service_contribution,
+            'autre': service_autre,
+            'total': total_services,
+        },
+    ]
+
+    recap_total_subvention = (
+        infra_subvention
+        + equip_subvention
+        + intrant_subvention
+        + service_subvention
+    )
+
+    recap_total_contribution = (
+        infra_contribution
+        + equip_contribution
+        + intrant_contribution
+        + fonct_contribution
+        + service_contribution
+    )
+
+    recap_total_autre = (
+        infra_autre
+        + equip_autre
+        + intrant_autre
+        + fonct_autre
+        + service_autre
+    )
+
+    recap_total_general = (
+        total_infrastructures
+        + total_equipements
+        + total_intrants
+        + total_fonctionnements
+        + total_services
+    )
+
+    total_ventes = 0
+    for realisation in realisations:
+        total_ventes += realisation.ventes_usd_annee_1 or 0
+        total_ventes += realisation.ventes_usd_annee_2 or 0
+        total_ventes += realisation.ventes_usd_annee_3 or 0
+
+    total_emprunte = sum(
+        emprunt.montant_emprunte or 0
+        for emprunt in emprunts
+    )
+
+    total_rembourse = sum(
+        emprunt.montant_rembourse or 0
+        for emprunt in emprunts
+    )
+
+    return {
+        'sous_projet': sous_projet,
+
+        'activites': activites,
+        'infrastructures': infrastructures,
+        'equipements': equipements,
+        'intrants': intrants,
+        'fonctionnements': fonctionnements,
+        'services': services,
+        'realisations': realisations,
+        'emprunts': emprunts,
+
+        'total_infrastructures': total_infrastructures,
+        'total_equipements': total_equipements,
+        'total_intrants': total_intrants,
+        'total_fonctionnements': total_fonctionnements,
+        'total_services': total_services,
+
+        'infra_subvention': infra_subvention,
+        'infra_contribution': infra_contribution,
+        'infra_autre': infra_autre,
+
+        'equip_subvention': equip_subvention,
+        'equip_contribution': equip_contribution,
+        'equip_autre': equip_autre,
+
+        'intrant_subvention': intrant_subvention,
+        'intrant_contribution': intrant_contribution,
+        'intrant_autre': intrant_autre,
+
+        'fonct_contribution': fonct_contribution,
+        'fonct_autre': fonct_autre,
+
+        'service_subvention': service_subvention,
+        'service_contribution': service_contribution,
+        'service_autre': service_autre,
+
+        'recap_financement': recap_financement,
+        'recap_total_subvention': recap_total_subvention,
+        'recap_total_contribution': recap_total_contribution,
+        'recap_total_autre': recap_total_autre,
+        'recap_total_general': recap_total_general,
+
+        'grand_total': recap_total_general,
+        'total_ventes': total_ventes,
+        'total_emprunte': total_emprunte,
+        'total_rembourse': total_rembourse,
+    }
+
+
+@login_required
+def impression_dossiers(request):
+    """
+    Page Reporting > Impression des dossiers.
+
+    Fonctionnement :
+    - respecte les droits définis dans get_accessible_sous_projets ;
+    - filtre les dossiers par Paysage / ZOCA ;
+    - permet ensuite à l'utilisateur de cocher les dossiers à imprimer.
+    """
+    utilisateur = get_current_user(request)
+
+    sous_projets_base = get_accessible_sous_projets(
+        utilisateur
+    )
+
+    paysages_disponibles = (
+        sous_projets_base
+        .exclude(paysage__isnull=True)
+        .values(
+            'paysage_id',
+            'paysage__nom',
+            'wilaya__nom',
+        )
+        .distinct()
+        .order_by(
+            'wilaya__nom',
+            'paysage__nom',
+        )
+    )
+
+    selected_paysage_id = (
+        request.GET.get('paysage') or ''
+    ).strip()
+
+    selected_paysage = None
+    sous_projets = SousProjet.objects.none()
+
+    # On n'affiche les dossiers qu'après sélection d'un paysage.
+    if selected_paysage_id:
+        try:
+            selected_paysage = Paysage.objects.get(
+                pk=selected_paysage_id
+            )
+
+            # Le paysage doit lui-même appartenir au périmètre
+            # des dossiers accessibles à l'utilisateur.
+            paysage_accessible = (
+                sous_projets_base
+                .filter(paysage_id=selected_paysage_id)
+                .exists()
+            )
+
+            if paysage_accessible:
+                sous_projets = (
+                    sous_projets_base
+                    .filter(
+                        paysage_id=selected_paysage_id
+                    )
+                    .select_related(
+                        'wilaya',
+                        'moughataa',
+                        'commune',
+                        'paysage',
+                    )
+                    .annotate(
+                        numero_reception_numerique=Case(
+                            When(
+                                numero_reception_formulaire__regex=r'^[0-9]+$',
+                                then=Cast(
+                                    'numero_reception_formulaire',
+                                    IntegerField()
+                                )
+                            ),
+                            default=Value(None),
+                            output_field=IntegerField()
+                        )
+                    )
+                    .order_by(
+                        'numero_reception_numerique',
+                        'numero_reception_formulaire',
+                        'id',
+                    )
+                )
+            else:
+                selected_paysage = None
+
+        except (Paysage.DoesNotExist, ValueError):
+            selected_paysage = None
+
+    context = {
+        'paysages_disponibles': paysages_disponibles,
+        'selected_paysage_id': str(
+            selected_paysage_id
+        ),
+        'selected_paysage': selected_paysage,
+        'sous_projets': sous_projets,
+
+        'user_name': request.session.get(
+            'user_name'
+        ),
+        'user_role': request.session.get(
+            'user_role'
+        ),
+        'user_wilaya_nom': request.session.get(
+            'user_wilaya_nom'
+        ),
+    }
+
+    return render(
+        request,
+        'formulaire/impression_dossiers.html',
+        context
+    )
+
+
+@login_required
+def generer_pdf_dossiers(request):
+    """
+    Génère un seul PDF contenant tous les dossiers cochés.
+
+    Sécurité :
+    les IDs reçus depuis le navigateur sont toujours recroisés avec
+    get_accessible_sous_projets(utilisateur), ce qui empêche un utilisateur
+    d'imprimer un dossier auquel il n'a pas accès.
+    """
+    if request.method != 'POST':
+        return redirect(
+            'formulaire:impression_dossiers'
+        )
+
+    utilisateur = get_current_user(request)
+
+    dossier_ids = request.POST.getlist(
+        'dossiers'
+    )
+
+    selected_paysage_id = (
+        request.POST.get('paysage') or ''
+    ).strip()
+
+    if not dossier_ids:
+        messages.error(
+            request,
+            "❌ Sélectionnez au moins un dossier à imprimer."
+        )
+
+        if selected_paysage_id:
+            return redirect(
+                f"{reverse('formulaire:impression_dossiers')}"
+                f"?paysage={selected_paysage_id}"
+            )
+
+        return redirect(
+            'formulaire:impression_dossiers'
+        )
+
+    # Garder uniquement des IDs numériques.
+    ids_valides = []
+
+    for dossier_id in dossier_ids:
+        try:
+            ids_valides.append(
+                int(dossier_id)
+            )
+        except (TypeError, ValueError):
+            continue
+
+    if not ids_valides:
+        messages.error(
+            request,
+            "❌ La sélection de dossiers est invalide."
+        )
+        return redirect(
+            'formulaire:impression_dossiers'
+        )
+
+    sous_projets = (
+        get_accessible_sous_projets(utilisateur)
+        .filter(
+            id__in=ids_valides
+        )
+        .select_related(
+            'wilaya',
+            'moughataa',
+            'commune',
+            'paysage',
+        )
+        .prefetch_related(
+            'activites',
+            'infrastructures',
+            'equipements',
+            'intrants',
+            'fonctionnements',
+            'services',
+            'realisations',
+            'emprunts',
+        )
+        .annotate(
+            numero_reception_numerique=Case(
+                When(
+                    numero_reception_formulaire__regex=r'^[0-9]+$',
+                    then=Cast(
+                        'numero_reception_formulaire',
+                        IntegerField()
+                    )
+                ),
+                default=Value(None),
+                output_field=IntegerField()
+            )
+        )
+        .order_by(
+            'numero_reception_numerique',
+            'numero_reception_formulaire',
+            'id',
+        )
+    )
+
+    # Si un paysage a été envoyé avec le formulaire, tous les dossiers
+    # sélectionnés doivent appartenir à ce paysage.
+    selected_paysage = None
+
+    if selected_paysage_id:
+        try:
+            selected_paysage = Paysage.objects.get(
+                pk=selected_paysage_id
+            )
+            sous_projets = sous_projets.filter(
+                paysage_id=selected_paysage_id
+            )
+        except (Paysage.DoesNotExist, ValueError):
+            selected_paysage = None
+            sous_projets = sous_projets.none()
+
+    # Vérification supplémentaire : tous les IDs demandés doivent
+    # réellement être accessibles et appartenir au filtre courant.
+    ids_trouves = set(
+        sous_projets.values_list(
+            'id',
+            flat=True
+        )
+    )
+
+    ids_demandes = set(ids_valides)
+
+    if not ids_trouves or ids_trouves != ids_demandes:
+        messages.error(
+            request,
+            (
+                "❌ Un ou plusieurs dossiers sélectionnés "
+                "ne sont pas accessibles ou ne correspondent "
+                "pas au paysage choisi."
+            )
+        )
+
+        if selected_paysage_id:
+            return redirect(
+                f"{reverse('formulaire:impression_dossiers')}"
+                f"?paysage={selected_paysage_id}"
+            )
+
+        return redirect(
+            'formulaire:impression_dossiers'
+        )
+
+    dossiers_impression = [
+        _construire_donnees_dossier_impression(
+            sous_projet
+        )
+        for sous_projet in sous_projets
+    ]
+
+    contexte_pdf = {
+        'dossiers': dossiers_impression,
+        'selected_paysage': selected_paysage,
+        'date_generation': timezone.now(),
+        'utilisateur': utilisateur,
+    }
+
+    html_string = render_to_string(
+        'formulaire/dossiers_impression_pdf.html',
+        contexte_pdf,
+        request=request
+    )
+
+    try:
+        from weasyprint import HTML
+    except ImportError:
+        messages.error(
+            request,
+            (
+                "❌ La génération PDF nécessite WeasyPrint. "
+                "Ajoutez WeasyPrint aux dépendances du projet."
+            )
+        )
+
+        if selected_paysage_id:
+            return redirect(
+                f"{reverse('formulaire:impression_dossiers')}"
+                f"?paysage={selected_paysage_id}"
+            )
+
+        return redirect(
+            'formulaire:impression_dossiers'
+        )
+
+    try:
+        pdf_bytes = HTML(
+            string=html_string,
+            base_url=request.build_absolute_uri('/')
+        ).write_pdf()
+    except Exception as exc:
+        messages.error(
+            request,
+            f"❌ Impossible de générer le PDF : {exc}"
+        )
+
+        if selected_paysage_id:
+            return redirect(
+                f"{reverse('formulaire:impression_dossiers')}"
+                f"?paysage={selected_paysage_id}"
+            )
+
+        return redirect(
+            'formulaire:impression_dossiers'
+        )
+
+    if selected_paysage:
+        nom_base = slugify(
+            selected_paysage.nom
+        ) or 'paysage'
+
+        filename = (
+            f"dossiers_{nom_base}_"
+            f"{timezone.localdate():%Y-%m-%d}.pdf"
+        )
+    else:
+        filename = (
+            f"dossiers_selectionnes_"
+            f"{timezone.localdate():%Y-%m-%d}.pdf"
+        )
+
+    response = HttpResponse(
+        pdf_bytes,
+        content_type='application/pdf'
+    )
+
+    response['Content-Disposition'] = (
+        f'attachment; filename="{filename}"'
+    )
+
+    return response
 
 
 # =========================================================
