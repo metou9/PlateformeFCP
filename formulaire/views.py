@@ -4139,13 +4139,41 @@ def impression_dossiers(request):
     Fonctionnement :
     - respecte les droits définis dans get_accessible_sous_projets ;
     - filtre les dossiers par Paysage / ZOCA ;
-    - permet ensuite à l'utilisateur de cocher les dossiers à imprimer.
+    - filtre aussi par décision du comité ;
+    - permet ensuite à l'utilisateur de cocher
+      les dossiers qu'il souhaite imprimer.
+
+    Exemple :
+    - Paysage : Bababé
+    - Décision : Présélectionné
+    => affiche uniquement les dossiers présélectionnés de Bababé.
     """
+
     utilisateur = get_current_user(request)
+
+    # =========================================================
+    # DOSSIERS ACCESSIBLES SELON LE RÔLE
+    # =========================================================
 
     sous_projets_base = get_accessible_sous_projets(
         utilisateur
     )
+
+    # =========================================================
+    # FILTRES REÇUS
+    # =========================================================
+
+    selected_paysage_id = (
+        request.GET.get('paysage') or ''
+    ).strip()
+
+    selected_decision = (
+        request.GET.get('decision') or ''
+    ).strip()
+
+    # =========================================================
+    # PAYSAGES DISPONIBLES
+    # =========================================================
 
     paysages_disponibles = (
         sous_projets_base
@@ -4162,34 +4190,110 @@ def impression_dossiers(request):
         )
     )
 
-    selected_paysage_id = (
-        request.GET.get('paysage') or ''
-    ).strip()
+    # =========================================================
+    # CHOIX DES DÉCISIONS
+    # =========================================================
+
+    decision_choices = [
+        (
+            'preselectionne',
+            'Présélectionné'
+        ),
+        (
+            'rejete',
+            'Rejeté'
+        ),
+        (
+            'reexaminer',
+            'À réexaminer'
+        ),
+        (
+            'a_examiner',
+            'À examiner'
+        ),
+    ]
+
+    # =========================================================
+    # INITIALISATION
+    # =========================================================
 
     selected_paysage = None
+
     sous_projets = SousProjet.objects.none()
 
-    # On n'affiche les dossiers qu'après sélection d'un paysage.
+    # =========================================================
+    # FILTRE PAYSAGE
+    # =========================================================
+
     if selected_paysage_id:
+
         try:
-            selected_paysage = Paysage.objects.get(
-                pk=selected_paysage_id
+
+            selected_paysage = (
+                Paysage.objects.get(
+                    pk=selected_paysage_id
+                )
             )
 
-            # Le paysage doit lui-même appartenir au périmètre
-            # des dossiers accessibles à l'utilisateur.
+            # Vérifier que l'utilisateur possède
+            # au moins un dossier accessible dans ce paysage.
             paysage_accessible = (
                 sous_projets_base
-                .filter(paysage_id=selected_paysage_id)
+                .filter(
+                    paysage_id=selected_paysage_id
+                )
                 .exists()
             )
 
             if paysage_accessible:
+
                 sous_projets = (
                     sous_projets_base
                     .filter(
                         paysage_id=selected_paysage_id
                     )
+                )
+
+                # =================================================
+                # FILTRE DÉCISION
+                # =================================================
+
+                if selected_decision == 'a_examiner':
+
+                    # Les anciennes données peuvent contenir :
+                    # NULL
+                    # chaîne vide
+                    # a_examiner
+                    sous_projets = (
+                        sous_projets.filter(
+                            Q(
+                                decision_comite__isnull=True
+                            )
+                            | Q(
+                                decision_comite=''
+                            )
+                            | Q(
+                                decision_comite='a_examiner'
+                            )
+                        )
+                    )
+
+                elif selected_decision:
+
+                    sous_projets = (
+                        sous_projets.filter(
+                            decision_comite=(
+                                selected_decision
+                            )
+                        )
+                    )
+
+                # =================================================
+                # CHARGEMENT ET TRI
+                # =================================================
+
+                sous_projets = (
+                    sous_projets
                     .select_related(
                         'wilaya',
                         'moughataa',
@@ -4215,26 +4319,124 @@ def impression_dossiers(request):
                         'id',
                     )
                 )
-            else:
-                selected_paysage = None
 
-        except (Paysage.DoesNotExist, ValueError):
+            else:
+
+                selected_paysage = None
+                sous_projets = (
+                    SousProjet.objects.none()
+                )
+
+        except (
+            Paysage.DoesNotExist,
+            ValueError,
+        ):
+
             selected_paysage = None
 
+            sous_projets = (
+                SousProjet.objects.none()
+            )
+
+    # =========================================================
+    # STATISTIQUES DE LA LISTE AFFICHÉE
+    # =========================================================
+
+    total_dossiers = sous_projets.count()
+
+    nb_preselectionnes = (
+        sous_projets.filter(
+            decision_comite='preselectionne'
+        ).count()
+    )
+
+    nb_rejetes = (
+        sous_projets.filter(
+            decision_comite='rejete'
+        ).count()
+    )
+
+    nb_reexaminer = (
+        sous_projets.filter(
+            decision_comite='reexaminer'
+        ).count()
+    )
+
+    nb_a_examiner = (
+        sous_projets.filter(
+            Q(
+                decision_comite__isnull=True
+            )
+            | Q(
+                decision_comite=''
+            )
+            | Q(
+                decision_comite='a_examiner'
+            )
+        ).count()
+    )
+
+    # =========================================================
+    # CONTEXTE
+    # =========================================================
+
     context = {
-        'paysages_disponibles': paysages_disponibles,
+
+        # Données
+        'sous_projets': sous_projets,
+
+        # Paysages
+        'paysages_disponibles': (
+            paysages_disponibles
+        ),
+
         'selected_paysage_id': str(
             selected_paysage_id
         ),
-        'selected_paysage': selected_paysage,
-        'sous_projets': sous_projets,
 
+        'selected_paysage': (
+            selected_paysage
+        ),
+
+        # Décisions
+        'decision_choices': (
+            decision_choices
+        ),
+
+        'selected_decision': (
+            selected_decision
+        ),
+
+        # Statistiques
+        'total_dossiers': (
+            total_dossiers
+        ),
+
+        'nb_preselectionnes': (
+            nb_preselectionnes
+        ),
+
+        'nb_rejetes': (
+            nb_rejetes
+        ),
+
+        'nb_reexaminer': (
+            nb_reexaminer
+        ),
+
+        'nb_a_examiner': (
+            nb_a_examiner
+        ),
+
+        # Utilisateur
         'user_name': request.session.get(
             'user_name'
         ),
+
         'user_role': request.session.get(
             'user_role'
         ),
+
         'user_wilaya_nom': request.session.get(
             'user_wilaya_nom'
         ),
@@ -4245,8 +4447,6 @@ def impression_dossiers(request):
         'formulaire/impression_dossiers.html',
         context
     )
-
-
 @login_required
 def generer_pdf_dossiers(request):
     """

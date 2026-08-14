@@ -136,6 +136,11 @@
         color: #ffffff;
     }
 
+    .btn-pdf:disabled {
+        opacity: 0.55;
+        cursor: not-allowed;
+    }
+
     .btn-select {
         border: 1px solid #5dbb63;
         background: #ffffff;
@@ -157,6 +162,34 @@
         margin-bottom: 15px;
         color: #374151;
         font-size: 14px;
+    }
+
+    .decision-badge {
+        display: inline-block;
+        padding: 4px 8px;
+        border-radius: 6px;
+        font-size: 12px;
+        font-weight: 700;
+    }
+
+    .decision-preselectionne {
+        background: #d1fae5;
+        color: #065f46;
+    }
+
+    .decision-rejete {
+        background: #fee2e2;
+        color: #991b1b;
+    }
+
+    .decision-reexaminer {
+        background: #fef3c7;
+        color: #92400e;
+    }
+
+    .decision-attente {
+        background: #e5e7eb;
+        color: #374151;
     }
 
     @media (max-width: 768px) {
@@ -184,30 +217,43 @@
 </style>
 {% endblock %}
 
+
 {% block content %}
 
 <div class="print-page">
 
     <div class="print-header">
         <h1>🖨️ Impression des dossiers</h1>
+
         <p>
-            Filtrez les dossiers par Paysage / ZOCA, sélectionnez ceux que vous souhaitez imprimer,
-            puis générez un seul fichier PDF.
+            Filtrez les dossiers par Paysage / ZOCA et par décision du comité,
+            sélectionnez les dossiers à imprimer puis générez un seul fichier PDF.
         </p>
     </div>
 
+
+    <!-- ======================================================
+         FILTRES
+         ====================================================== -->
+
     <div class="filter-card">
+
         <div class="card-body">
 
             <div class="filter-title">
-                Filtrer par Paysage / ZOCA
+                Filtrer les dossiers
             </div>
 
             <form method="get"
                   action="{% url 'formulaire:impression_dossiers' %}">
+
                 <div class="row g-3 align-items-end">
 
-                    <div class="col-md-8">
+
+                    <!-- PAYSAGE -->
+
+                    <div class="col-md-5">
+
                         <label for="id_paysage"
                                class="form-label fw-bold">
                             Paysage / ZOCA
@@ -222,42 +268,139 @@
                             </option>
 
                             {% for paysage in paysages_disponibles %}
-                                <option value="{{ paysage.paysage_id }}"
+
+                                <option
+                                    value="{{ paysage.paysage_id }}"
+
                                     {% if selected_paysage_id == paysage.paysage_id|stringformat:"s" %}
                                         selected
                                     {% endif %}
                                 >
+
                                     {{ paysage.paysage__nom }}
+
                                     {% if paysage.wilaya__nom %}
                                         - {{ paysage.wilaya__nom }}
                                     {% endif %}
+
                                 </option>
+
                             {% endfor %}
+
                         </select>
+
                     </div>
 
+
+                    <!-- DÉCISION DU COMITÉ -->
+
                     <div class="col-md-4">
+
+                        <label for="id_decision"
+                               class="form-label fw-bold">
+                            Décision du comité
+                        </label>
+
+                        <select name="decision"
+                                id="id_decision"
+                                class="form-select">
+
+                            <option value="">
+                                Toutes les décisions
+                            </option>
+
+                            {% for valeur, libelle in decision_choices %}
+
+                                <option
+                                    value="{{ valeur }}"
+
+                                    {% if selected_decision == valeur %}
+                                        selected
+                                    {% endif %}
+                                >
+                                    {{ libelle }}
+                                </option>
+
+                            {% endfor %}
+
+                        </select>
+
+                    </div>
+
+
+                    <!-- BOUTON -->
+
+                    <div class="col-md-3">
+
                         <button type="submit"
                                 class="btn btn-success w-100">
+
                             🔎 Afficher les dossiers
+
                         </button>
+
                     </div>
 
                 </div>
+
             </form>
 
         </div>
+
     </div>
+
+
+    <!-- ======================================================
+         LISTE
+         ====================================================== -->
 
     {% if selected_paysage %}
 
         <div class="list-card">
+
             <div class="card-body">
 
+
+                <!-- INFORMATIONS FILTRE -->
+
                 <div class="selected-paysage-info">
+
                     Paysage sélectionné :
-                    <strong>{{ selected_paysage.nom }}</strong>
+
+                    <strong>
+                        {{ selected_paysage.nom }}
+                    </strong>
+
+                    {% if selected_decision %}
+
+                        &nbsp; | &nbsp;
+
+                        Décision :
+
+                        <strong>
+                            {% for valeur, libelle in decision_choices %}
+                                {% if selected_decision == valeur %}
+                                    {{ libelle }}
+                                {% endif %}
+                            {% endfor %}
+                        </strong>
+
+                    {% endif %}
+
+                    &nbsp; | &nbsp;
+
+                    Nombre de dossiers :
+
+                    <strong>
+                        {{ total_dossiers }}
+                    </strong>
+
                 </div>
+
+
+                <!-- ======================================================
+                     FORMULAIRE PDF
+                     ====================================================== -->
 
                 <form method="post"
                       action="{% url 'formulaire:generer_pdf_dossiers' %}"
@@ -269,177 +412,367 @@
                            name="paysage"
                            value="{{ selected_paysage_id }}">
 
+                    <input type="hidden"
+                           name="decision"
+                           value="{{ selected_decision }}">
+
+
                     {% if sous_projets %}
+
+
+                        <!-- OUTILS SÉLECTION -->
 
                         <div class="selection-toolbar">
 
                             <div>
+
                                 <button type="button"
                                         class="btn-select"
                                         id="btn-select-all">
+
                                     Tout sélectionner
+
                                 </button>
 
                                 <button type="button"
                                         class="btn-select"
                                         id="btn-unselect-all">
+
                                     Tout désélectionner
+
                                 </button>
+
                             </div>
 
+
                             <div class="selection-count">
-                                <span id="selected-count">0</span>
+
+                                <span id="selected-count">
+                                    0
+                                </span>
+
                                 dossier(s) sélectionné(s)
+
                             </div>
 
                         </div>
 
+
+                        <!-- ======================================================
+                             TABLEAU
+                             ====================================================== -->
+
                         <div class="table-responsive">
 
                             <table class="table-print">
+
                                 <thead>
+
                                     <tr>
+
                                         <th class="checkbox-cell">
                                             Sélection
                                         </th>
-                                        <th>N° réception</th>
-                                        <th>Intitulé</th>
-                                        <th>Wilaya</th>
-                                        <th>Moughataa</th>
-                                        <th>Commune</th>
-                                        <th>Paysage / ZOCA</th>
-                                        <th>Village</th>
-                                        <th>Type projet</th>
-                                        <th>Guichet</th>
+
+                                        <th>
+                                            N° réception
+                                        </th>
+
+                                        <th>
+                                            Intitulé
+                                        </th>
+
+                                        <th>
+                                            Wilaya
+                                        </th>
+
+                                        <th>
+                                            Moughataa
+                                        </th>
+
+                                        <th>
+                                            Commune
+                                        </th>
+
+                                        <th>
+                                            Paysage / ZOCA
+                                        </th>
+
+                                        <th>
+                                            Village
+                                        </th>
+
+                                        <th>
+                                            Type projet
+                                        </th>
+
+                                        <th>
+                                            Guichet
+                                        </th>
+
+                                        <th>
+                                            Décision comité
+                                        </th>
+
                                     </tr>
+
                                 </thead>
+
 
                                 <tbody>
 
                                     {% for sous_projet in sous_projets %}
+
                                         <tr>
 
+
+                                            <!-- CHECKBOX -->
+
                                             <td class="checkbox-cell">
+
                                                 <input
                                                     type="checkbox"
                                                     name="dossiers"
                                                     value="{{ sous_projet.id }}"
                                                     class="dossier-checkbox"
                                                 >
+
                                             </td>
+
+
+                                            <!-- NUMERO -->
 
                                             <td class="text-center">
+
                                                 {{ sous_projet.numero_reception_formulaire|default:"Non renseigné" }}
+
                                             </td>
 
+
+                                            <!-- INTITULE -->
+
                                             <td>
+
                                                 {{ sous_projet.intitule_sous_projet|default:"Non renseigné" }}
+
                                             </td>
 
+
+                                            <!-- WILAYA -->
+
                                             <td>
+
                                                 {% if sous_projet.wilaya %}
                                                     {{ sous_projet.wilaya.nom }}
                                                 {% else %}
                                                     Non renseignée
                                                 {% endif %}
+
                                             </td>
 
+
+                                            <!-- MOUGHATAA -->
+
                                             <td>
+
                                                 {% if sous_projet.moughataa %}
                                                     {{ sous_projet.moughataa.nom }}
                                                 {% else %}
                                                     Non renseignée
                                                 {% endif %}
+
                                             </td>
 
+
+                                            <!-- COMMUNE -->
+
                                             <td>
+
                                                 {% if sous_projet.commune %}
                                                     {{ sous_projet.commune.nom }}
                                                 {% else %}
                                                     Non renseignée
                                                 {% endif %}
+
                                             </td>
 
+
+                                            <!-- PAYSAGE -->
+
                                             <td>
+
                                                 {% if sous_projet.paysage %}
                                                     {{ sous_projet.paysage.nom }}
                                                 {% else %}
                                                     Non renseigné
                                                 {% endif %}
+
                                             </td>
 
+
+                                            <!-- VILLAGE -->
+
                                             <td>
+
                                                 {{ sous_projet.village|default:"Non renseigné" }}
+
                                             </td>
 
+
+                                            <!-- TYPE PROJET -->
+
                                             <td>
+
                                                 {% if sous_projet.type_projet %}
+
                                                     {{ sous_projet.get_type_projet_display }}
+
                                                 {% else %}
+
                                                     Non renseigné
+
                                                 {% endif %}
+
                                             </td>
 
+
+                                            <!-- GUICHET -->
+
                                             <td>
+
                                                 {% if sous_projet.guichet %}
+
                                                     {{ sous_projet.get_guichet_display }}
+
                                                 {% else %}
+
                                                     Non renseigné
+
                                                 {% endif %}
+
                                             </td>
+
+
+                                            <!-- DECISION -->
+
+                                            <td class="text-center">
+
+                                                {% if sous_projet.decision_comite == 'preselectionne' %}
+
+                                                    <span class="decision-badge decision-preselectionne">
+                                                        Présélectionné
+                                                    </span>
+
+                                                {% elif sous_projet.decision_comite == 'rejete' %}
+
+                                                    <span class="decision-badge decision-rejete">
+                                                        Rejeté
+                                                    </span>
+
+                                                {% elif sous_projet.decision_comite == 'reexaminer' %}
+
+                                                    <span class="decision-badge decision-reexaminer">
+                                                        À réexaminer
+                                                    </span>
+
+                                                {% else %}
+
+                                                    <span class="decision-badge decision-attente">
+                                                        À examiner
+                                                    </span>
+
+                                                {% endif %}
+
+                                            </td>
+
 
                                         </tr>
+
                                     {% endfor %}
 
                                 </tbody>
+
                             </table>
 
                         </div>
 
+
+                        <!-- ======================================================
+                             GENERATION PDF
+                             ====================================================== -->
+
                         <div class="action-footer">
 
                             <div class="text-muted">
+
                                 Les dossiers sélectionnés seront regroupés
                                 dans un seul fichier PDF.
+
                             </div>
+
 
                             <button type="submit"
                                     class="btn-pdf"
                                     id="btn-generate-pdf"
                                     disabled>
+
                                 📄 Générer le PDF
+
                             </button>
 
                         </div>
 
+
                     {% else %}
 
+
                         <div class="empty-state">
-                            <strong>Aucun dossier trouvé.</strong>
+
+                            <strong>
+                                Aucun dossier trouvé.
+                            </strong>
+
                             <br>
-                            Aucun dossier accessible ne correspond à ce paysage.
+
+                            Aucun dossier accessible ne correspond
+                            aux critères sélectionnés.
+
                         </div>
+
 
                     {% endif %}
 
                 </form>
 
             </div>
+
         </div>
+
 
     {% else %}
 
+
         <div class="list-card">
+
             <div class="card-body">
 
                 <div class="empty-state">
-                    <strong>Sélectionnez d'abord un Paysage / ZOCA.</strong>
+
+                    <strong>
+                        Sélectionnez d'abord un Paysage / ZOCA.
+                    </strong>
+
                     <br>
-                    Les dossiers correspondants apparaîtront ensuite ici.
+
+                    Vous pourrez ensuite choisir la décision du comité
+                    pour afficher uniquement les dossiers souhaités.
+
                 </div>
 
             </div>
+
         </div>
+
 
     {% endif %}
 
@@ -447,61 +780,116 @@
 
 {% endblock %}
 
+
 {% block extra_js %}
 
 <script>
+
 document.addEventListener('DOMContentLoaded', function () {
 
-    const checkboxes = document.querySelectorAll('.dossier-checkbox');
-    const selectAllButton = document.getElementById('btn-select-all');
-    const unselectAllButton = document.getElementById('btn-unselect-all');
-    const selectedCount = document.getElementById('selected-count');
-    const generateButton = document.getElementById('btn-generate-pdf');
+    const checkboxes =
+        document.querySelectorAll('.dossier-checkbox');
+
+    const selectAllButton =
+        document.getElementById('btn-select-all');
+
+    const unselectAllButton =
+        document.getElementById('btn-unselect-all');
+
+    const selectedCount =
+        document.getElementById('selected-count');
+
+    const generateButton =
+        document.getElementById('btn-generate-pdf');
+
 
     function updateSelectedCount() {
+
         let count = 0;
 
         checkboxes.forEach(function (checkbox) {
+
             if (checkbox.checked) {
                 count++;
             }
+
         });
+
 
         if (selectedCount) {
+
             selectedCount.textContent = count;
+
         }
+
 
         if (generateButton) {
+
             generateButton.disabled = count === 0;
+
         }
+
     }
+
 
     checkboxes.forEach(function (checkbox) {
-        checkbox.addEventListener('change', updateSelectedCount);
+
+        checkbox.addEventListener(
+            'change',
+            updateSelectedCount
+        );
+
     });
 
-    if (selectAllButton) {
-        selectAllButton.addEventListener('click', function () {
-            checkboxes.forEach(function (checkbox) {
-                checkbox.checked = true;
-            });
 
-            updateSelectedCount();
-        });
+    if (selectAllButton) {
+
+        selectAllButton.addEventListener(
+            'click',
+            function () {
+
+                checkboxes.forEach(
+                    function (checkbox) {
+
+                        checkbox.checked = true;
+
+                    }
+                );
+
+                updateSelectedCount();
+
+            }
+        );
+
     }
+
 
     if (unselectAllButton) {
-        unselectAllButton.addEventListener('click', function () {
-            checkboxes.forEach(function (checkbox) {
-                checkbox.checked = false;
-            });
 
-            updateSelectedCount();
-        });
+        unselectAllButton.addEventListener(
+            'click',
+            function () {
+
+                checkboxes.forEach(
+                    function (checkbox) {
+
+                        checkbox.checked = false;
+
+                    }
+                );
+
+                updateSelectedCount();
+
+            }
+        );
+
     }
 
+
     updateSelectedCount();
+
 });
+
 </script>
 
 {% endblock %}
