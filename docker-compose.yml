@@ -41,6 +41,26 @@ services:
       POSTGRES_USER: soukeina
       POSTGRES_PASSWORD: "soukeina"
 
+  pdf_worker:
+    build: .
+    platform: linux/amd64
+    command: python manage.py traiter_impressions_pdf
+    volumes:
+      - .:/app
+    depends_on:
+      db:
+        condition: service_healthy
+    environment:
+      DATABASE_URL: postgresql://soukeina:soukeina@db:5432/fcp_app_db
+      DB_NAME: fcp_app_db
+      DB_USER: soukeina
+      DB_PASSWORD: soukeina
+      DB_HOST: db
+      DB_PORT: 5432
+      POSTGRES_DB: fcp_app_db
+      POSTGRES_USER: soukeina
+      POSTGRES_PASSWORD: "soukeina"
+
   metabase_db:
     image: postgres:15
     container_name: fcp_metabase_db

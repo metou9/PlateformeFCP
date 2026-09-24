@@ -4596,94 +4596,160 @@ def generer_pdf_dossiers(request):
             'formulaire:impression_dossiers'
         )
 
-    dossiers_impression = [
-        _construire_donnees_dossier_impression(
-            sous_projet
-        )
-        for sous_projet in sous_projets
-    ]
+    from uuid import uuid4
+    from django.utils.http import urlencode
+    job_id = uuid4().hex
+    _ecrire_job(job_id, {
+        'state': 'pending', 'user_id': utilisateur.pk,
+        'ids': list(ids_demandes), 'paysage': selected_paysage_id,
+        'base_url': request.build_absolute_uri('/'),
+        'created_at': timezone.now().isoformat(),
+    })
+    return redirect('formulaire:statut_pdf_dossiers', job_id=job_id)
 
-    contexte_pdf = {
+
+def _impression_job_dir():
+    from django.conf import settings
+    from pathlib import Path
+    directory = Path(settings.BASE_DIR) / 'impressions_pdf_jobs'
+    directory.mkdir(parents=True, exist_ok=True)
+    return directory
+
+
+def _ecrire_job(job_id, data):
+    import json
+    from uuid import uuid4
+    directory = _impression_job_dir()
+    temporary = directory / (job_id + '.' + uuid4().hex + '.tmp')
+    temporary.write_text(json.dumps(data, ensure_ascii=False), encoding='utf-8')
+    temporary.replace(directory / (job_id + '.json'))
+
+
+def _lire_job(job_id):
+    import json
+    from django.http import Http404
+    if len(job_id) != 32 or any(c not in '0123456789abcdef' for c in job_id):
+        raise Http404
+    try:
+        return json.loads((_impression_job_dir() / (job_id + '.json')).read_text(encoding='utf-8'))
+    except (OSError, ValueError):
+        raise Http404
+
+
+@login_required
+def statut_pdf_dossiers(request, job_id):
+    from django.http import JsonResponse, Http404
+    utilisateur = get_current_user(request)
+    job = _lire_job(job_id)
+    if not utilisateur or job['user_id'] != utilisateur.pk:
+        raise Http404
+    if request.GET.get('json') == '1':
+        return JsonResponse({'state': job['state'], 'error': job.get('error', ''),
+                             'download': reverse('formulaire:telecharger_pdf_dossiers', kwargs={'job_id': job_id}) if job['state'] == 'ready' else None})
+    return render(request, 'formulaire/impression_pdf_statut.html', {'job_id': job_id, 'job': job})
+
+
+@login_required
+def telecharger_pdf_dossiers(request, job_id):
+    from django.http import FileResponse, Http404
+    utilisateur = get_current_user(request)
+    job = _lire_job(job_id)
+    if not utilisateur or job['user_id'] != utilisateur.pk or job['state'] != 'ready':
+        raise Http404
+    # Vérifier les droits au moment du téléchargement aussi.
+    qs = get_accessible_sous_projets(utilisateur).filter(pk__in=job['ids'])
+    if job['paysage']:
+        qs = qs.filter(paysage_id=job['paysage'])
+    if set(qs.values_list('pk', flat=True)) != set(job['ids']):
+        raise Http404
+    path = _impression_job_dir() / (job_id + '.pdf')
+    if not path.is_file():
+        raise Http404
+    return FileResponse(path.open('rb'), as_attachment=True, filename='dossiers_selectionnes.pdf', content_type='application/pdf')
+
+def _traiter_impression_pdf(job_id, payload):
+    """Appelée exclusivement par le worker séparé."""
+    from .models import Utilisateur
+    from django.conf import settings
+    from pathlib import Path
+    from weasyprint import HTML
+    utilisateur = Utilisateur.objects.select_related('wilaya').get(pk=payload['user_id'], actif=True)
+    ids_valides = payload['ids']
+    selected_paysage_id = payload['paysage']
+    sous_projets = (
+        get_accessible_sous_projets(utilisateur)
+        .filter(
+            id__in=ids_valides
+        )
+        .select_related(
+            'wilaya',
+            'moughataa',
+            'commune',
+            'paysage',
+        )
+        .prefetch_related(
+            'activites',
+            'infrastructures',
+            'equipements',
+            'intrants',
+            'fonctionnements',
+            'services',
+            'realisations',
+            'emprunts',
+        )
+        .annotate(
+            numero_reception_numerique=Case(
+                When(
+                    numero_reception_formulaire__regex=r'^[0-9]+$',
+                    then=Cast(
+                        'numero_reception_formulaire',
+                        IntegerField()
+                    )
+                ),
+                default=Value(None),
+                output_field=IntegerField()
+            )
+        )
+        .order_by(
+            'numero_reception_numerique',
+            'numero_reception_formulaire',
+            'id',
+        )
+    )
+
+    # Si un paysage a été envoyé avec le formulaire, tous les dossiers
+    # sélectionnés doivent appartenir à ce paysage.
+    selected_paysage = None
+
+    if selected_paysage_id:
+        try:
+            selected_paysage = Paysage.objects.get(
+                pk=selected_paysage_id
+            )
+            sous_projets = sous_projets.filter(
+                paysage_id=selected_paysage_id
+            )
+        except (Paysage.DoesNotExist, ValueError):
+            selected_paysage = None
+            sous_projets = sous_projets.none()
+
+    if set(sous_projets.values_list('id', flat=True)) != set(ids_valides):
+        raise PermissionError('Accès aux dossiers modifié : génération annulée.')
+    dossiers_impression = [_construire_donnees_dossier_impression(sp) for sp in sous_projets]
+    html_string = render_to_string('formulaire/dossiers_impression_pdf.html', {
         'dossiers': dossiers_impression,
         'selected_paysage': selected_paysage,
         'date_generation': timezone.now(),
         'utilisateur': utilisateur,
-    }
-
-    html_string = render_to_string(
-        'formulaire/dossiers_impression_pdf.html',
-        contexte_pdf,
-        request=request
-    )
-
+    })
+    target = _impression_job_dir() / (job_id + '.pdf')
+    tmp = _impression_job_dir() / (job_id + '.pdf.tmp')
     try:
-        from weasyprint import HTML
-    except ImportError:
-        messages.error(
-            request,
-            (
-                "❌ La génération PDF nécessite WeasyPrint. "
-                "Ajoutez WeasyPrint aux dépendances du projet."
-            )
-        )
-
-        if selected_paysage_id:
-            return redirect(
-                f"{reverse('formulaire:impression_dossiers')}"
-                f"?paysage={selected_paysage_id}"
-            )
-
-        return redirect(
-            'formulaire:impression_dossiers'
-        )
-
-    try:
-        pdf_bytes = HTML(
-            string=html_string,
-            base_url=request.build_absolute_uri('/')
-        ).write_pdf()
-    except Exception as exc:
-        messages.error(
-            request,
-            f"❌ Impossible de générer le PDF : {exc}"
-        )
-
-        if selected_paysage_id:
-            return redirect(
-                f"{reverse('formulaire:impression_dossiers')}"
-                f"?paysage={selected_paysage_id}"
-            )
-
-        return redirect(
-            'formulaire:impression_dossiers'
-        )
-
-    if selected_paysage:
-        nom_base = slugify(
-            selected_paysage.nom
-        ) or 'paysage'
-
-        filename = (
-            f"dossiers_{nom_base}_"
-            f"{timezone.localdate():%Y-%m-%d}.pdf"
-        )
-    else:
-        filename = (
-            f"dossiers_selectionnes_"
-            f"{timezone.localdate():%Y-%m-%d}.pdf"
-        )
-
-    response = HttpResponse(
-        pdf_bytes,
-        content_type='application/pdf'
-    )
-
-    response['Content-Disposition'] = (
-        f'attachment; filename="{filename}"'
-    )
-
-    return response
-
+        HTML(string=html_string, base_url=payload['base_url']).write_pdf(target=str(tmp))
+        tmp.replace(target)
+    finally:
+        tmp.unlink(missing_ok=True)
+    return target.name
 
 # =========================================================
 # EXPORT EXCEL : RÉSULTATS DE PRÉSÉLECTION DU COMITÉ

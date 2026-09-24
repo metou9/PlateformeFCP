@@ -83,6 +83,9 @@ path(
     name='impression_dossiers'
 ),
 
+path('impression-dossiers/pdf/statut/<str:job_id>/', views.statut_pdf_dossiers, name='statut_pdf_dossiers'),
+path('impression-dossiers/pdf/telecharger/<str:job_id>/', views.telecharger_pdf_dossiers, name='telecharger_pdf_dossiers'),
+
 path(
     'impression-dossiers/pdf/',
     views.generer_pdf_dossiers,

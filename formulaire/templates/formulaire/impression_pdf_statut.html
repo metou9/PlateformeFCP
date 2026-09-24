@@ -1,0 +1,32 @@
+{% extends 'formulaire/base.html' %}
+{% block title %}Génération PDF{% endblock %}
+{% block content %}
+<div class="container py-4"><h2>Impression des dossiers</h2>
+<p id="pdf-status" role="status">Génération en attente… Vous pouvez laisser cette page ouverte.</p>
+<a id="pdf-download" class="btn btn-success" style="display:none" href="{% url 'formulaire:telecharger_pdf_dossiers' job_id %}">Télécharger le PDF</a>
+<a class="btn btn-outline-secondary" href="{% url 'formulaire:impression_dossiers' %}">Retour</a></div>
+<script>
+const statusUrl = "{% url 'formulaire:statut_pdf_dossiers' job_id %}?json=1";
+async function checkPdf() {
+  try {
+    const response = await fetch(statusUrl, {credentials:'same-origin',cache:'no-store'});
+    if (!response.ok) throw new Error('Statut indisponible');
+    const job = await response.json();
+    if (job.state === 'ready') {
+      document.getElementById('pdf-status').textContent = 'Votre PDF est prêt.';
+      document.getElementById('pdf-download').style.display = 'inline-block';
+      return;
+    }
+    if (job.state === 'error') {
+      document.getElementById('pdf-status').textContent = 'Échec de génération. Contactez l’administrateur.';
+      return;
+    }
+    document.getElementById('pdf-status').textContent = job.state === 'running' ? 'Génération en cours…' : 'Génération en attente…';
+  } catch (error) {
+    document.getElementById('pdf-status').textContent = 'Connexion momentanément indisponible. Nouvelle tentative…';
+  }
+  setTimeout(checkPdf, 4000);
+}
+checkPdf();
+</script>
+{% endblock %}
