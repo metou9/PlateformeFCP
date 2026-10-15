@@ -1363,7 +1363,17 @@ def realisation_passif(request):
     Si l'utilisateur abandonne avant cette étape, rien n'est enregistré.
     """
     utilisateur = get_current_user(request)
-    sous_projet = _build_unsaved_sous_projet_from_step1(request, utilisateur)
+
+    if not can_create_project(utilisateur):
+        messages.error(
+            request,
+            "Vous n'êtes pas autorisé à créer un dossier."
+        )
+        return redirect('formulaire:accueil')
+
+    sous_projet = _build_unsaved_sous_projet_from_step1(
+        request, utilisateur
+    )
     if not sous_projet:
         messages.error(request, "❌ Veuillez compléter l'étape 1 avant de continuer.")
         return redirect('formulaire:nouveau_sous_projet')
