@@ -1363,17 +1363,7 @@ def realisation_passif(request):
     Si l'utilisateur abandonne avant cette étape, rien n'est enregistré.
     """
     utilisateur = get_current_user(request)
-
-    if not can_create_project(utilisateur):
-        messages.error(
-            request,
-            "Vous n'êtes pas autorisé à créer un dossier."
-        )
-        return redirect('formulaire:accueil')
-
-    sous_projet = _build_unsaved_sous_projet_from_step1(
-        request, utilisateur
-    )
+    sous_projet = _build_unsaved_sous_projet_from_step1(request, utilisateur)
     if not sous_projet:
         messages.error(request, "❌ Veuillez compléter l'étape 1 avant de continuer.")
         return redirect('formulaire:nouveau_sous_projet')
@@ -2859,20 +2849,9 @@ def preselection_comite_liste(request):
             ).count()
         )
 
-        if decision_comite == 'preselectionne':
-            note_comite = (
-                nb_criteres_preselectionnes
-            )
-
-            note_type = 'preselectionne'
-
-        elif decision_comite == 'rejete':
-            note_comite = (
-                nb_criteres_rejetes
-            )
-
-            note_type = 'rejete'
-
+        if decision_comite in ('preselectionne', 'rejete'):
+            note_comite = nb_criteres_preselectionnes
+            note_type = decision_comite
         else:
             note_comite = None
             note_type = None
@@ -3291,18 +3270,7 @@ def preselection_comite_detail(request, pk):
                 # Score existant
                 # ---------------------------------------------
 
-                if decision_globale == 'preselectionne':
-                    score = (
-                        nb_criteres_preselectionnes
-                    )
-
-                elif decision_globale == 'rejete':
-                    score = (
-                        nb_criteres_rejetes
-                    )
-
-                else:
-                    score = 0
+                score = nb_criteres_preselectionnes
 
                 # ---------------------------------------------
                 # Score en base si le champ existe
@@ -3563,24 +3531,10 @@ def preselection_comite_detail(request, pk):
     # NOTE À AFFICHER
     # =========================================================
 
-    if decision_comite == 'preselectionne':
-
-        note_comite = (
-            nb_criteres_preselectionnes
-        )
-
-        note_type = 'preselectionne'
-
-    elif decision_comite == 'rejete':
-
-        note_comite = (
-            nb_criteres_rejetes
-        )
-
-        note_type = 'rejete'
-
+    if decision_comite in ('preselectionne', 'rejete'):
+        note_comite = nb_criteres_preselectionnes
+        note_type = decision_comite
     else:
-
         note_comite = None
         note_type = None
 
