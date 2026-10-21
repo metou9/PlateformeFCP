@@ -617,6 +617,7 @@
                             <th>Motif automatique</th>
                             <th>Décision comité</th>
                             <th>Note /20</th>
+                            <th>Notation grille /100</th>
                             <th>Motif comité</th>
 
                             {% if can_validate_comite %}
@@ -690,6 +691,14 @@
     {% endif %}
 
 </td>
+
+                                <td class="text-center">
+                                    {% if ligne.notation_grille is not None %}
+                                        <strong>{{ ligne.notation_grille|floatformat:"-2" }}/100</strong>
+                                    {% else %}
+                                        -
+                                    {% endif %}
+                                </td>
 
                                 <td class="motif-text">
                                     {{ ligne.motif_comite|default:"Non renseigné" }}

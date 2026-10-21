@@ -201,6 +201,15 @@ class SousProjet(models.Model):
         null=True,
         verbose_name="Principales activités"
     )
+    notation_grille = models.DecimalField(
+        max_digits=5,
+        decimal_places=2,
+        blank=True,
+        null=True,
+        validators=[MinValueValidator(0), MaxValueValidator(100)],
+        verbose_name="Notation grille /100",
+    )
+
     numero_reception_formulaire = models.CharField(
         max_length=100,
         blank=True,

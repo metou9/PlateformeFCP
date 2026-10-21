@@ -2918,6 +2918,8 @@ def preselection_comite_liste(request):
             # NOTE SUR 20
             # =================================================
 
+            'notation_grille': sp.notation_grille,
+
             'note_comite': (
                 note_comite
             ),
