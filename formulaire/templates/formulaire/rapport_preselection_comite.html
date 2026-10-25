@@ -208,6 +208,16 @@ Résultats de présélection du comité
 
                     </div>
 
+                    <!-- Présélection par grille de notation -->
+                    <div class="col-md-3">
+                        <label class="form-label">Présélectionné par grille de notation</label>
+                        <select name="preselection_grille" class="form-select">
+                            <option value="">Tous les dossiers</option>
+                            <option value="preselectionne" {% if selected_preselection_grille == 'preselectionne' %}selected{% endif %}>Présélectionné (note ≥ 50)</option>
+                            <option value="non_preselectionne" {% if selected_preselection_grille == 'non_preselectionne' %}selected{% endif %}>Non présélectionné (note &lt; 50 ou absente)</option>
+                        </select>
+                    </div>
+
                     <!-- Numéro de réception -->
 
                     <div class="col-md-4">

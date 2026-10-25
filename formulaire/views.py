@@ -5221,6 +5221,7 @@ def rapport_preselection_comite(request):
     selected_paysage_id = (request.GET.get('paysage') or '').strip()
     selected_type_projet = (request.GET.get('type_projet') or '').strip()
     selected_decision = (request.GET.get('decision') or '').strip()
+    selected_preselection_grille = (request.GET.get('preselection_grille') or '').strip()
     numero_reception = (
         request.GET.get('numero_reception') or ''
     ).strip()
@@ -5285,6 +5286,14 @@ def rapport_preselection_comite(request):
     elif selected_decision:
         sous_projets = sous_projets.filter(
             decision_comite=selected_decision
+        )
+
+    # Filtre indépendant de la décision officielle du comité.
+    if selected_preselection_grille == 'preselectionne':
+        sous_projets = sous_projets.filter(notation_grille__gte=50)
+    elif selected_preselection_grille == 'non_preselectionne':
+        sous_projets = sous_projets.filter(
+            Q(notation_grille__lt=50) | Q(notation_grille__isnull=True)
         )
 
     sous_projets = (
@@ -5579,6 +5588,7 @@ def rapport_preselection_comite(request):
         'selected_paysage_id': str(selected_paysage_id),
         'selected_type_projet': selected_type_projet,
         'selected_decision': selected_decision,
+        'selected_preselection_grille': selected_preselection_grille,
         'numero_reception': numero_reception,
 
         'selected_wilaya': selected_wilaya,
