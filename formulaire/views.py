@@ -5458,6 +5458,13 @@ def rapport_preselection_comite(request):
             'subvention': total_subvention,
             'nb_rejets_automatiques': nb_rejets_automatiques,
             'nb_rejets_comite': nb_rejets_comite,
+            'notation_grille': sp.notation_grille,
+            'note_comite': (
+                sum(1 for r in resultats if r.decision_comite == 'preselectionne')
+                if decision_code == 'preselectionne'
+                else nb_rejets_comite if decision_code == 'rejete'
+                else None
+            ),
             'decision_code': decision_code,
             'decision': decision_labels.get(
                 decision_code,

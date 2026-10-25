@@ -522,6 +522,8 @@ Résultats de présélection du comité
                                 Nombre de critères rejetés
                             </th>
 
+                            <th rowspan="2">Note grille /100</th>
+                            <th rowspan="2">Note comité /20</th>
                             <th colspan="2">
                                 Décision
                             </th>
@@ -625,6 +627,12 @@ Résultats de présélection du comité
                                 </td>
 
                                 <td class="text-center">
+                                    {% if ligne.notation_grille != None %}{{ ligne.notation_grille|floatformat:2 }}{% else %}—{% endif %}
+                                </td>
+                                <td class="text-center">
+                                    {% if ligne.note_comite != None %}{{ ligne.note_comite }}{% else %}—{% endif %}
+                                </td>
+                                <td class="text-center">
 
                                     {% if ligne.decision_code == 'preselectionne' %}
 
@@ -664,7 +672,7 @@ Résultats de présélection du comité
 
                             <tr>
 
-                                <td colspan="16"
+                                <td colspan="18"
                                     class="text-center py-4 text-muted">
 
                                     Aucun dossier ne correspond aux filtres sélectionnés.
@@ -698,7 +706,7 @@ Résultats de présélection du comité
                                     {{ total_subventions|floatformat:2|intcomma }}
                                 </th>
 
-                                <th colspan="4"></th>
+                                <th colspan="6"></th>
 
                             </tr>
 
