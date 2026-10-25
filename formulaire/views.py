@@ -4794,9 +4794,9 @@ def exporter_rapport_preselection_excel(
 
     # =====================================================
     # TITRE
-    # 16 colonnes : A à P
+    # 18 colonnes : A à R
     # =====================================================
-    worksheet.merge_cells("A1:P1")
+    worksheet.merge_cells("A1:R1")
 
     worksheet["A1"] = (
         "Résultats de présélection du comité"
@@ -4832,7 +4832,7 @@ def exporter_rapport_preselection_excel(
         else "Tous les paysages"
     )
 
-    worksheet.merge_cells("A2:P2")
+    worksheet.merge_cells("A2:R2")
 
     worksheet["A2"] = (
         f"Wilaya : {wilaya_label} | "
@@ -4865,6 +4865,8 @@ def exporter_rapport_preselection_excel(
         "Subvention",
         "Critères rejetés automatiquement",
         "Critères rejetés CPR",
+        "Note grille /100",
+        "Note comité /20",
         "Décision",
         "Motif",
     ]
@@ -4897,9 +4899,9 @@ def exporter_rapport_preselection_excel(
     # Geler les lignes de titre et d'en-tête
     worksheet.freeze_panes = "A5"
 
-    # Filtre Excel sur les 16 colonnes
+    # Filtre Excel sur les 18 colonnes
     worksheet.auto_filter.ref = (
-        f"A4:P{max(4, len(lignes) + 4)}"
+        f"A4:R{max(4, len(lignes) + 4)}"
     )
 
     # =====================================================
@@ -4990,6 +4992,8 @@ def exporter_rapport_preselection_excel(
                 0
             ),
 
+            float(ligne["notation_grille"]) if ligne.get("notation_grille") is not None else None,
+            ligne.get("note_comite"),
             decision_labels.get(
                 ligne.get("decision_code"),
                 ligne.get(
@@ -5046,6 +5050,8 @@ def exporter_rapport_preselection_excel(
                 13,
                 14,
                 15,
+                16,
+                17,
             ):
                 cell.alignment = Alignment(
                     horizontal="center",
@@ -5128,8 +5134,8 @@ def exporter_rapport_preselection_excel(
         vertical="center"
     )
 
-    # Colonnes M à P
-    for column_index in range(13, 17):
+    # Colonnes M à R
+    for column_index in range(13, 19):
         cell = worksheet.cell(
             row=total_row,
             column=column_index
@@ -5156,8 +5162,10 @@ def exporter_rapport_preselection_excel(
         12: 18,  # Subvention
         13: 20,  # Rejets automatiques
         14: 18,  # Rejets CPR
-        15: 20,  # Décision
-        16: 42,  # Motif
+        15: 20,  # Note grille /100
+        16: 20,  # Note comité /20
+        17: 20,  # Décision
+        18: 42,  # Motif
     }
 
     for column_index, width in (
