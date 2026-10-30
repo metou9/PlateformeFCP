@@ -4137,10 +4137,6 @@ def impression_dossiers(request):
         request.GET.get('decision') or ''
     ).strip()
 
-    selected_preselection_grille = (
-        request.GET.get('preselection_grille') or ''
-    ).strip()
-
     # =========================================================
     # PAYSAGES DISPONIBLES
     # =========================================================
@@ -4165,6 +4161,10 @@ def impression_dossiers(request):
     # =========================================================
 
     decision_choices = [
+        (
+            'preselection_grille',
+            'Présélectionné par grille de notation (≥ 50/100)'
+        ),
         (
             'preselectionne',
             'Présélectionné'
@@ -4248,6 +4248,10 @@ def impression_dossiers(request):
                         )
                     )
 
+                elif selected_decision == 'preselection_grille':
+
+                    sous_projets = sous_projets.filter(notation_grille__gte=50)
+
                 elif selected_decision:
 
                     sous_projets = (
@@ -4256,16 +4260,6 @@ def impression_dossiers(request):
                                 selected_decision
                             )
                         )
-                    )
-
-                # Filtre indépendant de la décision du comité
-                if selected_preselection_grille == 'preselectionne':
-                    sous_projets = sous_projets.filter(
-                        notation_grille__gte=50
-                    )
-                elif selected_preselection_grille == 'non_preselectionne':
-                    sous_projets = sous_projets.filter(
-                        Q(notation_grille__lt=50) | Q(notation_grille__isnull=True)
                     )
 
                 # =================================================
@@ -4386,8 +4380,6 @@ def impression_dossiers(request):
         'selected_decision': (
             selected_decision
         ),
-
-        'selected_preselection_grille': selected_preselection_grille,
 
         # Statistiques
         'total_dossiers': (

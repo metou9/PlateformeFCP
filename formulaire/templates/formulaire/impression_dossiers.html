@@ -226,7 +226,7 @@
         <h1>🖨️ Impression des dossiers</h1>
 
         <p>
-            Filtrez les dossiers par Paysage / ZOCA, décision du comité ou présélection par grille de notation,
+            Filtrez les dossiers par Paysage / ZOCA et par décision du comité,
             sélectionnez les dossiers à imprimer puis générez un seul fichier PDF.
         </p>
     </div>
@@ -307,6 +307,11 @@
 
                             <option value="">
                                 Toutes les décisions
+                            </option>
+
+                            <option value="preselection_grille"
+                                {% if selected_decision == 'preselection_grille' %}selected{% endif %}>
+                                Présélectionné par grille de notation (≥ 50/100)
                             </option>
 
                             {% for valeur, libelle in decision_choices %}
